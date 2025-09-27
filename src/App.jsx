@@ -295,69 +295,54 @@ function ArticlePage() {
         setArticle(res.data);
         document.title = `${res.data.title} – My News`;
 
-        // ---------- Inject SEO head tags (ADDED) ----------
-        const url = `${window.location.origin}/article/${res.data.slug}`;
-        const desc = buildDescriptionClient(res.data);
+        // ---------- Inject SEO head tags ----------
+const url = `${window.location.origin}/article/${res.data.slug}`;
+const desc = buildDescriptionClient(res.data);
 
-        // Canonical
-        upsertTag('link', { rel: 'canonical', href: url }, 'rel');
+// Canonical
+upsertTag('link', { rel: 'canonical', href: url }, 'rel');
 
-        // Meta description (use summary, else trim first 160 chars of body)
-        const metaDescription =
-          (res.data.summary && res.data.summary.trim()) ||
-          (res.data.body ? String(res.data.body).replace(/\s+/g, ' ').slice(0, 160) : '');
-        upsertTag('meta', { name: 'description', content: metaDescription });
-        
-        // Default SEO for list pages
-        const canonicalListUrl = window.location.origin + (urlCat === 'All' ? '/' : `/category/${encodeURIComponent(urlCat)}`);
-        upsertTag('link', { rel: 'canonical', href: canonicalListUrl }, 'rel');
-        const listDesc = q
-          ? `Search results for "${q}" in ${urlCat} – latest news and updates.`
-          : (urlCat === 'All'
-              ? 'Latest articles and breaking news from My News.'
-              : `Latest ${urlCat} news from My News.`);
-        upsertTag('meta', { name: 'description', content: listDesc });
+// Meta description
+upsertTag('meta', { name: 'description', content: desc });
 
+// Open Graph
+upsertTag('meta', { property: 'og:type', content: 'article' }, 'property');
+upsertTag('meta', { property: 'og:title', content: res.data.title }, 'property');
+upsertTag('meta', { property: 'og:description', content: desc }, 'property');
+upsertTag('meta', { property: 'og:url', content: url }, 'property');
+if (res.data.imageUrl) {
+  upsertTag('meta', { property: 'og:image', content: res.data.imageUrl }, 'property');
+}
 
-        // Meta description (ADD)
-        upsertTag('meta', { name: 'description', content: desc });
+// Twitter cards
+upsertTag('meta', { name: 'twitter:card', content: res.data.imageUrl ? 'summary_large_image' : 'summary' });
+upsertTag('meta', { name: 'twitter:title', content: res.data.title });
+upsertTag('meta', { name: 'twitter:description', content: desc });
+if (res.data.imageUrl) {
+  upsertTag('meta', { name: 'twitter:image', content: res.data.imageUrl });
+}
 
-        // Open Graph
-        upsertTag('meta', { property: 'og:type', content: 'article' }, 'property');
-        upsertTag('meta', { property: 'og:title', content: res.data.title }, 'property');
-        upsertTag('meta', { property: 'og:description', content: desc }, 'property');
-        upsertTag('meta', { property: 'og:url', content: url }, 'property');
-        if (res.data.imageUrl) {
-          upsertTag('meta', { property: 'og:image', content: res.data.imageUrl }, 'property');
-        }
+// hreflang alternates
+['x-default','en-US','en-IN'].forEach(code => {
+  upsertTag('link', { rel: 'alternate', hreflang: code, href: url }, 'hreflang');
+});
 
-        // Twitter cards
-        upsertTag('meta', { name: 'twitter:card', content: res.data.imageUrl ? 'summary_large_image' : 'summary' });
-        upsertTag('meta', { name: 'twitter:title', content: res.data.title });
-        upsertTag('meta', { name: 'twitter:description', content: desc });
-        if (res.data.imageUrl) {
-          upsertTag('meta', { name: 'twitter:image', content: res.data.imageUrl });
-        }
+// JSON-LD (NewsArticle)
+setJsonLd({
+  "@context": "https://schema.org",
+  "@type": "NewsArticle",
+  "headline": res.data.title,
+  "datePublished": new Date(res.data.publishedAt || res.data.createdAt || Date.now()).toISOString(),
+  "dateModified": new Date(res.data.updatedAt || res.data.publishedAt || res.data.createdAt || Date.now()).toISOString(),
+  "author": [{ "@type": "Person", "name": res.data.author }],
+  "articleSection": res.data.category || "General",
+  "image": res.data.imageUrl ? [res.data.imageUrl] : undefined,
+  "mainEntityOfPage": { "@type": "WebPage", "@id": url },
+  "url": url,
+  "description": desc
+});
+// ---------- End SEO head tags ----------
 
-        // hreflang alternates (self-refs for now; server sitemap also has hreflang)
-        ['x-default','en-US','en-IN'].forEach(code => {
-          upsertTag('link', { rel: 'alternate', hreflang: code, href: url }, 'hreflang');
-        });
-
-        // JSON-LD (NewsArticle)
-        setJsonLd({
-          "@context": "https://schema.org",
-          "@type": "NewsArticle",
-          "headline": res.data.title,
-          "datePublished": new Date(res.data.publishedAt || res.data.createdAt || Date.now()).toISOString(),
-          "dateModified": new Date(res.data.updatedAt || res.data.publishedAt || res.data.createdAt || Date.now()).toISOString(),
-          "author": [{ "@type": "Person", "name": res.data.author }],
-          "articleSection": res.data.category || "General",
-          "image": res.data.imageUrl ? [res.data.imageUrl] : undefined,
-          "mainEntityOfPage": { "@type": "WebPage", "@id": url },
-          "url": url,
-          "description": res.data.summary || ""
-        });
         // ---------- End SEO head tags ----------
       } catch {
         setError('Article not found');
