@@ -178,6 +178,20 @@ function PublicList() {
     navigate(path + window.location.search);
   };
 
+  // ---------- Default SEO for list pages (ADD) ----------
+  useEffect(() => {
+    const homeUrl = window.location.origin + (urlCat === 'All' ? '/' : `/category/${encodeURIComponent(urlCat)}`);
+    document.title = urlCat === 'All' ? 'My News — Latest headlines' : `My News — ${urlCat}`;
+    upsertTag('link', { rel: 'canonical', href: homeUrl }, 'rel');
+    upsertTag('meta', { name: 'description', content: 'Latest politics, business, tech, sports and world news.' });
+    // Optional OG baseline for lists
+    upsertTag('meta', { property: 'og:type', content: 'website' }, 'property');
+    upsertTag('meta', { property: 'og:title', content: document.title }, 'property');
+    upsertTag('meta', { property: 'og:description', content: 'Latest politics, business, tech, sports and world news.' }, 'property');
+    upsertTag('meta', { property: 'og:url', content: homeUrl }, 'property');
+  }, [urlCat]);
+  // ---------- End default SEO ----------
+
   return (
     <div style={styles.page}>
       <div style={styles.nav}>
@@ -256,6 +270,16 @@ function setJsonLd(obj) {
   document.head.appendChild(s);
 }
 
+// --- Description helpers (ADD after setJsonLd) ---
+function stripHtmlClient(s = '') {
+  return String(s).replace(/<[^>]*>/g, '');
+}
+function buildDescriptionClient(doc = {}) {
+  const raw = (doc.summary && doc.summary.trim())
+    || stripHtmlClient(doc.body || '').slice(0, 200);
+  return String(raw).replace(/\s+/g, ' ').slice(0, 160);
+}
+
 /* -------------------- Article page -------------------- */
 function ArticlePage() {
   const { slug } = useParams();
@@ -273,14 +297,18 @@ function ArticlePage() {
 
         // ---------- Inject SEO head tags (ADDED) ----------
         const url = `${window.location.origin}/article/${res.data.slug}`;
+        const desc = buildDescriptionClient(res.data);
 
         // Canonical
         upsertTag('link', { rel: 'canonical', href: url }, 'rel');
 
+        // Meta description (ADD)
+        upsertTag('meta', { name: 'description', content: desc });
+
         // Open Graph
         upsertTag('meta', { property: 'og:type', content: 'article' }, 'property');
         upsertTag('meta', { property: 'og:title', content: res.data.title }, 'property');
-        upsertTag('meta', { property: 'og:description', content: res.data.summary || '' }, 'property');
+        upsertTag('meta', { property: 'og:description', content: desc }, 'property');
         upsertTag('meta', { property: 'og:url', content: url }, 'property');
         if (res.data.imageUrl) {
           upsertTag('meta', { property: 'og:image', content: res.data.imageUrl }, 'property');
@@ -289,7 +317,7 @@ function ArticlePage() {
         // Twitter cards
         upsertTag('meta', { name: 'twitter:card', content: res.data.imageUrl ? 'summary_large_image' : 'summary' });
         upsertTag('meta', { name: 'twitter:title', content: res.data.title });
-        upsertTag('meta', { name: 'twitter:description', content: res.data.summary || '' });
+        upsertTag('meta', { name: 'twitter:description', content: desc });
         if (res.data.imageUrl) {
           upsertTag('meta', { name: 'twitter:image', content: res.data.imageUrl });
         }
