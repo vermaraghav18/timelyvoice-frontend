@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <!-- Home -->
+  <url>
+    <loc>https://news-site-frontend-sigma.vercel.app/</loc>
+    <changefreq>hourly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Category pages -->
+  <url>
+    <loc>https://news-site-frontend-sigma.vercel.app/category/Politics</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://news-site-frontend-sigma.vercel.app/category/Business</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://news-site-frontend-sigma.vercel.app/category/Tech</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://news-site-frontend-sigma.vercel.app/category/Sports</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://news-site-frontend-sigma.vercel.app/category/Entertainment</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://news-site-frontend-sigma.vercel.app/category/World</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- Articles -->
+  <url>
+    <loc>https://news-site-frontend-sigma.vercel.app/article/w</loc>
+    <lastmod>2025-09-27T05:30:13.090Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://news-site-frontend-sigma.vercel.app/article/preview-test-india</loc>
+    <lastmod>2025-09-26T18:48:54.629Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://news-site-frontend-sigma.vercel.app/article/de-3</loc>
+    <lastmod>2025-09-26T18:21:02.271Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://news-site-frontend-sigma.vercel.app/article/geo-only-india</loc>
+    <lastmod>2025-09-26T18:20:14.280Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+</urlset>
