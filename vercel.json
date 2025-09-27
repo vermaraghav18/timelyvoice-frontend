@@ -1,8 +1,5 @@
 {
   "rewrites": [
-    { "source": "/article/:slug", "destination": "https://news-site-backend-6qbu.onrender.com/article/:slug" },
-     {
-  "rewrites": [
     {
       "source": "/sitemap.xml",
       "destination": "https://news-site-backend-6qbu.onrender.com/sitemap.xml"
@@ -11,8 +8,5 @@
       "source": "/news-sitemap.xml",
       "destination": "https://news-site-backend-6qbu.onrender.com/news-sitemap.xml"
     }
-  ]
-}
-
   ]
 }
