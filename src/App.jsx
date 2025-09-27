@@ -5,8 +5,15 @@ import {
 } from 'react-router-dom';
 import axios from 'axios';
 
-// API
-const api = axios.create({ baseURL: 'http://localhost:4000' });
+// ===== API base =====
+// In Vercel, set: VITE_API_BASE = https://news-site-backend-6qbu.onrender.com
+// Locally, it will fall back to http://localhost:4000
+const API_BASE =
+  import.meta.env.VITE_API_BASE ||
+  (location.hostname === 'localhost' ? 'http://localhost:4000' : '');
+
+// Create axios instance
+const api = axios.create({ baseURL: API_BASE });
 
 // Token helpers
 const tokenKey = 'news_admin_token';

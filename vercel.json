@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/article/:slug", "destination": "https://news-site-backend-6qbu.onrender.com/article/:slug" }
+  ]
+}
