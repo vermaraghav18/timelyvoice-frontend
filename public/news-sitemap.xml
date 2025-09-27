@@ -1,47 +1,53 @@
-This XML file does not appear to have any style information associated with it. The document tree is shown below.
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
-<url>
-<loc>http://localhost:5173/article/w</loc>
-<news:news>
-<news:publication>
-<news:name>My News</news:name>
-<news:language>en</news:language>
-</news:publication>
-<news:publication_date>2025-09-27T05:30:13.085Z</news:publication_date>
-<news:title>w</news:title>
-</news:news>
-</url>
-<url>
-<loc>http://localhost:5173/article/preview-test-india</loc>
-<news:news>
-<news:publication>
-<news:name>My News</news:name>
-<news:language>en</news:language>
-</news:publication>
-<news:publication_date>2025-09-26T18:48:54.625Z</news:publication_date>
-<news:title>Preview Test India</news:title>
-</news:news>
-</url>
-<url>
-<loc>http://localhost:5173/article/de-3</loc>
-<news:news>
-<news:publication>
-<news:name>My News</news:name>
-<news:language>en</news:language>
-</news:publication>
-<news:publication_date>2025-09-26T18:21:02.265Z</news:publication_date>
-<news:title>de</news:title>
-</news:news>
-</url>
-<url>
-<loc>http://localhost:5173/article/geo-only-india</loc>
-<news:news>
-<news:publication>
-<news:name>My News</news:name>
-<news:language>en</news:language>
-</news:publication>
-<news:publication_date>2025-09-26T18:16:28.778Z</news:publication_date>
-<news:title>Geo Only India</news:title>
-</news:news>
-</url>
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
+
+  <url>
+    <loc>https://news-site-frontend-sigma.vercel.app/article/w</loc>
+    <news:news>
+      <news:publication>
+        <news:name>My News</news:name>
+        <news:language>en</news:language>
+      </news:publication>
+      <news:publication_date>2025-09-27T05:30:13.085Z</news:publication_date>
+      <news:title>w</news:title>
+    </news:news>
+  </url>
+
+  <url>
+    <loc>https://news-site-frontend-sigma.vercel.app/article/preview-test-india</loc>
+    <news:news>
+      <news:publication>
+        <news:name>My News</news:name>
+        <news:language>en</news:language>
+      </news:publication>
+      <news:publication_date>2025-09-26T18:48:54.625Z</news:publication_date>
+      <news:title>Preview Test India</news:title>
+    </news:news>
+  </url>
+
+  <url>
+    <loc>https://news-site-frontend-sigma.vercel.app/article/de-3</loc>
+    <news:news>
+      <news:publication>
+        <news:name>My News</news:name>
+        <news:language>en</news:language>
+      </news:publication>
+      <news:publication_date>2025-09-26T18:21:02.265Z</news:publication_date>
+      <news:title>de</news:title>
+    </news:news>
+  </url>
+
+  <url>
+    <loc>https://news-site-frontend-sigma.vercel.app/article/geo-only-india</loc>
+    <news:news>
+      <news:publication>
+        <news:name>My News</news:name>
+        <news:language>en</news:language>
+      </news:publication>
+      <news:publication_date>2025-09-26T18:16:28.778Z</news:publication_date>
+      <news:title>Geo Only India</news:title>
+    </news:news>
+  </url>
+
 </urlset>
