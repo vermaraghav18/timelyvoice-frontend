@@ -302,6 +302,23 @@ function ArticlePage() {
         // Canonical
         upsertTag('link', { rel: 'canonical', href: url }, 'rel');
 
+        // Meta description (use summary, else trim first 160 chars of body)
+        const metaDescription =
+          (res.data.summary && res.data.summary.trim()) ||
+          (res.data.body ? String(res.data.body).replace(/\s+/g, ' ').slice(0, 160) : '');
+        upsertTag('meta', { name: 'description', content: metaDescription });
+        
+        // Default SEO for list pages
+        const canonicalListUrl = window.location.origin + (urlCat === 'All' ? '/' : `/category/${encodeURIComponent(urlCat)}`);
+        upsertTag('link', { rel: 'canonical', href: canonicalListUrl }, 'rel');
+        const listDesc = q
+          ? `Search results for "${q}" in ${urlCat} – latest news and updates.`
+          : (urlCat === 'All'
+              ? 'Latest articles and breaking news from My News.'
+              : `Latest ${urlCat} news from My News.`);
+        upsertTag('meta', { name: 'description', content: listDesc });
+
+
         // Meta description (ADD)
         upsertTag('meta', { name: 'description', content: desc });
 
