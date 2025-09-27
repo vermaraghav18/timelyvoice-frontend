@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://news-site-backend-6qbu.onrender.com/sitemap.xml
+Sitemap: https://news-site-backend-6qbu.onrender.com/news-sitemap.xml
