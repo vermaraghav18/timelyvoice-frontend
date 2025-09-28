@@ -8,9 +8,10 @@ import axios from 'axios';
 // ===== API base =====
 // In Vercel, set: VITE_API_BASE = https://news-site-backend-6qbu.onrender.com
 // Locally, it will fall back to http://localhost:4000
+const isLocalHost = ['localhost', '127.0.0.1'].includes(location.hostname);
 const API_BASE =
   import.meta.env.VITE_API_BASE ||
-  (location.hostname === 'localhost' ? 'http://localhost:4000' : '');
+  (isLocalHost ? 'http://localhost:4000' : '');
 
 // Create axios instance
 const api = axios.create({ baseURL: API_BASE });
@@ -118,7 +119,8 @@ function PublicList() {
 
   const [items, setItems] = useState([]);
   const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(false);
+  // FIX #1: start in loading state to avoid flash & runaway observer
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const PAGE_SIZE = 5;
 
@@ -127,6 +129,9 @@ function PublicList() {
 
   // when cat or q changes, reset to page=1 (via URL) & clear list
   useEffect(() => {
+    // FIX #2: fully reset list + hasMore before jumping back to page=1
+    setItems([]);
+    setHasMore(true);
     set({ page: 1 }); // keep q as-is
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlCat, q]);
@@ -159,7 +164,9 @@ function PublicList() {
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
-    if (!hasMore || loading) return;
+
+    // FIX #3: wait until first page rendered; avoid runaway page++
+    if (loading || !hasMore || items.length === 0) return;
 
     const obs = new IntersectionObserver((entries) => {
       const entry = entries[0];
@@ -171,7 +178,7 @@ function PublicList() {
 
     obs.observe(el);
     return () => obs.disconnect();
-  }, [page, hasMore, loading, set]);
+  }, [page, hasMore, loading, items.length, set]);
 
   const changeCategory = (next) => {
     const path = next === 'All' ? '/' : `/category/${encodeURIComponent(next)}`;
