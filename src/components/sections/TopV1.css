@@ -1,0 +1,197 @@
+@import url('https://fonts.googleapis.com/css2?family=Changa+One&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:wght@400;600;700;800&display=swap');
+
+.topv1{
+  margin:-20px 0;
+  padding-bottom:50px;
+  border-bottom:1px solid #535353;
+
+  --stackW:200px;
+  --thumbSize:48px;
+  --mainGap:18px;
+  --stripGap:14px;
+  --line:#464646;
+
+  --leadBg:#00063a;          /* card background */
+  --leadBorder:#243a6b;      /* card border color */
+  --leadRadius:1px;
+  --leadShadow:none;         /* disable shadow to avoid “blurred” bottom edge */
+
+  color:#ffffff;
+
+  /* thin top line (semi-transparent white) */
+  border-top:1px solid #ffffff33;
+}
+
+.topv1::before{
+  content:"";
+  display:block;
+  width:100%;
+  height:1px;
+  background:#3d3d3d;
+  margin-bottom:12px;
+}
+
+/* --- strip --- */
+.topv1-strip{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:var(--stripGap);
+  margin-bottom:18px;
+  padding-bottom:12px;
+  border-bottom:2px solid var(--line);
+}
+.topv1-strip>.topv1-mini:not(:last-child){border-right:1px solid var(--line);padding-right:calc(var(--stripGap)*.5);}
+.topv1-strip>.topv1-mini:not(:first-child){padding-left:calc(var(--stripGap)*.5);}
+.topv1-mini-link{display:block;text-decoration:none;color:inherit;}
+.topv1-mini-title{
+  font-size:15px;font-weight:400;line-height:1.25;
+  display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;
+  font-family:'Newsreader',serif;margin-top:4px;
+}
+.topv1-mini-date{
+  font-size:0px;font-weight:500;color:#fffb00;
+  font-family:'Newsreader',serif;margin-top:1px;margin-bottom:10px;
+}
+
+/* --- layout --- */
+.topv1-main{
+  display:grid;
+  grid-template-columns:280px 1fr 280px;
+  gap:var(--mainGap);
+  align-items:end; /* keep columns bottom-aligned */
+}
+
+.topv1-col-left{border-right:1px solid var(--line);padding-right:14px;}
+.topv1-col-right{border-left:1px solid var(--line);padding-left:14px;}
+.topv1-col-center{display:grid;grid-template-columns:1fr var(--stackW);gap:14px;align-items:start;}
+.topv1-right-stack{display:grid;grid-template-rows:auto auto;gap:14px;border-left:1px solid var(--line);padding-left:14px;}
+
+/* --- images --- */
+.topv1-lead-img,.topv1-tall-img{width:100%;height:auto;display:block;border-radius:1px;}
+
+/* spacing between the two right-stack cards */
+.topv1-tall + .topv1-tall{margin-top:14px;}
+
+/* right-stack tweaks to match lead card spacing/color */
+.topv1-tall-img{margin:10px 0;}
+.topv1-tall-title{color:#fff;}
+.topv1-tall-date{color:#a8b3d1;}
+
+/* --- lead card --- */
+.topv1-lead{
+  background:var(--leadBg);
+  border:1px solid var(--leadBorder);
+  border-radius:var(--leadRadius);
+  box-shadow:var(--leadShadow);
+  font-family:'Newsreader',serif;
+  padding:12px;
+  overflow:visible;  /* ensure the border is crisp and not clipped */
+}
+
+.topv1-lead-title{
+  font-size:22px;color:#fff;font-weight:700;margin-top:2px;text-decoration:none;
+}
+.topv1-lead-img{margin:10px 0;}
+.topv1-lead-summary{
+  margin-top:10px;color:#fffefe;font-size:20px;line-height:1.45rem;
+}
+
+/* >>> badge overlay on image <<< */
+.topv1-lead-media{position:relative;}
+.topv1-badge{
+  display:inline-block;padding:6px 10px;font-size:14px;font-weight:500;
+  background:#ff00ea;color:#ffffff;border-radius:4px;text-decoration:none;
+}
+.topv1-badge-over{
+  position:absolute;left:8px;bottom:8px;box-shadow:0 2px 6px rgba(0,0,0,.25);
+}
+
+/* --- right stack cards --- */
+.topv1-tall{
+  background:var(--leadBg);
+  border:1px solid var(--leadBorder);
+  border-radius:var(--leadRadius);
+  box-shadow:var(--leadShadow);
+  padding:12px;
+}
+
+/* IMPORTANT: keep the bottom edge/border visible for the last card */
+.topv1-right-stack > .topv1-tall:last-child{
+  border-bottom:1px solid var(--leadBorder);
+  padding-bottom:12px;
+}
+
+.topv1-tall-title{
+  font-weight:500;margin-top:1px;display:block;text-decoration:none;color:inherit;font-size:15px;
+}
+.topv1-tall-date{font-size:12px;color:#666;}
+
+/* --- lists --- */
+.topv1-list{display:flex;flex-direction:column;gap:8px;}
+.topv1-list-title{
+  font-family:'Changa One',sans-serif;color:#FF0000;font-size:26px;font-weight:500;
+  text-transform:uppercase;border:none;margin-bottom:8px;
+}
+.topv1-list-scroll{overflow-y:auto;padding-top:4px;}
+.topv1-list-item{
+  display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);
+  color:inherit;text-decoration:none;
+}
+.topv1-list-item:last-child{border-bottom:0;}
+.topv1-list-item.with-thumb{align-items:center;}
+.topv1-list-thumb{width:var(--thumbSize);flex:0 0 var(--thumbSize);border-radius:1px;overflow:hidden;}
+.topv1-list-meta{min-width:0;}
+.topv1-list-item-title{
+  line-height:1.3;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;
+}
+.topv1-list-item-date{font-size:12px;color:#666;margin-top:4px;}
+
+/* --- link reset --- */
+.topv1 a,
+.topv1 a:hover,
+.topv1 a:focus,
+.topv1 a:active,
+.topv1-mini-link,
+.topv1-mini-link:hover,
+.topv1-tall-title,
+.topv1-tall-title:hover,
+.topv1-lead-title,
+.topv1-lead-title:hover{
+  text-decoration:none !important;outline:none;
+}
+
+/* --- responsive --- */
+@media (max-width:1279px){
+  .topv1-main{grid-template-columns:220px 1fr 220px;}
+  .topv1-col-center{grid-template-columns:1fr 200px;}
+}
+@media (max-width:1023px){
+  .topv1-main{grid-template-columns:1fr;}
+  .topv1-col-left,.topv1-col-right{order:2;border:0;padding:0;}
+  .topv1-col-center{order:1;grid-template-columns:1fr;}
+  .topv1-right-stack{grid-template-rows:none;grid-template-columns:1fr 1fr;border-left:0;padding-left:0;gap:12px;}
+}
+@media (max-width:639px){
+  .topv1-strip{grid-template-columns:repeat(2,1fr);}
+  .topv1-right-stack{grid-template-columns:1fr;}
+}
+
+/* Keep scroll, hide the bar across browsers */
+.topv1-list-scroll{
+  overflow-y:auto;
+  padding-top:4px;
+
+  /* Firefox */
+  scrollbar-width:none;
+
+  /* IE/Edge (legacy) */
+  -ms-overflow-style:none;
+}
+
+/* WebKit (Chrome, Edge, Safari, Opera) */
+.topv1-list-scroll::-webkit-scrollbar{width:0;height:0;}
+.topv1-list-scroll::-webkit-scrollbar-track,
+.topv1-list-scroll::-webkit-scrollbar-thumb{
+  background:transparent;border:none;
+}

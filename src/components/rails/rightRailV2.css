@@ -1,0 +1,17 @@
+.right-rail-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  width: 360px;             /* standard right-rail width */
+}
+
+.right-rail-v2__block {
+  width: 100%;
+}
+
+/* stack on mobile */
+@media (max-width: 1024px) {
+  .right-rail-v2 {
+    width: 100%;
+  }
+}

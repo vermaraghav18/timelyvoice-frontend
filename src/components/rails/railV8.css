@@ -1,0 +1,37 @@
+/* frontend/src/components/rails/railV8.css */
+.railv8 { margin-bottom: 16px; }
+
+.railv8__card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid #eaeaea;   /* simple, sharp edges */
+  border-radius: 0;             /* explicitly no radius */
+  overflow: hidden;             /* keep image edges sharp */
+  background: #fff;
+}
+
+.railv8__media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.railv8__body {
+  padding: 10px 12px;
+}
+
+.railv8__title {
+  font-size: 16px;
+  line-height: 1.25;
+  font-weight: 700;
+  margin: 0 0 6px 0;
+}
+
+.railv8__summary {
+  font-size: 14px;
+  line-height: 1.4;
+  color: #444;
+  margin: 0;
+}

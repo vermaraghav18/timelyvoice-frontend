@@ -1,0 +1,129 @@
+/* =========================================
+   MainV7 — Hero + 6 cards (title below image)
+   Uniform card heights everywhere
+========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --main-col-width: 650px; /* adjust to match your left column */
+
+  /* Card sizing controls */
+  --m7-thumb-ratio: 16/9;       /* image area ratio */
+  --m7-title-fs: 16px;          /* title font-size */
+  --m7-title-lh: 1.25;          /* title line-height */
+  --m7-title-lines: 5;          /* exactly this many visible lines */
+  --m7-cap-pad-y: 10px;         /* caption vertical padding */
+  --m7-cap-pad-x: 12px;         /* caption horizontal padding */
+  font-family: 'Newsreader', serif;
+}
+
+.section-full { grid-column: 1 / -1; }
+
+.m7 { width: 100%; background: transparent; color: #0f1a23; }
+.m7__inner { max-width: var(--main-col-width); margin: 0 auto; padding: 8px 0 12px; }
+
+/* optional label */
+.m7__heading {
+  margin: 0 0 10px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(0,0,0,0.25);
+  display: inline-block;
+}
+
+/* HERO */
+.m7__hero {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr; /* image a bit wider */
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.25);
+}
+
+.m7__heroMedia {
+  display: block;
+  border: 1px solid rgba(0,0,0,0.25);
+  border-radius: 1px;
+  overflow: hidden;
+
+  aspect-ratio: 16 / 9;
+}
+.m7__heroMedia img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.m7__heroBody { display: flex; align-items: center; }
+.m7__heroTitle {
+  margin: 0;
+  font-size: clamp(22px, 3.6vw, 35px);
+  font-weight: 800;
+  line-height: 1.15;
+}
+.m7__heroTitle a { color:#ffffff; text-decoration: none; }
+.m7__heroTitle a:hover { text-decoration: underline; }
+
+/* GRID (6 cards) */
+.m7__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px 16px;
+  
+}
+
+/* Card wrapper with thin border */
+.m7__card {
+  display: block;                 /* block flow (no flex gaps) */
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid rgba(0,0,0,0.25);
+  border-radius: 1px;
+  overflow: hidden;
+
+}
+
+/* Fixed-ratio IMAGE */
+.m7__cardMedia {
+  width: 100%;
+  aspect-ratio: var(--m7-thumb-ratio);
+  background: #e9eef3;
+}
+.m7__cardMedia img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* CAPTION — FIXED HEIGHT (not min-height) */
+.m7__cardCaption {
+  background:#04003a;
+  color: #fff;
+  padding: var(--m7-cap-pad-y) var(--m7-cap-pad-x);
+
+  /* Fixed caption height: (lines × fs × lh) + vertical paddings */
+  height: calc(
+    (var(--m7-title-lines) * var(--m7-title-fs) * var(--m7-title-lh))
+    + (2 * var(--m7-cap-pad-y))
+  );
+  overflow: hidden;               /* hide extra if headline is longer */
+  box-sizing: border-box;
+}
+
+/* Title text: clamp to N lines */
+.m7__cardTitle {
+  margin: 0;
+  font-weight: 300;
+  font-size: var(--m7-title-fs);
+  line-height: var(--m7-title-lh);
+  display: -webkit-box;
+  -webkit-line-clamp: var(--m7-title-lines);
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* spacing below section */
+.m7 { margin-bottom: 28px; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .m7__grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 700px) {
+  .m7__hero { grid-template-columns: 1fr; }
+  .m7__grid { grid-template-columns: 1fr; }
+}

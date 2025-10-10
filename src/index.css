@@ -1,3 +1,8 @@
+@import './styles/home.css';
+@import './styles/rails.css';
+@import './styles/overrides.css';  /* must be last so it wins */
+
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;

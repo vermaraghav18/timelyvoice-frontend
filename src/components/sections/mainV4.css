@@ -1,0 +1,118 @@
+/* ===========================
+   MainV4 — More Headlines
+   (matches list_v1 look & feel)
+=========================== */
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600;700;800&display=swap');
+
+/* Global root variable to control container width */
+:root {
+  --main-col-width: 650px; /* adjust 650–780px to match your main column width */
+  
+}
+
+.section-full {
+  grid-column: 1 / -1;
+}
+
+/* Remove background (transparent container) */
+.mainv4 {
+  width: 96%;
+  background: transparent; /* 🔧 no background */
+  color: #111;
+}
+
+.mainv4__inner {
+    
+  max-width: var(--main-col-width); /* uses global width variable */
+  margin: 0 auto;
+  padding: 14px 0 8px;
+}
+
+/* Section header (like list_v1) */
+.mainv4__heading {
+  margin: 0 0 12px;
+  font-weight: 800;
+  font-size: 19.5px;
+  text-transform: uppercase;
+  color: #1b3d8f;
+  border-bottom: 0px solid #1b3d8f;
+  display: inline-block;
+  line-height: 1.1;
+}
+
+/* 2-column grid with subtle gutter */
+.mainv4__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 28px;
+  row-gap: 14px;
+}
+
+/* Row (thumbnail + stacked text + dotted divider) */
+.mainv4__row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  padding: 10px 0;
+  border-bottom: 1px dotted #cfd5da;
+}
+
+/* Thumbnail — 16:9 small preview */
+.mainv4__thumb {
+  width: 120px;
+  aspect-ratio: 16 / 9;
+  border-radius: 1px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #eef1f4;
+}
+.mainv4__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.mainv4__thumb--ph {
+  background: #eceff2;
+}
+
+/* Text block */
+.mainv4__body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Headline */
+.mainv4__title {
+  margin: 0 0 4px;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Byline */
+.mainv4__by {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0b5bb5;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .mainv4__grid {
+    grid-template-columns: 1fr;
+  }
+  .mainv4__row {
+    padding: 12px 0;
+  }
+  .mainv4__thumb {
+    width: 112px;
+  }
+}

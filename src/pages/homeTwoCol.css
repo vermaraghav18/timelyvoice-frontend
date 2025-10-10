@@ -1,0 +1,17 @@
+.home-two-col {
+  display: grid;
+  grid-template-columns: 1fr 360px;   /* left + right */
+  gap: 20px;
+  align-items: start;
+}
+
+.home-two-col__left {
+  min-width: 0;   /* prevent overflow in grids */
+}
+
+/* Mobile: stack */
+@media (max-width: 1024px) {
+  .home-two-col {
+    grid-template-columns: 1fr;
+  }
+}

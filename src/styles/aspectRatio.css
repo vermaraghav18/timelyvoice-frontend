@@ -1,0 +1,18 @@
+/* Simple aspect-ratio utility for images/cards */
+.ar-16x9 {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%; /* 16:9 */
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.ar-16x9 > img,
+.ar-16x9 > a > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}

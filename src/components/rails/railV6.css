@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:wght@400;700;800&display=swap');
+
+.railv6{
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 4px;
+  padding: 12px;
+  font-family: 'Newsreader', serif;
+  color: #0f1a23;
+}
+
+/* Centered compact heading with thin line */
+.railv6__head{
+  display: grid;
+  place-items: center;
+  border-bottom: 1px solid rgba(0,0,0,.15);
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+.railv6__title{
+  font-weight: 800;
+  font-size: 14px;
+  color: #0b4da8;   /* blue-ish like screenshot */
+  letter-spacing: .3px;
+}
+
+/* Lead area */
+.railv6__lead{
+  border-bottom: 1px solid rgba(0,0,0,.12);   /* thin divider */
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+.railv6__leadTitle{
+  margin: 0 0 8px;
+  font-size: 15px;
+  line-height: 1.25;
+  font-weight: 800;
+}
+.railv6__leadTitle a{
+  color: inherit;
+  text-decoration: none;
+}
+.railv6__leadTitle a:hover{ text-decoration: underline; }
+.railv6__leadMedia{
+  display: block;
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #eef1f4;
+}
+.railv6__leadMedia img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.railv6__ph{ width: 100%; height: 100%; background: #e9edf2; }
+
+/* Rows (title left, thumb right) with separators */
+.railv6__rows{ display: grid; }
+
+.railv6__row{
+  display: grid;
+  grid-template-columns: 1fr 90px; /* text | thumb */
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0,0,0,.10);
+  color: inherit;
+  text-decoration: none;
+}
+.railv6__row:last-child{ border-bottom: none; }
+
+.railv6__rowTitle{
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+.railv6__row:hover .railv6__rowTitle{ text-decoration: underline; }
+
+.railv6__rowThumb{
+  width: 90px;
+  aspect-ratio: 4/3;   /* small right thumb feel */
+  border-radius: 6px;
+  overflow: hidden;
+  background: #eef1f4;
+  justify-self: end;
+}
+.railv6__rowThumb img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

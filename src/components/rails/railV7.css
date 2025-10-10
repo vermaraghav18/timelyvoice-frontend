@@ -1,0 +1,22 @@
+/* frontend/src/components/rails/railv7.css */
+
+.railv7 {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0 0 18px 0;
+}
+
+.railv7__media {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+
+.railv7__media img {
+  width: 100%;
+  height: auto;          /* 🔥 allow tall images to show full */
+  display: block;
+  object-fit: contain;   /* ✅ show full image, no cropping */
+}

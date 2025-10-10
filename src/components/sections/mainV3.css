@@ -1,0 +1,99 @@
+/* =========================================================
+   MainV3 — centered hero (kicker, H1, byline, dek, big image)
+========================================================= */
+
+/* Tune once to match left column width exactly */
+:root { --main-col-width: 650px; }  /* try 720–780px to align with other sections */
+
+.section-full { grid-column: 1 / -1; }
+
+/* Outer: just spans grid */
+.m3 { width: 100%; }
+
+/* Inner: width cap + vertical rhythm */
+.m3__inner {
+  max-width: var(--main-col-width);
+  margin-left: 0;           /* left-align to main column */
+  margin-right: auto;
+  padding: 18px 0 24px; 
+  border-bottom: 1px solid #cfd5da;   /* matches the top rule color */
+  padding-bottom: 28px;      /* top / sides / bottom */
+}
+
+/* Thin rule above kicker (like ref) */
+.m3__rule {
+  height: 1px;
+  background: #cfd5da;
+  margin-bottom: 10px;
+}
+
+/* Centered typography block */
+.m3__kicker {
+  text-align: center;
+  font-size: 15px;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: #0077ff;
+  margin-bottom: 8px;
+}
+
+.m3__headline {
+  text-align: center;
+  font-weight: 800;
+  line-height: 1.1;
+  font-size: clamp(26px, 4vw, 44px);
+  margin: 0 0 10px 0;
+}
+.m3__headline a { color: #00F93E; text-decoration: none; }
+.m3__headline a:hover { text-decoration: underline; }
+
+.m3__byline {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  color: #ffffff;
+  margin: 6px 0 10px;
+}
+.m3__author { color: #007c42; margin-left: 10px; }
+
+.m3__dek {
+  text-align: center;
+  margin: 0 auto 14px;
+  color: #ffffff;
+  font-size: 20px;
+  line-height: 1.45;
+  max-width: 56ch;
+}
+
+/* Image: full inner width, centered below text */
+.m3__media {
+  display: block;
+  width: 100%;
+  border-radius: 2px;
+  overflow: hidden;
+  background: #eceff2;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.08);
+  aspect-ratio: 3 / 2;      /* close to the reference’s proportion */
+  min-height: 260px;        /* fallback */
+}
+.m3__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Spacing below so it never sticks to the next section */
+.m3 { margin-bottom: 32px; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .m3__inner { padding: 16px 0 22px; }
+  .m3__dek { max-width: 60ch; }
+}
+@media (max-width: 640px) {
+  .m3__headline { font-size: clamp(22px, 6vw, 30px); }
+  .m3__media { min-height: 200px; }
+}

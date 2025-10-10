@@ -1,0 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Changa+One&display=swap');
+
+.railv4 {
+  background:#000b3a;
+  border: 0px solid #e6e6e6;
+  border-radius: 4px;
+  margin-top: 20px;
+  padding: 14px;
+  font-family: 'Newsreader', serif;
+}
+
+.railv4__title {
+  margin: 0 0 10px;
+  font-family: 'Changa One', sans-serif;
+  font-weight: 500;
+  font-size: 32px;
+  color: #ffffff;
+  text-align: center;
+  letter-spacing: .2px;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(0,0,0,.22);
+  padding-bottom: 8px;
+}
+
+.railv4__list {
+  display: grid;
+}
+
+.railv4__card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  padding: 12px 2px;
+  border-bottom: 1px solid rgba(0,0,0,.22);
+}
+.railv4__card:last-child { border-bottom: none; }
+
+.railv4__thumb {
+  position: relative;       /* ✅ enables overlay positioning */
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #eef1f4;
+  margin-bottom: 8px;
+}
+.railv4__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Rank badge */
+.railv4__rank {
+  position: absolute;
+  top: 6.5rem;
+  left: 8px;                 /* default: top-left */
+  background: #d62323;       /* red square */
+  color: #fff;               /* white number */
+  font-weight: 500;          /* bold */
+  font-size: 24px;
+  line-height: 1;
+  padding: 6px 9px;
+  border-radius: 4px;
+  box-shadow: 0 1px 0 rgba(0,0,0,.2);
+  font-family: 'Changa One', sans-serif;
+}
+
+/* If you prefer top-right corner */
+.railv4__rank--right {
+  left: auto;
+  right: 8px;
+}
+
+.railv4__text {
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #ffffff;
+}
+
+.railv4__more {
+  margin-top: 10px;
+  text-align: right;
+  font-weight: 700;
+}

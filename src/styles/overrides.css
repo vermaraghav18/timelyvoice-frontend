@@ -1,0 +1,26 @@
+/* 1) Absolutely remove any column gap (even if a later 'gap:' shorthand is set) */
+.home-grid{
+  gap: 0 !important;
+  column-gap: 0 !important;
+    row-gap: 0 !important;  /
+}
+
+/* 2) Remove any left gutter applied by the right rail wrappers */
+.home-grid > aside,
+.home-grid > aside.right-rail,
+.home-grid > aside .rail-col,
+.home-grid > aside .rail-wrap,
+.home-grid > aside .rail-scroll{
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+}
+
+/* 3) Make the two columns visually touch: no right edge on the left section box */
+.home-grid > main .sec-wrap,
+.home-grid > main .nh-wrap{
+  border-right: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* 4) Optional: overlap rail by 1px if the left border line still shows */
+.home-grid > aside{ margin-left: -1px; }

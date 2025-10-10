@@ -1,151 +1,274 @@
-// TODO: analytics SDK stub (init later)// frontend/src/lib/analytics.js
+// frontend/src/lib/analytics.js
+// No-code friendly: configure BACKEND_URL only.
+// Excludes bots/admin on server; honors DNT + opt-out cookie.
 
-// --- IDs (visitor + session) ---
-const VISITOR_KEY = 'news_vis_id';
-const SESSION_KEY = 'news_ses_id';
-const SESSION_TOUCH = 'news_ses_last'; // ms timestamp
-const SESSION_TIMEOUT_MIN = 30; // new session after 30 min of inactivity
+const BACKEND_URL = import.meta.env.VITE_API_BASE || 'http://localhost:4000';
 
-function uuid() {
-  return ([1e7]+-1e3+-4e3+-8e3+-1e11)
-    .replace(/[018]/g, c =>
-      (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+// Globals
+let started = false;
+let heartbeatTimer = null;
+let readSeconds = 0;
+let sentReadComplete = false;
+let lastPV = { path: '', ts: 0 }; // de-dupe page_view within a short window
+let scrollListener = null;
+
+// ---------- Opt-out helpers ----------
+function getCookie(name) {
+  try {
+    const m = document.cookie.match(
+      new RegExp(
+        '(?:^|; )' + 
+        name.replace(/([.$?*|{}()[\]\\/+^])/g, '\\$1') + 
+        '=([^;]*)'
+      )
     );
+    return m ? decodeURIComponent(m[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function hasOptOutCookie() {
+  return getCookie('analytics_optout') === '1';
+}
+function browserDNTEnabled() {
+  try {
+    return (navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack) === '1';
+  } catch {
+    return false;
+  }
+}
+function shouldDropClientSide() {
+  // Client-side guard; server also enforces DNT/opt-out
+  return typeof window === 'undefined' || browserDNTEnabled() || hasOptOutCookie();
+}
+
+/**
+ * Public toggle to enable/disable analytics persistently via cookie.
+ * - When enabling opt-out, we also stop the heartbeat immediately.
+ * - When disabling, analytics will start the next time initAnalytics() runs.
+ */
+export function setAnalyticsOptOut(enabled) {
+  const maxAge = 60 * 60 * 24 * 365; // 1 year
+  if (enabled) {
+    document.cookie = `analytics_optout=1; path=/; max-age=${maxAge}; SameSite=Lax`;
+    stopHeartbeat();
+  } else {
+    document.cookie = `analytics_optout=; path=/; max-age=0; SameSite=Lax`;
+  }
+}
+
+/** Useful for UI checkboxes */
+export function isAnalyticsOptedOut() {
+  return hasOptOutCookie();
+}
+
+// ---------- Safe storage ----------
+function safeGet(item, key) {
+  try { return item.getItem(key); } catch { return null; }
+}
+function safeSet(item, key, val) {
+  try { item.setItem(key, val); } catch { /* ignore */ }
+}
+
+// ---------- Core posting ----------
+function post(path, body) {
+  try {
+    if (shouldDropClientSide()) return Promise.resolve();
+    return fetch(`${BACKEND_URL}/analytics${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // 'X-Geo-Preview-Country': 'IN',
+      },
+      body: JSON.stringify(body),
+      credentials: 'include',
+    }).catch(() => {});
+  } catch (_) {}
+}
+
+function nowISO() {
+  return new Date().toISOString();
 }
 
 function getVisitorId() {
-  let id = localStorage.getItem(VISITOR_KEY);
-  if (!id) {
-    id = uuid();
-    localStorage.setItem(VISITOR_KEY, id);
+  const key = 'news_vid';
+  let v = safeGet(localStorage, key);
+  if (!v) {
+    v = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Math.random()).slice(2);
+    safeSet(localStorage, key, v);
   }
-  return id;
+  return v;
 }
 
 function getSessionId() {
-  const now = Date.now();
-  const last = parseInt(localStorage.getItem(SESSION_TOUCH) || '0', 10);
-  let ses = localStorage.getItem(SESSION_KEY);
-
-  const inactiveMs = now - (isNaN(last) ? 0 : last);
-  const timedOut = inactiveMs > SESSION_TIMEOUT_MIN * 60 * 1000;
-
-  if (!ses || timedOut) {
-    ses = uuid();
-    localStorage.setItem(SESSION_KEY, ses);
+  const key = 'news_sid';
+  let s = safeGet(sessionStorage, key);
+  if (!s) {
+    s = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Math.random()).slice(2);
+    safeSet(sessionStorage, key, s);
   }
-  localStorage.setItem(SESSION_TOUCH, String(now));
-  return ses;
+  return s;
 }
 
-// --- Transport ---
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000';
-
-function sendEvents(events) {
+function getUTM() {
   try {
-    const payload = JSON.stringify({ events });
-
-    // Use a CORS-safelisted content type to avoid preflight.
-    // Server still parses JSON from the string body.
-    const body = payload;
-    const contentType = 'text/plain;charset=UTF-8';
-
-    const url = `${API_BASE}/analytics/collect`;
-
-    // Prefer sendBeacon so it doesn't block navigation and avoids preflight.
-    if (navigator.sendBeacon) {
-      const blob = new Blob([body], { type: contentType });
-      navigator.sendBeacon(url, blob);
-      return;
-    }
-
-    // Fallback: fetch without credentials and with safelisted content-type
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': contentType },
-      body,
-      // keepalive lets this complete during page unloads
-      keepalive: true,
-      // Explicitly avoid sending cookies/auth so the browser doesn't
-      // treat this as a "credentialed" CORS request.
-      credentials: 'omit',
-      mode: 'cors',
-      cache: 'no-store',
-    }).catch(() => {});
-  } catch (_e) {
-    // ignore
+    const p = new URLSearchParams(location.search);
+    const utm = {};
+    ['utm_source','utm_medium','utm_campaign','utm_term','utm_content'].forEach(k => {
+      const v = p.get(k);
+      if (v) utm[k] = v;
+    });
+    return Object.keys(utm).length ? utm : null;
+  } catch {
+    return null;
   }
 }
 
-// --- Helpers to capture page info ---
-function currentPath() {
-  return window.location.pathname + window.location.search + window.location.hash;
-}
+export function track(type, data = {}) {
+  if (shouldDropClientSide()) return Promise.resolve();
 
-function baseEvent(fields = {}) {
-  return {
-    ts: Date.now(),
+  const payload = {
+    type,
+    ts: nowISO(),
     visitorId: getVisitorId(),
     sessionId: getSessionId(),
-    path: currentPath(),
-    title: document.title || '',
-    ...fields,
+    path: location.pathname + location.search,
+    referrer: document.referrer || null,
+    utm: getUTM(),
+    ...data,
   };
+  return post('/collect', payload);
 }
 
-// --- Public API ---
-export function track(type, data = {}) {
-  sendEvents([ baseEvent({ type, ...data }) ]);
-}
+// ---------- Heartbeat / Scroll ----------
+function startHeartbeat() {
+  stopHeartbeat();
+  if (shouldDropClientSide()) return; // don’t start if opted out
 
-export function initAnalytics() {
-  // Respect Do Not Track
-  const dnt = (navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack);
-  if (String(dnt) === '1') return;
-
-  // First page_view on load
-  track('page_view');
-
-  // Minimal route change tracking:
-  // intercept pushState/replaceState and listen for back/forward
-  const { pushState, replaceState } = history;
-  function onNav() { track('page_view'); }
-
-  history.pushState = function(...args) {
-    const ret = pushState.apply(this, args);
-    onNav();
-    return ret;
-  };
-  history.replaceState = function(...args) {
-    const ret = replaceState.apply(this, args);
-    onNav();
-    return ret;
-  };
-  window.addEventListener('popstate', onNav);
-
-  // Basic scroll depth (25/50/75/90 once per page)
-  let sent = new Set();
-  function onScroll() {
-    const h = document.documentElement;
-    const scrolled = (h.scrollTop || document.body.scrollTop);
-    const height = (h.scrollHeight - h.clientHeight) || 1;
-    const pct = Math.min(100, Math.round((scrolled / height) * 100));
-    [25,50,75,90].forEach(mark => {
-      if (pct >= mark && !sent.has(mark)) {
-        sent.add(mark);
-        track('scroll', { scroll: { pct: mark } });
-      }
-    });
-  }
-  window.addEventListener('scroll', onScroll, { passive: true });
-
-  // Heartbeat every 15s while tab is visible
-  setInterval(() => {
-    if (document.visibilityState === 'visible') {
-      track('heartbeat', { read: { secondsVisible: 15 } });
+  heartbeatTimer = setInterval(() => {
+    readSeconds += 15;
+    track('heartbeat', { read: { seconds: readSeconds } });
+    // Auto mark read_complete at 60s (tweak later)
+    if (!sentReadComplete && readSeconds >= 60) {
+      sentReadComplete = true;
+      track('read_complete', { read: { seconds: readSeconds, reason: 'time' } });
     }
   }, 15000);
+}
 
-  // expose manual hook if needed
-  window.newsTrack = track;
+function stopHeartbeat() {
+  if (heartbeatTimer) clearInterval(heartbeatTimer);
+  heartbeatTimer = null;
+}
+
+function setupScroll() {
+  if (shouldDropClientSide()) return;
+
+  const thresholds = [25, 50, 75, 90];
+  const sent = new Set();
+
+  const onScroll = () => {
+    const doc = document.documentElement;
+    const body = document.body;
+    const scrollTop = window.scrollY || doc.scrollTop || body.scrollTop || 0;
+    const height = Math.max(
+      body.scrollHeight, body.offsetHeight,
+      doc.clientHeight, doc.scrollHeight, doc.offsetHeight
+    );
+    const win = window.innerHeight || doc.clientHeight || 0;
+    const pct = Math.min(100, Math.round(((scrollTop + win) / height) * 100));
+
+    thresholds.forEach(t => {
+      if (!sent.has(t) && pct >= t && !shouldDropClientSide()) {
+        sent.add(t);
+        track('scroll', { scroll: { p: t } });
+      }
+    });
+
+    // Also mark read_complete based on depth (70%+)
+    if (!sentReadComplete && pct >= 70) {
+      sentReadComplete = true;
+      track('read_complete', { read: { seconds: readSeconds, reason: 'depth' } });
+    }
+  };
+
+  // keep a reference to unbind later if needed
+  scrollListener = onScroll;
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll(); // check once
+}
+
+function teardownScroll() {
+  if (scrollListener) {
+    window.removeEventListener('scroll', scrollListener, { passive: true });
+  }
+  scrollListener = null;
+}
+
+// ---------- SPA route change integration ----------
+
+/**
+ * Call this from React Router (App.jsx) on route changes.
+ * De-dupes page_view events and (re)starts heartbeat for the new page.
+ */
+export function notifyRouteChange(path = location.pathname, search = location.search) {
+  if (shouldDropClientSide()) {
+    stopHeartbeat();
+    return;
+  }
+  const now = Date.now();
+  const full = `${path}${search || ''}`;
+  // de-dupe page_view if same path within 400ms (router updates can trigger twice)
+  if (lastPV.path === full && now - lastPV.ts < 400) return;
+
+  lastPV = { path: full, ts: now };
+  track('page_view', { path, q: search || '' });
+
+  // reset read trackers
+  sentReadComplete = false;
+  readSeconds = 0;
+  startHeartbeat();
+}
+
+// ---------- Init / Teardown ----------
+export function initAnalytics() {
+  if (started || typeof window === 'undefined') return;
+  started = true;
+
+  // Respect browser DNT & opt-out cookie early (server also enforces)
+  if (shouldDropClientSide()) return;
+
+  // Initial page view (current URL)
+  notifyRouteChange();
+
+  // Timers & listeners
+  setupScroll();
+
+  // As a safety net for non-Router navigations (rare in our app),
+  // we also hook into history changes. If you use notifyRouteChange
+  // in App.jsx (recommended), this will just be a backup.
+  const pushState = history.pushState;
+  history.pushState = function (...args) {
+    const ret = pushState.apply(this, args);
+    if (!shouldDropClientSide()) {
+      notifyRouteChange();
+    } else {
+      stopHeartbeat();
+    }
+    return ret;
+  };
+  window.addEventListener('popstate', () => {
+    if (!shouldDropClientSide()) {
+      notifyRouteChange();
+    } else {
+      stopHeartbeat();
+    }
+  });
+}
+
+// Optional manual stop (rarely needed)
+export function teardownAnalytics() {
+  stopHeartbeat();
+  teardownScroll();
 }

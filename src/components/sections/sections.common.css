@@ -1,0 +1,200 @@
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600;700;800&display=swap');
+
+.sec-wrap {
+  border: 1px solid #eee;
+  border-radius: 1px;
+  padding: 16px;
+  background: #fff;
+  margin: 0;
+  font-family: 'Newsreader', serif;
+}
+
+/* header */
+.sec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px dotted #bbb;
+}
+
+.sec-title {
+  margin: 0;
+  font-size: 35px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+.sec-more {
+  color: #f97316;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+/* cards */
+.card {
+  border: 1px solid #eee;
+  border-radius: 1px;
+  background: #fff;
+}
+
+.thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #e5e7eb;
+  border-radius: 1px;
+  overflow: hidden;
+  display: block;
+}
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.thumb-ph { width: 100%; height: 100%; background: #e5e7eb; }
+
+/* 🟦 Tag overlay (bottom-left) */
+/* Tag overlay on image */
+.tag-overlay {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: #1B4965;         /* 🔵 change this color (dark navy blue) */
+  color: #fff;
+  font-weight: 800;
+  font-size: 11px;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 1px;          /* 🟢 reduced to 1px as requested */
+  line-height: 1;
+  letter-spacing: 0.3px;
+}
+
+
+/* Title & meta */
+.grid-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 12px;
+  margin-top: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.meta {
+  color: #666;
+  font-size: 11px;
+}
+
+.carousel-wrap {
+  position: relative;
+  padding-bottom: 10px;
+}
+.carousel-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+}
+.carousel-row .grid-card { scroll-snap-align: start; }
+
+.carousel-row::-webkit-scrollbar { height: 6px; }
+.carousel-row::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 999px;
+}
+
+.carousel-row::-webkit-scrollbar-track { background: transparent; }
+
+.sec-wrap.sec-compact {
+  max-width: 620px;
+  margin-left: 0;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 900px) {
+  .sec-wrap.sec-compact {
+    max-width: 100%;
+    margin-left: 0;
+  }
+}
+
+/* =========================================================
+   🎯 HeroV1 — add thin top & bottom borders to section
+========================================================= */
+.hero-v1.sec-wrap {
+  border: 0;                                /* remove default box border */
+  border-top: 1px solid #cfd5da;
+  border-bottom: 1px solid #cfd5da;
+  border-radius: 0;
+  background: #fff;
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+/* ================================
+   FeatureV1 — Dark blue container
+   ================================ */
+
+/* Section wrapper (the outer white box) */
+.feature-v1.sec-wrap {
+  background: #1B4965;              /* dark blue */
+  color: #ffffff;                   /* default text color inside */
+  border-color: #163955;            /* darker blue border */
+}
+
+/* Section header */
+.feature-v1 .sec-head {
+  border-bottom: 1px  rgba(255, 255, 255, 0.35);
+}
+.feature-v1 .sec-title {
+  color: #ffffff;
+}
+.feature-v1 .sec-more {
+  color: #FFC947;                   /* accent link; tweak if you prefer white */
+}
+
+/* The feature card itself */
+.feature-v1 .feature-v1__card {
+  background: #1B4965;              /* match section */
+  border: 1px solid #163955;
+  border-radius: 1px;
+}
+
+/* Text block inside the card */
+.feature-v1 .feature-v1__text h3 {
+  color: #ffffff !important;
+}
+.feature-v1 .feature-v1__text p {
+  color: #eaf4f8 !important;        /* soft white for body */
+}
+.feature-v1 .feature-v1__text small {
+  color: #d7e3ea !important;        /* lighter meta text */
+}
+
+/* Optional: give the media area a subtle frame so it sits on dark bg nicely */
+.feature-v1 .feature-v1__media {
+  background: rgba(255,255,255,0.06);
+  border-radius: 6px;
+}
+
+/* FeatureV1: remove inner card border */
+.feature-v1 .feature-v1__card,
+.feature-v1 .card,
+.feature-v1 .grid-card {
+  border: 0 !important;
+  box-shadow: none !important;   /* in case any shadow looks like a border */
+}
+
+/* keep focus styles accessible but without border outline */
+.feature-v1 .feature-v1__card:focus,
+.feature-v1 .feature-v1__card:focus-visible {
+  outline: 2px solid rgba(255,255,255,0.35);
+  outline-offset: 2px;
+}

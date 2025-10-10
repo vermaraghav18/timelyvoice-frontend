@@ -1,0 +1,91 @@
+/* --- Article Prose (readable defaults) --- */
+.prose {
+  color: #212121;
+  font-size: 16px;
+  line-height: 1.8;
+  letter-spacing: 0.2px;
+  max-width: 70ch;
+}
+
+@media (min-width: 900px) {
+  .prose { font-size: 17px; }
+}
+
+/* Headings */
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  color: #212121;
+  font-weight: 800;
+  line-height: 1.25;
+  margin: 1.2em 0 0.4em;
+}
+.prose h1 { font-size: 1.9rem; }
+.prose h2 { font-size: 1.5rem; }
+.prose h3 { font-size: 1.25rem; }
+.prose h4 { font-size: 1.1rem; }
+
+/* Paragraphs & spacing */
+.prose p { margin: 0.9em 0; }
+
+/* Links */
+.prose a {
+  color: #1B4965;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose a:focus-visible {
+  outline: 2px solid #1D9A8E;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Lists */
+.prose ul, .prose ol { margin: 0.9em 0; padding-left: 1.4em; }
+.prose li { margin: 0.3em 0; }
+
+/* Blockquote */
+.prose blockquote {
+  margin: 1.2em 0;
+  padding: 0.8em 1em;
+  background: #F4F7F6;
+  border-left: 4px solid #1D9A8E;
+  border-radius: 8px;
+  color: #4A4A4A;
+}
+
+/* Code */
+.prose code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: #f6f8fa;
+  border: 1px solid #e5e7eb;
+  padding: 0.1em 0.35em;
+  border-radius: 6px;
+  font-size: 0.95em;
+}
+.prose pre {
+  background: #0b1220;
+  color: #e6edf3;
+  padding: 1em;
+  border-radius: 12px;
+  overflow: auto;
+  border: 1px solid #101828;
+  margin: 1.1em 0;
+}
+
+/* Images inside body text */
+.prose img {
+  max-width: 100%;
+  border-radius: 12px;
+}
+
+/* Horizontal rule */
+.prose hr {
+  border: 0;
+  height: 1px;
+  background: #eee;
+  margin: 1.4em 0;
+}
+
+/* Tables */
+.prose table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+.prose th, .prose td { border: 1px solid #e5e7eb; padding: 8px; }
+.prose th { background: #f9fafb; text-align: left; }

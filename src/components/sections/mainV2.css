@@ -1,0 +1,138 @@
+/* =========================================================
+   MainV2 — final, width-capped & left-aligned
+========================================================= */
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:wght@400;600;700;800&display=swap');
+/* Adjust this once to match your main column exactly */
+:root {
+  --main-col-width: 650px;  /* try 720–780px to match your other sections */
+}
+
+.section-full { grid-column: 1 / -1; }
+
+/* Outer wrapper spans the grid; no background here */
+.mainv2 {
+  width: 100%;
+}
+
+/* INNER box: carries background + width cap + padding */
+.mainv2__inner {
+  max-width: var(--main-col-width);
+  /* left-align to the main column instead of centering */
+  margin-left: 0;
+  margin-right: auto;
+
+  padding: 24px 22px;
+  background: #002a61de;   /* mauve/purple */
+  color: #f0e9ee;
+  border-radius: 1px;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.18), 0 0 0 2px rgba(0,0,0,0.04) inset;
+  box-sizing: border-box;
+  overflow: hidden;       /* clip any stray overflow */
+}
+
+/* Grid layout */
+.mainv2__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+}
+
+.mainv2 {
+  padding-bottom: 16px;   /* inner breathing room */
+  margin-bottom: 25px;    /* space before next section */
+}
+
+/* Prevent intrinsic overflow inside columns */
+.mainv2__text,
+.mainv2__media { min-width: 0; }
+
+/* Badge */
+.mainv2__badge {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: #ff006f;
+  margin-bottom: 12px;
+}
+
+/* Headline (your compact setting) */
+.mainv2__headline {
+  margin: 0 0 10px 0;
+  line-height: 1.06;
+  font-weight: 600;
+  font-size: clamp(13px, 2.2vw, 22px);
+  font-family: 'Newsreader', serif;
+}
+.mainv2__headline a {
+  color: #ffffff;
+  text-decoration: none;
+}
+.mainv2__headline a:hover { text-decoration: underline; }
+
+/* Byline */
+.mainv2__byline {
+  margin: 6px 0 12px 0;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #e2c8d3;
+}
+
+/* Dek (unchanged size) */
+.mainv2__dek {
+  margin: 0;
+  color: #e9dfe5;
+  line-height: 1.35;
+  font-size: 16px;
+  max-width: 48ch;
+}
+
+/* Media (never wider than its column) */
+.mainv2__media {
+  width: 100%;
+  border-radius: 1px;
+  overflow: hidden;
+  background: #3c3339;
+  aspect-ratio: 16 / 9;
+  min-height: 200px; /* shorter per your compact layout */
+  box-shadow: 0 2px 0 rgba(0,0,0,0.25);
+}
+.mainv2__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.mainv2__imgPh {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #473d44, #544750, #473d44);
+}
+
+/* "More" link row */
+.mainv2__moreRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+.mainv2__more {
+  color: #e8ddea;
+  font-weight: 700;
+  text-decoration: none;
+}
+.mainv2__more:hover { text-decoration: underline; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .mainv2__inner { padding: 22px; }
+  .mainv2__grid { grid-template-columns: 1fr; gap: 18px; }
+  .mainv2__dek { max-width: none; }
+}
+@media (max-width: 640px) {
+  .mainv2__inner { padding: 18px; }
+  .mainv2__headline { font-size: clamp(18px, 6vw, 22px); }
+  .mainv2__media { min-height: 180px; }
+}
