@@ -22,16 +22,24 @@ function ArticleImage({ src, alt, className }) {
   return <img className={`topv2-img ${className || ""}`} src={src} alt={alt || ""} loading="lazy" />;
 }
 
+/** Build a correct article URL for this app */
+function articleHref(slug) {
+  if (!slug) return "#";
+  if (/^https?:\/\//i.test(slug)) return slug;             // external
+  if (slug.startsWith("/article/")) return slug;            // already correct
+  if (slug.startsWith("/")) return `/article${slug}`;       // leading slash but no /article
+  return `/article/${slug}`;                                // plain slug
+}
+
 export default function TopV2({ section }) {
   const items = section?.items || {};
   const hero = Array.isArray(items.hero) ? items.hero[0] : null;
 
-  // Bottom row uses belowGrid (fallback to sideStack)
   const bottomCards = Array.isArray(items.belowGrid) && items.belowGrid.length
     ? items.belowGrid
     : (Array.isArray(items.sideStack) ? items.sideStack : []);
 
-  const heroHref = hero?.slug ? `/${hero.slug}` : "#";
+  const heroHref = articleHref(hero?.slug);
   const heroTime = timeAgo(hero?.publishedAt);
 
   return (
@@ -61,7 +69,7 @@ export default function TopV2({ section }) {
       {bottomCards?.length ? (
         <div className="topv2-cards">
           {bottomCards.map((a) => {
-            const href = a?.slug ? `/${a.slug}` : "#";
+            const href = articleHref(a?.slug);
             const ta = timeAgo(a?.publishedAt);
             return (
               <article className="topv2-card" key={a.id || a._id || a.slug}>
