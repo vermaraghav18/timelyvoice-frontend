@@ -10,7 +10,6 @@ const LINKS = [
   { label: 'Entertainment', slug: 'Entertainment' },
   { label: 'General', slug: 'General' },
   { label: 'Health', slug: 'Health' },
-  { label: 'Science', slug: 'Science' },
   { label: 'Sports', slug: 'Sports' },
   { label: 'Tech', slug: 'Tech' },
 ];
