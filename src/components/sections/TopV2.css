@@ -1,23 +1,170 @@
-/* frontend/src/components/sections/TopV2.css */
-.topv2 { display: grid; gap: 16px; }
-.topv2-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
-.topv2-hero-title { font-weight: 700; font-size: 1.4rem; display: block; margin-bottom: 8px; }
-.topv2-hero-summary { color: #4A4A4A; margin-top: 8px; }
+/* Container */
+.topv2 {
+  margin: 16px 0 24px;
+}
 
-.topv2-side { display: grid; gap: 12px; align-content: start; }
-.topv2-side-item { display: grid; grid-template-columns: 84px 1fr; gap: 10px; align-items: center; }
-.topv2-side-thumb img { width: 100%; height: auto; border-radius: 6px; }
-.topv2-side-title { font-weight: 600; line-height: 1.2; }
+.topv2-title {
+  font-weight: 800;
+  font-size: clamp(18px, 2.4vw, 22px);
+  line-height: 1.25;
+  margin: 0 0 12px;
+}
 
-.topv2-below { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.topv2-card-title { font-weight: 600; margin-top: 6px; }
+/* ---------- Hero ---------- */
+.topv2-hero {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 16px;
+}
 
-.topv2-trending { margin-top: 8px; }
-.topv2-trending-title { font-weight: 700; margin-bottom: 8px; }
-.topv2-trending-list { display: grid; gap: 8px; }
-.topv2-trending-item { display: block; }
+.topv2-hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 
-@media (max-width: 960px) {
-  .topv2-row { grid-template-columns: 1fr; }
-  .topv2-below { grid-template-columns: repeat(2, 1fr); }
+.topv2-updated {
+  font-size: 11px;
+  letter-spacing: .06em;
+  font-weight: 700;
+  color: rgba(255,255,255,0.65);
+}
+
+.topv2-hero-title {
+  font-weight: 800;
+  text-decoration: none;
+  color: inherit;
+  line-height: 1.1;
+  /* Large but responsive */
+  font-size: clamp(22px, 3.4vw, 40px);
+}
+
+.topv2-hero-title:hover {
+  text-decoration: underline;
+}
+
+.topv2-hero-meta {
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+}
+
+.topv2-hero-meta .brand {
+  color: #63a0ff; /* accent */
+}
+
+.topv2-hero-summary {
+  margin: 6px 0 0;
+  color: rgba(255,255,255,0.82);
+  line-height: 1.45;
+  font-size: clamp(14px, 1.4vw, 16px);
+}
+
+.topv2-hero-media {
+  display: block;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.topv2-img {
+  width: 100%;
+  height: 100%;
+  max-height: 420px;
+  object-fit: cover;
+  display: block;
+  background: #111;
+}
+
+.topv2-img.placeholder {
+  min-height: 260px;
+  background: linear-gradient(120deg, #2a2a2a, #1c1c1c);
+}
+
+/* ---------- Bottom cards row ---------- */
+.topv2-cards {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.topv2-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.topv2-card-media {
+  display: block;
+  position: relative;
+  overflow: hidden;
+}
+
+.topv2-card-media .topv2-img {
+  height: 140px;
+  max-height: 140px;
+}
+
+.topv2-chip {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(0,0,0,0.75);
+  color: #fff;
+  border-radius: 999px;
+  padding: 4px 8px;
+  pointer-events: none;
+}
+
+.topv2-card-title {
+  display: block;
+  color: #fff;
+  text-decoration: none;
+  padding: 10px 12px 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  font-size: 14px;
+}
+
+.topv2-card-title:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1100px) {
+  .topv2-cards {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .topv2-hero {
+    grid-template-columns: 1fr;
+  }
+  .topv2-img {
+    max-height: 360px;
+  }
+  .topv2-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 620px) {
+  .topv2-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .topv2-card-media .topv2-img {
+    height: 120px;
+    max-height: 120px;
+  }
 }
