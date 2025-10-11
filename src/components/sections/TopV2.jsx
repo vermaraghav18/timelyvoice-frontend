@@ -23,11 +23,10 @@ function ArticleImage({ src, alt, className }) {
 }
 
 export default function TopV2({ section }) {
-  // Backend sends the composite payload in section.items
   const items = section?.items || {};
   const hero = Array.isArray(items.hero) ? items.hero[0] : null;
 
-  // Use belowGrid for the bottom cards (fallback to sideStack)
+  // Bottom row uses belowGrid (fallback to sideStack)
   const bottomCards = Array.isArray(items.belowGrid) && items.belowGrid.length
     ? items.belowGrid
     : (Array.isArray(items.sideStack) ? items.sideStack : []);
@@ -37,34 +36,28 @@ export default function TopV2({ section }) {
 
   return (
     <section className="topv2">
-      {/* Optional section title */}
       {section?.title ? <h2 className="topv2-title">{section.title}</h2> : null}
 
-      {/* ===== Hero row ===== */}
       {hero ? (
         <div className="topv2-hero">
-          {/* Left: text block */}
+          {/* Left: text */}
           <div className="topv2-hero-text">
-            {heroTime ? <div className="topv2-updated">UPDATED {heroTime.toUpperCase()}</div> : null}
+            {heroTime ? <div className="topv2-updated">{`UPDATED ${heroTime.toUpperCase()}`}</div> : null}
             <Link to={heroHref} className="topv2-hero-title">
               {hero.title || ""}
             </Link>
-            {hero?.author ? (
-              <div className="topv2-hero-meta">
-                <span className="brand">The Timely Voice</span>
-              </div>
-            ) : null}
+            <div className="topv2-hero-meta">The Timely Voice</div>
             {hero?.summary ? <p className="topv2-hero-summary">{hero.summary}</p> : null}
           </div>
 
-          {/* Right: hero image */}
+          {/* Right: image */}
           <Link to={heroHref} className="topv2-hero-media">
             <ArticleImage src={hero?.imageUrl} alt={hero?.imageAlt || hero?.title} />
           </Link>
         </div>
       ) : null}
 
-      {/* ===== Bottom cards ===== */}
+      {/* Bottom cards */}
       {bottomCards?.length ? (
         <div className="topv2-cards">
           {bottomCards.map((a) => {
