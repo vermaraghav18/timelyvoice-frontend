@@ -5,7 +5,7 @@ import { api, removeManagedHeadTags, upsertTag } from '../../App.jsx';
 import SiteNav from '../../components/SiteNav.jsx';
 import SiteFooter from '../../components/SiteFooter.jsx';
 
-// reuse homepage rails (only for page-scoped head_* blocks; no sidebars)
+// Sections renderer (used for head_* and rail_* templates)
 import SectionRenderer from '../../components/sections/SectionRenderer.jsx';
 import '../../styles/rails.css';
 
@@ -39,20 +39,31 @@ const toSlug = (s = '') =>
 const normPath = (p = '') =>
   String(p).trim().replace(/\/+$/, '') || '/'; // remove trailing slash (except root)
 
-/* ---------- layout (single column) ---------- */
-const outerContainer = {
+/* ---------- layout ---------- */
+// Responsive 3-col: Left Rail | Main | Right Rail
+const pageWrap = {
   display: 'flex',
   justifyContent: 'center',
+  paddingTop: 5,
   marginTop: 40,
   marginBottom: 40,
   fontFamily: "'Newsreader', serif",
-  paddingTop: 5,
 };
-const mainWrapper = {
+const gridWrap = {
   width: '100%',
-  maxWidth: 760,          // tighter single-column read
+  maxWidth: 1200,
+  padding: '0 12px',
+  display: 'grid',
+  gridTemplateColumns: '260px 1fr 260px',
+  gap: 16,
+};
+const singleColWrap = {
+  width: '100%',
+  maxWidth: 760,
   padding: '0 12px',
 };
+const railCol = { minWidth: 0 };
+const mainCol = { minWidth: 0 };
 
 const listStyle = { display: 'flex', flexDirection: 'column', gap: 8 };
 
@@ -94,7 +105,6 @@ const leadCardWrap = {
   padding: 12,
   boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
 };
-
 const leadImg = {
   width: '100%',
   height: 240,
@@ -171,7 +181,7 @@ function ArticleRow({ a }) {
   );
 }
 
-/* ---------- Category Page (single-column; no homepage rails) ---------- */
+/* ---------- Category Page ---------- */
 export default function CategoryPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -183,8 +193,13 @@ export default function CategoryPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  // page-scoped sections (for /category/<slug>) — keep only if you want head_* blocks
+  // page-scoped sections (for head_* blocks)
   const [pageSections, setPageSections] = useState([]);
+
+  // category plan (rails + any other sections if you decide later)
+  const [planSections, setPlanSections] = useState([]);
+  const [railsLoading, setRailsLoading] = useState(false);
+  const [railsError, setRailsError] = useState('');
 
   const canonical = useMemo(() => `${window.location.origin}/category/${slug}`, [slug]);
 
@@ -234,7 +249,7 @@ export default function CategoryPage() {
     upsertTag('link', { rel: 'canonical', href: canonical });
   }, [category, canonical]);
 
-  /* fetch sections for THIS page path (head_v1/head_v2 etc.) — optional */
+  /* fetch sections for THIS page path (head_v1/head_v2 etc.) — optional page banners */
   useEffect(() => {
     let cancel = false;
     (async () => {
@@ -242,7 +257,7 @@ export default function CategoryPage() {
         const res = await api.get('/api/sections', { params: { path: pagePath } });
         const items = Array.isArray(res.data) ? res.data : [];
 
-        // Strictly keep sections that belong to THIS path + are enabled
+        // keep sections that belong to THIS path + are enabled
         const filtered = items.filter(
           (s) =>
             s?.enabled !== false &&
@@ -250,7 +265,7 @@ export default function CategoryPage() {
             normPath(s?.target?.value) === pagePath
         );
 
-        // Dedupe by _id and sort by placementIndex (default 0)
+        // Dedupe by _id and sort by placementIndex
         const seen = new Set();
         const deduped = [];
         for (const s of filtered) {
@@ -263,7 +278,7 @@ export default function CategoryPage() {
         deduped.sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
 
         if (!cancel) setPageSections(deduped);
-      } catch (e) {
+      } catch {
         if (!cancel) setPageSections([]);
       }
     })();
@@ -272,55 +287,170 @@ export default function CategoryPage() {
     };
   }, [pagePath]);
 
-  // only page “banner” blocks (e.g., head_v1/head_v2). No homepage rails.
+  // ✅ FETCH CATEGORY-SCOPED PLAN (rails live here)
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      try {
+        setRailsLoading(true);
+        setRailsError('');
+        const res = await api.get('/api/sections/plan', {
+          params: { targetType: 'category', targetValue: slug },
+        });
+        const rows = Array.isArray(res.data) ? res.data : [];
+        if (!cancel) setPlanSections(rows);
+      } catch (e) {
+        if (!cancel) {
+          setRailsError('Failed to load rails');
+          setPlanSections([]);
+        }
+        console.error(e);
+      } finally {
+        if (!cancel) setRailsLoading(false);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [slug]);
+
+  // page “banner” blocks (e.g., head_v1/head_v2). These render above main list.
   const headBlocks = pageSections.filter((s) => s.template?.startsWith('head_'));
+
+  // ✅ rails from plan: respect side + placementIndex
+  const rails = useMemo(() => {
+    return (planSections || [])
+      .filter((s) => s?.template?.startsWith('rail_') && s?.enabled !== false)
+      .sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
+  }, [planSections]);
+
+  const leftRails = rails.filter((s) => (s.side || 'right') === 'left');
+  const rightRails = rails.filter((s) => (s.side || 'right') === 'right');
+
+  const renderRails = (items, firstPullup = 0) =>
+    items.map((sec, i) => (
+      <div
+        key={sec.id || sec._id || sec.slug || `${sec.template}-${i}`}
+        style={{ marginTop: i === 0 ? firstPullup : 12 }}
+      >
+        <SectionRenderer section={sec} />
+      </div>
+    ));
 
   // split first article (lead) and the rest
   const lead = articles?.[0] || null;
   const rest = Array.isArray(articles) && articles.length > 1 ? articles.slice(1) : [];
 
+  // Responsive decision: if no rails at all, fall back to your original single-column layout
+  const hasAnyRails = leftRails.length > 0 || rightRails.length > 0;
+
+  // Slight negative margin to pull first rail up if its template has top padding
+  const LEFT_FIRST_PULLUP = -4;
+  const RIGHT_FIRST_PULLUP = -4;
+
   return (
     <>
       <SiteNav />
-      <div style={outerContainer}>
-        <div style={mainWrapper}>
-          {/* MAIN COLUMN (single) */}
-          {loading && <p>Loading…</p>}
 
-          {!loading && notFound && (
-            <>
-              <h2>Category not found</h2>
-              <p>
-                Try another category or go back to the <Link to="/">home page</Link>.
-              </p>
-            </>
-          )}
+      <div style={pageWrap}>
+        {hasAnyRails ? (
+          <div style={gridWrap}>
+            {/* LEFT RAIL */}
+            <aside style={railCol}>
+              {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
+              {!railsLoading && railsError && (
+                <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>
+              )}
+              {!railsLoading && !railsError && renderRails(leftRails, LEFT_FIRST_PULLUP)}
+            </aside>
 
-          {!loading && !notFound && (
-            <>
-              {/* page-scoped head sections (always on top, before the list) */}
-              {headBlocks.map((sec) => (
-                <div key={sec._id || sec.id || sec.slug} style={{ marginBottom: 12 }}>
-                  <SectionRenderer section={sec} />
-                </div>
-              ))}
+            {/* MAIN */}
+            <main style={mainCol}>
+              {loading && <p>Loading…</p>}
 
-              {(!articles || articles.length === 0) ? (
-                <p style={{ textAlign: 'center' }}>No articles yet.</p>
-              ) : (
+              {!loading && notFound && (
                 <>
-                  <LeadCard a={lead} />
-                  <div style={listStyle}>
-                    {rest.map((a) => (
-                      <ArticleRow key={a._id || a.id || a.slug} a={a} />
-                    ))}
-                  </div>
+                  <h2>Category not found</h2>
+                  <p>
+                    Try another category or go back to the <Link to="/">home page</Link>.
+                  </p>
                 </>
               )}
-            </>
-          )}
-        </div>
+
+              {!loading && !notFound && (
+                <>
+                  {/* page-scoped head sections (top banners) */}
+                  {headBlocks.map((sec) => (
+                    <div key={sec._id || sec.id || sec.slug} style={{ marginBottom: 12 }}>
+                      <SectionRenderer section={sec} />
+                    </div>
+                  ))}
+
+                  {(!articles || articles.length === 0) ? (
+                    <p style={{ textAlign: 'center' }}>No articles yet.</p>
+                  ) : (
+                    <>
+                      <LeadCard a={lead} />
+                      <div style={listStyle}>
+                        {rest.map((a) => (
+                          <ArticleRow key={a._id || a.id || a.slug} a={a} />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </main>
+
+            {/* RIGHT RAIL */}
+            <aside style={railCol}>
+              {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
+              {!railsLoading && railsError && (
+                <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>
+              )}
+              {!railsLoading && !railsError && renderRails(rightRails, RIGHT_FIRST_PULLUP)}
+            </aside>
+          </div>
+        ) : (
+          // Fallback: single column when there are no rails configured for this category
+          <div style={singleColWrap}>
+            {loading && <p>Loading…</p>}
+
+            {!loading && notFound && (
+              <>
+                <h2>Category not found</h2>
+                <p>
+                  Try another category or go back to the <Link to="/">home page</Link>.
+                </p>
+              </>
+            )}
+
+            {!loading && !notFound && (
+              <>
+                {headBlocks.map((sec) => (
+                  <div key={sec._id || sec.id || sec.slug} style={{ marginBottom: 12 }}>
+                    <SectionRenderer section={sec} />
+                  </div>
+                ))}
+
+                {(!articles || articles.length === 0) ? (
+                  <p style={{ textAlign: 'center' }}>No articles yet.</p>
+                ) : (
+                  <>
+                    <LeadCard a={lead} />
+                    <div style={listStyle}>
+                      {rest.map((a) => (
+                        <ArticleRow key={a._id || a.id || a.slug} a={a} />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
+
       <SiteFooter />
     </>
   );
