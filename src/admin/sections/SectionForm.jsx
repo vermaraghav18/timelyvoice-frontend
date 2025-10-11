@@ -126,6 +126,7 @@ const [pinLoading, setPinLoading] = useState(false);
             <option value="head_v1">Head (v1)</option>
             <option value="head_v2">Head (v2)</option>
             <option value="top_v1">Top (v1) – Composite</option>
+            <option value="top_v2">Top (v2) – Composite</option>
             <option value="grid_v1">Grid (v1)</option>
             <option value="carousel_v1">Carousel (v1)</option>
             <option value="list_v1">List (v1) – More Headlines</option>
@@ -502,6 +503,429 @@ const [pinLoading, setPinLoading] = useState(false);
       {form.template === "top_v1" && (
         <div className="border rounded p-3 space-y-3">
           <div className="font-semibold">Top v1 settings</div>
+      {/* ================================
+    Top (v2) – Composite controls
+    ================================ */}
+{form.template === "top_v2" && (
+  <div className="border rounded p-3 space-y-3">
+    <div className="font-semibold">Top v2 settings</div>
+
+    {/* Dedupe */}
+    <label className="inline-flex items-center gap-2">
+      <input
+        type="checkbox"
+        checked={!!form.custom?.dedupeAcrossZones}
+        onChange={(e) =>
+          update("custom", {
+            ...(form.custom || {}),
+            dedupeAcrossZones: e.target.checked,
+          })
+        }
+      />
+      Dedupe across zones
+    </label>
+
+    {/* ===== HERO (1) ===== */}
+    <fieldset className="border rounded p-2">
+      <legend className="px-1 text-sm">Hero (1)</legend>
+
+      <label className="inline-flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={form.custom?.hero?.enable !== false}
+          onChange={(e) =>
+            update("custom", {
+              ...(form.custom || {}),
+              hero: { ...(form.custom?.hero || {}), enable: e.target.checked },
+            })
+          }
+        />
+        Enable
+      </label>
+
+      <div className="grid grid-cols-3 gap-2 mt-2">
+        <label className="text-sm">
+          Limit
+          <input
+            type="number"
+            className="border p-1 w-full"
+            value={form.custom?.hero?.limit ?? 1}
+            onChange={(e) =>
+              update("custom", {
+                ...(form.custom || {}),
+                hero: {
+                  ...(form.custom?.hero || {}),
+                  limit: Number(e.target.value || 1),
+                },
+              })
+            }
+          />
+        </label>
+
+        <label className="text-sm">
+          Categories (csv)
+          <input
+            className="border p-1 w-full"
+            value={(form.custom?.hero?.query?.categories || []).join(",")}
+            onChange={(e) =>
+              update("custom", {
+                ...(form.custom || {}),
+                hero: {
+                  ...(form.custom?.hero || {}),
+                  query: {
+                    ...(form.custom?.hero?.query || {}),
+                    categories: e.target.value
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  },
+                },
+              })
+            }
+          />
+        </label>
+
+        <label className="text-sm">
+          Tags (csv)
+          <input
+            className="border p-1 w-full"
+            value={(form.custom?.hero?.query?.tags || []).join(",")}
+            onChange={(e) =>
+              update("custom", {
+                ...(form.custom || {}),
+                hero: {
+                  ...(form.custom?.hero || {}),
+                  query: {
+                    ...(form.custom?.hero?.query || {}),
+                    tags: e.target.value
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  },
+                },
+              })
+            }
+          />
+        </label>
+      </div>
+    </fieldset>
+
+    {/* ===== SIDE STACK (3) ===== */}
+    <fieldset className="border rounded p-2">
+      <legend className="px-1 text-sm">Side stack (3)</legend>
+
+      <label className="inline-flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={form.custom?.sideStack?.enable !== false}
+          onChange={(e) =>
+            update("custom", {
+              ...(form.custom || {}),
+              sideStack: { ...(form.custom?.sideStack || {}), enable: e.target.checked },
+            })
+          }
+        />
+        Enable
+      </label>
+
+      <div className="grid grid-cols-3 gap-2 mt-2">
+        <label className="text-sm">
+          Limit
+          <input
+            type="number"
+            className="border p-1 w-full"
+            value={form.custom?.sideStack?.limit ?? 3}
+            onChange={(e) =>
+              update("custom", {
+                ...(form.custom || {}),
+                sideStack: {
+                  ...(form.custom?.sideStack || {}),
+                  limit: Number(e.target.value || 3),
+                },
+              })
+            }
+          />
+        </label>
+
+        <label className="text-sm">
+          Categories (csv)
+          <input
+            className="border p-1 w-full"
+            value={(form.custom?.sideStack?.query?.categories || []).join(",")}
+            onChange={(e) =>
+              update("custom", {
+                ...(form.custom || {}),
+                sideStack: {
+                  ...(form.custom?.sideStack || {}),
+                  query: {
+                    ...(form.custom?.sideStack?.query || {}),
+                    categories: e.target.value
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  },
+                },
+              })
+            }
+          />
+        </label>
+
+        <label className="text-sm">
+          Tags (csv)
+          <input
+            className="border p-1 w-full"
+            value={(form.custom?.sideStack?.query?.tags || []).join(",")}
+            onChange={(e) =>
+              update("custom", {
+                ...(form.custom || {}),
+                sideStack: {
+                  ...(form.custom?.sideStack || {}),
+                  query: {
+                    ...(form.custom?.sideStack?.query || {}),
+                    tags: e.target.value
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  },
+                },
+              })
+            }
+          />
+        </label>
+      </div>
+    </fieldset>
+
+    {/* ===== BELOW GRID (6) ===== */}
+    <fieldset className="border rounded p-2">
+      <legend className="px-1 text-sm">Below grid (6)</legend>
+
+      <label className="inline-flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={form.custom?.belowGrid?.enable !== false}
+          onChange={(e) =>
+            update("custom", {
+              ...(form.custom || {}),
+              belowGrid: { ...(form.custom?.belowGrid || {}), enable: e.target.checked },
+            })
+          }
+        />
+        Enable
+      </label>
+
+      <div className="grid grid-cols-3 gap-2 mt-2">
+        <label className="text-sm">
+          Limit
+          <input
+            type="number"
+            className="border p-1 w-full"
+            value={form.custom?.belowGrid?.limit ?? 6}
+            onChange={(e) =>
+              update("custom", {
+                ...(form.custom || {}),
+                belowGrid: {
+                  ...(form.custom?.belowGrid || {}),
+                  limit: Number(e.target.value || 6),
+                },
+              })
+            }
+          />
+        </label>
+
+        <label className="text-sm">
+          Categories (csv)
+          <input
+            className="border p-1 w-full"
+            value={(form.custom?.belowGrid?.query?.categories || []).join(",")}
+            onChange={(e) =>
+              update("custom", {
+                ...(form.custom || {}),
+                belowGrid: {
+                  ...(form.custom?.belowGrid || {}),
+                  query: {
+                    ...(form.custom?.belowGrid?.query || {}),
+                    categories: e.target.value
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  },
+                },
+              })
+            }
+          />
+        </label>
+
+        <label className="text-sm">
+          Tags (csv)
+          <input
+            className="border p-1 w-full"
+            value={(form.custom?.belowGrid?.query?.tags || []).join(",")}
+            onChange={(e) =>
+              update("custom", {
+                ...(form.custom || {}),
+                belowGrid: {
+                  ...(form.custom?.belowGrid || {}),
+                  query: {
+                    ...(form.custom?.belowGrid?.query || {}),
+                    tags: e.target.value
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  },
+                },
+              })
+            }
+          />
+        </label>
+      </div>
+    </fieldset>
+
+    {/* ===== TRENDING (10) ===== */}
+    <fieldset className="border rounded p-2">
+      <legend className="px-1 text-sm">Trending (10)</legend>
+
+      <label className="inline-flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={form.custom?.trending?.enable !== false}
+          onChange={(e) =>
+            update("custom", {
+              ...(form.custom || {}),
+              trending: { ...(form.custom?.trending || {}), enable: e.target.checked },
+            })
+          }
+        />
+        Enable
+      </label>
+
+      <div className="grid grid-cols-3 gap-2 mt-2">
+        <label className="text-sm">
+          Limit
+          <input
+            type="number"
+            className="border p-1 w-full"
+            value={form.custom?.trending?.limit ?? 10}
+            onChange={(e) =>
+              update("custom", {
+                ...(form.custom || {}),
+                trending: {
+                  ...(form.custom?.trending || {}),
+                  limit: Number(e.target.value || 10),
+                },
+              })
+            }
+          />
+        </label>
+
+        <label className="text-sm">
+          Panel title
+          <input
+            className="border p-1 w-full"
+            value={form.custom?.trending?.panelTitle ?? "Trending"}
+            onChange={(e) =>
+              update("custom", {
+                ...(form.custom || {}),
+                trending: {
+                  ...(form.custom?.trending || {}),
+                  panelTitle: e.target.value,
+                },
+              })
+            }
+          />
+        </label>
+
+        <label className="text-sm">
+          Layout
+          <select
+            className="border p-1 w-full"
+            value={form.custom?.trending?.layout || "compact"}
+            onChange={(e) =>
+              update("custom", {
+                ...(form.custom || {}),
+                trending: {
+                  ...(form.custom?.trending || {}),
+                  layout: e.target.value, // "compact" | "compact+thumb"
+                },
+              })
+            }
+          >
+            <option value="compact">compact (no image)</option>
+            <option value="compact+thumb">compact + thumbnail</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mt-2">
+        <label className="text-sm">
+          Categories (csv)
+          <input
+            className="border p-1 w-full"
+            value={(form.custom?.trending?.query?.categories || []).join(",")}
+            onChange={(e) =>
+              update("custom", {
+                ...(form.custom || {}),
+                trending: {
+                  ...(form.custom?.trending || {}),
+                  query: {
+                    ...(form.custom?.trending?.query || {}),
+                    categories: e.target.value
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  },
+                },
+              })
+            }
+          />
+        </label>
+
+        <label className="text-sm">
+          Tags (csv)
+          <input
+            className="border p-1 w-full"
+            value={(form.custom?.trending?.query?.tags || []).join(",")}
+            onChange={(e) =>
+              update("custom", {
+                ...(form.custom || {}),
+                trending: {
+                  ...(form.custom?.trending || {}),
+                  query: {
+                    ...(form.custom?.trending?.query || {}),
+                    tags: e.target.value
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  },
+                },
+              })
+            }
+          />
+        </label>
+
+        <label className="text-sm">
+          Since days
+          <input
+            type="number"
+            className="border p-1 w-full"
+            value={form.custom?.trending?.query?.sinceDays ?? 0}
+            onChange={(e) =>
+              update("custom", {
+                ...(form.custom || {}),
+                trending: {
+                  ...(form.custom?.trending || {}),
+                  query: {
+                    ...(form.custom?.trending?.query || {}),
+                    sinceDays: Number(e.target.value || 0),
+                  },
+                },
+              })
+            }
+          />
+        </label>
+      </div>
+    </fieldset>
+  </div>
+)}
 
           {/* De-dupe */}
           <label className="inline-flex items-center gap-2">

@@ -24,11 +24,14 @@ import RailV6 from "../rails/RailV6.jsx";
 import RailV7 from "../rails/RailV7.jsx";
 import RailV8 from "../rails/RailV8";
 import TopV1 from "./TopV1.jsx";
+import TopV2 from "./TopV2.jsx";
+
 
 const TEMPLATES = {
   head_v1: NewsHeadSection,
   head_v2: HeadV2,
   top_v1: TopV1,
+  top_v2: TopV2,
   grid_v1: GridSection,
   carousel_v1: CarouselSection,
   list_v1: ListV1,

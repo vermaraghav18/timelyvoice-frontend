@@ -1,0 +1,23 @@
+/* frontend/src/components/sections/TopV2.css */
+.topv2 { display: grid; gap: 16px; }
+.topv2-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+.topv2-hero-title { font-weight: 700; font-size: 1.4rem; display: block; margin-bottom: 8px; }
+.topv2-hero-summary { color: #4A4A4A; margin-top: 8px; }
+
+.topv2-side { display: grid; gap: 12px; align-content: start; }
+.topv2-side-item { display: grid; grid-template-columns: 84px 1fr; gap: 10px; align-items: center; }
+.topv2-side-thumb img { width: 100%; height: auto; border-radius: 6px; }
+.topv2-side-title { font-weight: 600; line-height: 1.2; }
+
+.topv2-below { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.topv2-card-title { font-weight: 600; margin-top: 6px; }
+
+.topv2-trending { margin-top: 8px; }
+.topv2-trending-title { font-weight: 700; margin-bottom: 8px; }
+.topv2-trending-list { display: grid; gap: 8px; }
+.topv2-trending-item { display: block; }
+
+@media (max-width: 960px) {
+  .topv2-row { grid-template-columns: 1fr; }
+  .topv2-below { grid-template-columns: repeat(2, 1fr); }
+}
