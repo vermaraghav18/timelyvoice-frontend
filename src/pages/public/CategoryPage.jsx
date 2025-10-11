@@ -5,7 +5,7 @@ import { api, removeManagedHeadTags, upsertTag } from '../../App.jsx';
 import SiteNav from '../../components/SiteNav.jsx';
 import SiteFooter from '../../components/SiteFooter.jsx';
 
-// reuse homepage rails
+// reuse homepage rails (only for page-scoped head_* blocks; no sidebars)
 import SectionRenderer from '../../components/sections/SectionRenderer.jsx';
 import '../../styles/rails.css';
 
@@ -39,7 +39,7 @@ const toSlug = (s = '') =>
 const normPath = (p = '') =>
   String(p).trim().replace(/\/+$/, '') || '/'; // remove trailing slash (except root)
 
-/* ---------- layout ---------- */
+/* ---------- layout (single column) ---------- */
 const outerContainer = {
   display: 'flex',
   justifyContent: 'center',
@@ -48,21 +48,11 @@ const outerContainer = {
   fontFamily: "'Newsreader', serif",
   paddingTop: 5,
 };
-
 const mainWrapper = {
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'flex-start',
-  gap: 16,
   width: '100%',
-  maxWidth: 1040,
+  maxWidth: 760,          // tighter single-column read
   padding: '0 12px',
 };
-
-// columns
-const leftColumn = { flex: '0 0 300px', marginTop: 0 };
-const centerColumn = { flex: '0 0 380px', marginTop: 0 };
-const rightColumn = { flex: '0 0 320px', marginTop: 0 };
 
 const listStyle = { display: 'flex', flexDirection: 'column', gap: 8 };
 
@@ -181,7 +171,7 @@ function ArticleRow({ a }) {
   );
 }
 
-/* ---------- Category Page ---------- */
+/* ---------- Category Page (single-column; no homepage rails) ---------- */
 export default function CategoryPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -193,12 +183,7 @@ export default function CategoryPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  // rails (homepage sidebars)
-  const [homeSections, setHomeSections] = useState([]);
-  const [railsLoading, setRailsLoading] = useState(true);
-  const [railsError, setRailsError] = useState('');
-
-  // page-scoped sections (for /category/<slug>)
+  // page-scoped sections (for /category/<slug>) — keep only if you want head_* blocks
   const [pageSections, setPageSections] = useState([]);
 
   const canonical = useMemo(() => `${window.location.origin}/category/${slug}`, [slug]);
@@ -249,31 +234,7 @@ export default function CategoryPage() {
     upsertTag('link', { rel: 'canonical', href: canonical });
   }, [category, canonical]);
 
-  /* fetch homepage rails plan (shared) */
-  useEffect(() => {
-    let cancel = false;
-    (async () => {
-      try {
-        setRailsLoading(true);
-        setRailsError('');
-        const res = await api.get('/api/sections/plan', {
-          params: { targetType: 'homepage', targetValue: '/' },
-        });
-        if (!cancel) setHomeSections(Array.isArray(res.data) ? res.data : []);
-      } catch (e) {
-        if (!cancel) setRailsError('Failed to load rails');
-        // eslint-disable-next-line no-console
-        console.error(e);
-      } finally {
-        if (!cancel) setRailsLoading(false);
-      }
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, []);
-
-  /* fetch sections for THIS page path (head_v1/head_v2 etc.) */
+  /* fetch sections for THIS page path (head_v1/head_v2 etc.) — optional */
   useEffect(() => {
     let cancel = false;
     (async () => {
@@ -299,9 +260,7 @@ export default function CategoryPage() {
             deduped.push(s);
           }
         }
-        deduped.sort(
-          (a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0)
-        );
+        deduped.sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
 
         if (!cancel) setPageSections(deduped);
       } catch (e) {
@@ -313,99 +272,53 @@ export default function CategoryPage() {
     };
   }, [pagePath]);
 
-  // derive rails then alternate: right, left, right, left…
-  const rails = homeSections.filter((s) => s.template?.startsWith('rail_'));
-  const rightRails = rails.filter((_, i) => i % 2 === 0); // 0,2,4...
-  const leftRails = rails.filter((_, i) => i % 2 === 1); // 1,3,5...
-
-  // page “banner” blocks (e.g., head_v1/head_v2) — ONLY for this path
+  // only page “banner” blocks (e.g., head_v1/head_v2). No homepage rails.
   const headBlocks = pageSections.filter((s) => s.template?.startsWith('head_'));
 
   // split first article (lead) and the rest
   const lead = articles?.[0] || null;
   const rest = Array.isArray(articles) && articles.length > 1 ? articles.slice(1) : [];
 
-  // amount to compensate for rail templates that add top margin/padding
-  const LEFT_FIRST_PULLUP = -20; // tweak to -16 if your theme uses 16px rhythm
-  const RIGHT_FIRST_PULLUP = 0; // right rail first item aligns already
-
-  // render a column of rails with consistent spacing
-  const renderRails = (items, firstPullup = 0) =>
-    items.map((sec, i) => (
-      <div
-        key={sec.id || sec._id || sec.slug}
-        style={{
-          // pull the first rail upwards if it has internal top spacing
-          marginTop: i === 0 ? firstPullup : 12,
-        }}
-      >
-        <SectionRenderer section={sec} />
-      </div>
-    ));
-
-  // wrapper prevents margin-collapsing
-  const railWrapFix = { display: 'flow-root' };
-
   return (
     <>
       <SiteNav />
       <div style={outerContainer}>
         <div style={mainWrapper}>
-          {/* LEFT SIDEBAR */}
-          <div style={leftColumn}>
-            <div className="rail-wrap" style={railWrapFix}>
-              {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-              {!railsLoading && railsError && <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>}
-              {!railsLoading && !railsError && renderRails(leftRails, LEFT_FIRST_PULLUP)}
-            </div>
-          </div>
+          {/* MAIN COLUMN (single) */}
+          {loading && <p>Loading…</p>}
 
-          {/* MAIN COLUMN */}
-          <div style={centerColumn}>
-            {loading && <p>Loading…</p>}
+          {!loading && notFound && (
+            <>
+              <h2>Category not found</h2>
+              <p>
+                Try another category or go back to the <Link to="/">home page</Link>.
+              </p>
+            </>
+          )}
 
-            {!loading && notFound && (
-              <>
-                <h2>Category not found</h2>
-                <p>
-                  Try another category or go back to the <Link to="/">home page</Link>.
-                </p>
-              </>
-            )}
+          {!loading && !notFound && (
+            <>
+              {/* page-scoped head sections (always on top, before the list) */}
+              {headBlocks.map((sec) => (
+                <div key={sec._id || sec.id || sec.slug} style={{ marginBottom: 12 }}>
+                  <SectionRenderer section={sec} />
+                </div>
+              ))}
 
-            {!loading && !notFound && (
-              <>
-                {/* page-scoped head sections (always on top, before the list) */}
-                {headBlocks.map((sec) => (
-                  <div key={sec._id || sec.id || sec.slug} style={{ marginBottom: 12 }}>
-                    <SectionRenderer section={sec} />
+              {(!articles || articles.length === 0) ? (
+                <p style={{ textAlign: 'center' }}>No articles yet.</p>
+              ) : (
+                <>
+                  <LeadCard a={lead} />
+                  <div style={listStyle}>
+                    {rest.map((a) => (
+                      <ArticleRow key={a._id || a.id || a.slug} a={a} />
+                    ))}
                   </div>
-                ))}
-
-                {(!articles || articles.length === 0) ? (
-                  <p style={{ textAlign: 'center' }}>No articles yet.</p>
-                ) : (
-                  <>
-                    <LeadCard a={lead} />
-                    <div style={listStyle}>
-                      {rest.map((a) => (
-                        <ArticleRow key={a._id || a.id || a.slug} a={a} />
-                      ))}
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* RIGHT SIDEBAR */}
-          <div style={rightColumn}>
-            <div className="rail-wrap" style={railWrapFix}>
-              {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-              {!railsLoading && railsError && <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>}
-              {!railsLoading && !railsError && renderRails(rightRails, RIGHT_FIRST_PULLUP)}
-            </div>
-          </div>
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
       <SiteFooter />

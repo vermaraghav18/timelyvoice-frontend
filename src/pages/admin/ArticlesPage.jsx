@@ -1,6 +1,7 @@
 // src/pages/admin/ArticlesPage.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../App";
+import PasteImporter from "../../components/PasteImporter.jsx";
 import { useToast } from "../../providers/ToastProvider.jsx";
 
 export default function ArticlesPage() {
@@ -611,182 +612,211 @@ export default function ArticlesPage() {
 
       {/* Editor modal/drawer */}
       {showForm && (
-        <div style={modalBackdrop}>
-          <div style={modalCard}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
-                {editingId ? "Edit Article" : "Create Article"}
-              </h2>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                {editingId && (
-                  <span style={{ fontSize: 12, color: autoSaving ? "#92400e" : "#16a34a" }}>
-                    {autoSaving ? "Saving…" : (autoSavedAt ? `Saved ${autoSavedAt.toLocaleTimeString()}` : "Autosave on")}
-                  </span>
-                )}
-                <button onClick={closeForm} style={btnGhost}>Close</button>
-              </div>
-            </div>
+  <div style={modalBackdrop}>
+    <div style={modalCard}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
+          {editingId ? "Edit Article" : "Create Article"}
+        </h2>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {editingId && (
+            <span style={{ fontSize: 12, color: autoSaving ? "#92400e" : "#16a34a" }}>
+              {autoSaving ? "Saving…" : (autoSavedAt ? `Saved ${autoSavedAt.toLocaleTimeString()}` : "Autosave on")}
+            </span>
+          )}
+          <button onClick={closeForm} style={btnGhost}>Close</button>
+        </div>
+      </div>
 
-            <form onSubmit={saveForm} style={{ display: "grid", gap: 10 }}>
-              <div style={grid2}>
-                <label style={lbl}>Title<input required value={form.title} onChange={e=>setForm(f=>({ ...f, title: e.target.value }))} style={inp} /></label>
-                <label style={lbl}>Author<input required value={form.author} onChange={e=>setForm(f=>({ ...f, author: e.target.value }))} style={inp} /></label>
-              </div>
+      {/* Paste-once importer (auto-fills the form from JSON/YAML) */}
+      <PasteImporter
+        onApply={(d) => {
+          setForm((f) => ({
+            ...f,
+            title: d.title ?? f.title,
+            slug: d.slug ?? f.slug,
+            summary: d.summary ?? f.summary,
+            author: d.author ?? f.author,
+            category: d.category ?? f.category,
+            status: d.status ?? f.status,
+            publishAt: d.publishAt ?? f.publishAt,
+            imageUrl: d.imageUrl ?? f.imageUrl,
+            imagePublicId: d.imagePublicId ?? f.imagePublicId,
+            imageAlt: d.imageAlt ?? f.imageAlt,
+            metaTitle: (d.metaTitle ?? f.metaTitle)?.slice(0, META_TITLE_MAX),
+            metaDesc: (d.metaDesc ?? f.metaDesc)?.slice(0, META_DESC_MAX),
+            ogImage: d.ogImage ?? f.ogImage,
+            geoMode: d.geoMode ?? f.geoMode,
+            geoAreasText: d.geoAreasText ?? f.geoAreasText,
+            body: d.body ?? f.body,
+          }));
+          setTagsInput((d.tags || []).join(", "));
+          // Optional: reset GEO preview helpers
+          // setTestCountry(""); setTestRegion(""); setTestCity("");
+        }}
+      />
 
-              {/* Slug (editable) */}
-              <label style={lbl}>Slug
-                <input
-                  value={form.slug}
-                  onChange={e=>setForm(f=>({ ...f, slug: e.target.value }))}
-                  placeholder="leave blank to auto-generate from title"
-                  style={inp}
-                />
-              </label>
+      <form onSubmit={saveForm} style={{ display: "grid", gap: 10 }}>
+        <div style={grid2}>
+          <label style={lbl}>Title<input required value={form.title} onChange={e=>setForm(f=>({ ...f, title: e.target.value }))} style={inp} /></label>
+          <label style={lbl}>Author<input required value={form.author} onChange={e=>setForm(f=>({ ...f, author: e.target.value }))} style={inp} /></label>
+        </div>
 
-              <label style={lbl}>Summary<textarea required rows={2} value={form.summary} onChange={e=>setForm(f=>({ ...f, summary: e.target.value }))} style={ta} /></label>
+        {/* Slug (editable) */}
+        <label style={lbl}>Slug
+          <input
+            value={form.slug}
+            onChange={e=>setForm(f=>({ ...f, slug: e.target.value }))}
+            placeholder="leave blank to auto-generate from title"
+            style={inp}
+          />
+        </label>
 
-              <div style={grid3}>
-                <label style={lbl}>Category
-                  <select value={form.category} onChange={e=>setForm(f=>({ ...f, category: e.target.value }))} style={inp}>
-                    {[...(categories.map(c => c.name)), "General"].filter((v,i,a)=>a.indexOf(v)===i).map(n =>
-                      <option key={n} value={n}>{n}</option>
-                    )}
-                  </select>
-                </label>
+        <label style={lbl}>Summary<textarea required rows={2} value={form.summary} onChange={e=>setForm(f=>({ ...f, summary: e.target.value }))} style={ta} /></label>
 
-                <label style={lbl}>Status
-                  <select
-                    value={form.status}
-                    onChange={e=>setForm(f=>({ ...f, status: e.target.value }))}
-                    style={{ ...inp, opacity: isAdmin ? 1 : 0.6 }}
-                    disabled={!isAdmin}
-                    title={!isAdmin ? "Only admins can change publish status" : undefined}
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="published">Published</option>
-                  </select>
-                </label>
-
-                <label style={lbl}>Publish At
-                  <input type="datetime-local" value={form.publishAt} onChange={e=>setForm(f=>({ ...f, publishAt: e.target.value }))} style={inp} />
-                </label>
-              </div>
-
-              <div style={grid2}>
-                <label style={lbl}>Image URL<input value={form.imageUrl} onChange={e=>setForm(f=>({ ...f, imageUrl: e.target.value }))} style={inp} /></label>
-                <label style={lbl}>Image Public ID<input value={form.imagePublicId} onChange={e=>setForm(f=>({ ...f, imagePublicId: e.target.value }))} style={inp} /></label>
-              </div>
-
-              {/* SEO fields with counters */}
-              <div style={{ fontWeight: 600, marginTop: 8 }}>SEO</div>
-              <div style={grid3}>
-                <label style={lbl}>Image Alt
-                  <input
-                    value={form.imageAlt}
-                    onChange={e=>setForm(f=>({ ...f, imageAlt: e.target.value }))}
-                    placeholder="Describe the image (e.g. ‘Solar panels on a rooftop at sunset’)"
-                    style={inp}
-                  />
-                </label>
-                <label style={lbl}>Meta Title
-                  <input
-                    value={form.metaTitle}
-                    onChange={e=>setForm(f=>({ ...f, metaTitle: e.target.value.slice(0, META_TITLE_MAX) }))}
-                    style={inp}
-                    maxLength={META_TITLE_MAX}
-                  />
-                  <small style={{ color: "#64748b" }}>{(form.metaTitle || "").length}/{META_TITLE_MAX}</small>
-                </label>
-                <label style={lbl}>OG Image URL<input value={form.ogImage} onChange={e=>setForm(f=>({ ...f, ogImage: e.target.value }))} style={inp} /></label>
-              </div>
-              {form.imageUrl && !form.imageAlt && (
-                <div style={{ color: "var(--color-warning, #b45309)", fontSize: 12, marginTop: -4 }}>
-                  Tip: Add a short, meaningful alt description so screen readers and SEO can understand the image.
-                </div>
+        <div style={grid3}>
+          <label style={lbl}>Category
+            <select value={form.category} onChange={e=>setForm(f=>({ ...f, category: e.target.value }))} style={inp}>
+              {[...(categories.map(c => c.name)), "General"].filter((v,i,a)=>a.indexOf(v)===i).map(n =>
+                <option key={n} value={n}>{n}</option>
               )}
-              <label style={lbl}>Meta Description
-                <textarea
-                  rows={2}
-                  value={form.metaDesc}
-                  onChange={e=>setForm(f=>({ ...f, metaDesc: e.target.value.slice(0, META_DESC_MAX) }))}
-                  style={ta}
-                  maxLength={META_DESC_MAX}
-                />
-                <small style={{ color: "#64748b" }}>{(form.metaDesc || "").length}/{META_DESC_MAX}</small>
-              </label>
+            </select>
+          </label>
 
-              {/* GEO section */}
-              <div style={{ fontWeight: 600, marginTop: 8 }}>GEO</div>
-              <div style={grid3}>
-                <label style={lbl}>Mode
-                  <select value={form.geoMode} onChange={e=>setForm(f=>({ ...f, geoMode: e.target.value }))} style={inp}>
-                    <option value="global">Global</option>
-                    <option value="include">Include only</option>
-                    <option value="exclude">Exclude these</option>
-                  </select>
-                </label>
-                <label style={{ ...lbl, gridColumn: "span 2" }}>Areas (comma separated)
-                  <input
-                    value={form.geoAreasText}
-                    onChange={e=>setForm(f=>({ ...f, geoAreasText: e.target.value }))}
-                    placeholder='Examples: country:IN, state:US:CA, city:IN:Bengaluru'
-                    style={inp}
-                  />
-                </label>
-              </div>
+          <label style={lbl}>Status
+            <select
+              value={form.status}
+              onChange={e=>setForm(f=>({ ...f, status: e.target.value }))}
+              style={{ ...inp, opacity: isAdmin ? 1 : 0.6 }}
+              disabled={!isAdmin}
+              title={!isAdmin ? "Only admins can change publish status" : undefined}
+            >
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
+          </label>
 
-              {/* GEO Preview */}
-              <div style={{ border: "1px dashed #e5e7eb", borderRadius: 12, padding: 10 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>GEO Preview</div>
-                <div style={grid3}>
-                  <label style={lbl}>Country (2-letter)
-                    <input value={testCountry} onChange={e=>setTestCountry(e.target.value.toUpperCase())} style={inp} placeholder="e.g. IN" />
-                  </label>
-                  <label style={lbl}>Region / State
-                    <input value={testRegion} onChange={e=>setTestRegion(e.target.value.toUpperCase())} style={inp} placeholder="e.g. KA or CA" />
-                  </label>
-                  <label style={lbl}>City
-                    <input value={testCity} onChange={e=>setTestCity(e.target.value)} style={inp} placeholder="e.g. Bengaluru" />
-                  </label>
-                </div>
-                <div style={{ marginTop: 8, fontSize: 13 }}>
-                  Result:&nbsp;
-                  <span style={{ ...badge, ...(geoPreviewAllowed ? badgeGreen : badgeGray) }}>
-                    {geoPreviewAllowed ? "Allowed" : "Blocked"}
-                  </span>
-                  <span style={{ marginLeft: 8, color: "#64748b" }}>
-                    mode = <code>{form.geoMode}</code>, areas = <code>{form.geoAreasText || "—"}</code>
-                  </span>
-                </div>
-              </div>
+          <label style={lbl}>Publish At
+            <input type="datetime-local" value={form.publishAt} onChange={e=>setForm(f=>({ ...f, publishAt: e.target.value }))} style={inp} />
+          </label>
+        </div>
 
-              {/* Tags */}
-              <label style={lbl}>Tags (comma or space separated)
-                <input
-                  placeholder="e.g. cricket, politics, tech"
-                  value={tagsInput}
-                  onChange={e=>setTagsInput(e.target.value)}
-                  style={inp}
-                />
-              </label>
-              {parseTags(tagsInput).length > 0 && (
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {parseTags(tagsInput).map(t => (
-                    <span key={t} style={chip}>#{t}</span>
-                  ))}
-                </div>
-              )}
+        <div style={grid2}>
+          <label style={lbl}>Image URL<input value={form.imageUrl} onChange={e=>setForm(f=>({ ...f, imageUrl: e.target.value }))} style={inp} /></label>
+          <label style={lbl}>Image Public ID<input value={form.imagePublicId} onChange={e=>setForm(f=>({ ...f, imagePublicId: e.target.value }))} style={inp} /></label>
+        </div>
 
-              <label style={lbl}>Body<textarea rows={8} value={form.body} onChange={e=>setForm(f=>({ ...f, body: e.target.value }))} style={ta} /></label>
+        {/* SEO fields with counters */}
+        <div style={{ fontWeight: 600, marginTop: 8 }}>SEO</div>
+        <div style={grid3}>
+          <label style={lbl}>Image Alt
+            <input
+              value={form.imageAlt}
+              onChange={e=>setForm(f=>({ ...f, imageAlt: e.target.value }))}
+              placeholder="Describe the image (e.g. ‘Solar panels on a rooftop at sunset’)"
+              style={inp}
+            />
+          </label>
+          <label style={lbl}>Meta Title
+            <input
+              value={form.metaTitle}
+              onChange={e=>setForm(f=>({ ...f, metaTitle: e.target.value.slice(0, META_TITLE_MAX) }))}
+              style={inp}
+              maxLength={META_TITLE_MAX}
+            />
+            <small style={{ color: "#64748b" }}>{(form.metaTitle || "").length}/{META_TITLE_MAX}</small>
+          </label>
+          <label style={lbl}>OG Image URL<input value={form.ogImage} onChange={e=>setForm(f=>({ ...f, ogImage: e.target.value }))} style={inp} /></label>
+        </div>
+        {form.imageUrl && !form.imageAlt && (
+          <div style={{ color: "var(--color-warning, #b45309)", fontSize: 12, marginTop: -4 }}>
+            Tip: Add a short, meaningful alt description so screen readers and SEO can understand the image.
+          </div>
+        )}
+        <label style={lbl}>Meta Description
+          <textarea
+            rows={2}
+            value={form.metaDesc}
+            onChange={e=>setForm(f=>({ ...f, metaDesc: e.target.value.slice(0, META_DESC_MAX) }))}
+            style={ta}
+            maxLength={META_DESC_MAX}
+          />
+          <small style={{ color: "#64748b" }}>{(form.metaDesc || "").length}/{META_DESC_MAX}</small>
+        </label>
 
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 6 }}>
-                <button type="button" onClick={closeForm} style={btnGhost}>Cancel</button>
-                <button type="submit" disabled={saving} style={btnPrimary}>{saving ? "Saving…" : "Save"}</button>
-              </div>
-            </form>
+        {/* GEO section */}
+        <div style={{ fontWeight: 600, marginTop: 8 }}>GEO</div>
+        <div style={grid3}>
+          <label style={lbl}>Mode
+            <select value={form.geoMode} onChange={e=>setForm(f=>({ ...f, geoMode: e.target.value }))} style={inp}>
+              <option value="global">Global</option>
+              <option value="include">Include only</option>
+              <option value="exclude">Exclude these</option>
+            </select>
+          </label>
+          <label style={{ ...lbl, gridColumn: "span 2" }}>Areas (comma separated)
+            <input
+              value={form.geoAreasText}
+              onChange={e=>setForm(f=>({ ...f, geoAreasText: e.target.value }))}
+              placeholder='Examples: country:IN, state:US:CA, city:IN:Bengaluru'
+              style={inp}
+            />
+          </label>
+        </div>
+
+        {/* GEO Preview */}
+        <div style={{ border: "1px dashed #e5e7eb", borderRadius: 12, padding: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>GEO Preview</div>
+          <div style={grid3}>
+            <label style={lbl}>Country (2-letter)
+              <input value={testCountry} onChange={e=>setTestCountry(e.target.value.toUpperCase())} style={inp} placeholder="e.g. IN" />
+            </label>
+            <label style={lbl}>Region / State
+              <input value={testRegion} onChange={e=>setTestRegion(e.target.value.toUpperCase())} style={inp} placeholder="e.g. KA or CA" />
+            </label>
+            <label style={lbl}>City
+              <input value={testCity} onChange={e=>setTestCity(e.target.value)} style={inp} placeholder="e.g. Bengaluru" />
+            </label>
+          </div>
+          <div style={{ marginTop: 8, fontSize: 13 }}>
+            Result:&nbsp;
+            <span style={{ ...badge, ...(geoPreviewAllowed ? badgeGreen : badgeGray) }}>
+              {geoPreviewAllowed ? "Allowed" : "Blocked"}
+            </span>
+            <span style={{ marginLeft: 8, color: "#64748b" }}>
+              mode = <code>{form.geoMode}</code>, areas = <code>{form.geoAreasText || "—"}</code>
+            </span>
           </div>
         </div>
-      )}
+
+        {/* Tags */}
+        <label style={lbl}>Tags (comma or space separated)
+          <input
+            placeholder="e.g. cricket, politics, tech"
+            value={tagsInput}
+            onChange={e=>setTagsInput(e.target.value)}
+            style={inp}
+          />
+        </label>
+        {parseTags(tagsInput).length > 0 && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {parseTags(tagsInput).map(t => (
+              <span key={t} style={chip}>#{t}</span>
+            ))}
+          </div>
+        )}
+
+        <label style={lbl}>Body<textarea rows={8} value={form.body} onChange={e=>setForm(f=>({ ...f, body: e.target.value }))} style={ta} /></label>
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 6 }}>
+          <button type="button" onClick={closeForm} style={btnGhost}>Cancel</button>
+          <button type="submit" disabled={saving} style={btnPrimary}>{saving ? "Saving…" : "Save"}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }
