@@ -52,16 +52,24 @@ export default function PublicHome() {
   }, []);
 
   // Partition sections:
-  // - full-width mains: main_v1 and top_v1 render above rails
+  // - full-width mains: include main_v1, top_v1, and **top_v2** (NEW)
   // - rails = any template starting with "rail_"
   // - others = everything else (left column)
   const mains = sections.filter(
-    (s) => s.template === "main_v1" || s.template === "top_v1"
+    (s) => s.template === "main_v1" || s.template === "top_v1" || s.template === "top_v2" // <-- added top_v2
   );
+
+  // Always place top_v2 first (if present), then sort remaining by placementIndex
+  const mainsSorted = [...mains].sort((a, b) => {
+    if (a.template === "top_v2" && b.template !== "top_v2") return -1;
+    if (b.template === "top_v2" && a.template !== "top_v2") return 1;
+    return (a.placementIndex ?? 0) - (b.placementIndex ?? 0);
+  });
+
   const rails = sections.filter((s) => s.template?.startsWith("rail_"));
   const others = sections.filter(
     (s) =>
-      !["main_v1", "top_v1"].includes(s.template) &&
+      !["main_v1", "top_v1", "top_v2"].includes(s.template) && // <-- exclude top_v2 from others
       !s.template?.startsWith("rail_")
   );
 
@@ -77,14 +85,14 @@ export default function PublicHome() {
           </div>
         </div>
 
-        {/* ===== FULL-WIDTH main blocks (main_v1 + top_v1) ===== */}
+        {/* ===== FULL-WIDTH main blocks (main_v1 + top_v1 + top_v2) ===== */}
         {sectionsLoading && !sections.length ? (
           <div style={{ padding: 12 }}>Loading sections…</div>
         ) : sectionsError ? (
           <div style={{ padding: 12, color: "crimson" }}>{sectionsError}</div>
         ) : (
           <>
-            {mains.map((sec) => (
+            {mainsSorted.map((sec) => (
               <div
                 key={sec.id || sec._id || sec.slug}
                 className="fullwidth-section"
