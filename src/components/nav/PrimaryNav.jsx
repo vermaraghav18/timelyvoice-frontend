@@ -1,9 +1,8 @@
-// src/components/nav/PrimaryNav.jsx
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
-// Full set from your dropdown
 const LINKS = [
-  { label: 'Top News', path: '/top-news' },           // <-- ensure leading slash
+  { label: 'Home', path: '/' },                 // NEW
+  { label: 'Top News', path: '/top-news' },     // stays first after Home
   { label: 'World', slug: 'World' },
   { label: 'Politics', slug: 'Politics' },
   { label: 'Business', slug: 'Business' },
@@ -46,7 +45,7 @@ const UL_STYLE = {
   whiteSpace: 'nowrap',
 };
 
-const LINK_STYLE = {
+const LINK_BASE = {
   color: '#fff',
   textDecoration: 'none',
   fontWeight: 800,
@@ -57,6 +56,12 @@ const LINK_STYLE = {
   display: 'inline-block',
   textTransform: 'uppercase',
   whiteSpace: 'nowrap',
+  borderBottom: '3px solid transparent',  // for active indicator
+};
+
+const ACTIVE_DECORATION = {
+  borderBottomColor: '#ffffff',             // active tab underline
+  textShadow: '0 0 0 currentColor',         // crisp text (no color change)
 };
 
 const SEP_STYLE = {
@@ -67,15 +72,25 @@ const SEP_STYLE = {
 };
 
 function hrefFor(link) {
-  if (link.path) {
-    // explicit path item like Top News
-    return link.path.startsWith('/') ? link.path : `/${link.path}`;
-  }
-  // category item
+  if (link.path) return link.path.startsWith('/') ? link.path : `/${link.path}`;
   return `/category/${encodeURIComponent(link.slug)}`;
 }
 
+function isActive(link, pathname) {
+  // Home
+  if (link.path === '/') return pathname === '/';
+
+  // Explicit path (e.g. /top-news)
+  if (link.path) return pathname.startsWith(link.path);
+
+  // Category pages
+  const catPath = `/category/${encodeURIComponent(link.slug)}`;
+  return pathname === catPath || pathname.startsWith(`${catPath}/`);
+}
+
 export default function PrimaryNav() {
+  const { pathname } = useLocation();
+
   return (
     <nav style={WRAP_STYLE} aria-label="Primary">
       <div style={INNER_STYLE}>
@@ -83,9 +98,16 @@ export default function PrimaryNav() {
           {LINKS.map((l, idx) => {
             const href = hrefFor(l);
             const key = l.slug || l.path || l.label;
+            const active = isActive(l, pathname);
+            const style = active ? { ...LINK_BASE, ...ACTIVE_DECORATION } : LINK_BASE;
+
             return (
               <li key={key} style={{ display: 'inline-flex', alignItems: 'center' }}>
-                <Link to={href} style={LINK_STYLE}>
+                <Link
+                  to={href}
+                  style={style}
+                  aria-current={active ? 'page' : undefined}
+                >
                   {l.label}
                 </Link>
                 {idx < LINKS.length - 1 && (
