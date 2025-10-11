@@ -1,0 +1,106 @@
+.tn-title {
+  margin: 16px 0 12px;
+  font-weight: 800;
+  font-size: clamp(20px, 2.6vw, 28px);
+  color: #fff;
+}
+
+.tn-status, .tn-error {
+  color: #fff;
+  padding: 8px 0;
+}
+
+.tn-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.tn-item {
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 1px;     /* match your 1px global */
+  padding: 12px;
+  color: #fff;
+}
+
+.tn-left {
+  min-width: 0; /* allow title to truncate gracefully */
+}
+
+.tn-item-title {
+  color: #fff;
+  font-weight: 800;
+  text-decoration: none;
+  line-height: 1.2;
+  font-size: clamp(16px, 2.1vw, 20px);
+}
+
+.tn-item-title:hover,
+.tn-item-title:focus {
+  text-decoration: none; /* no underline on hover */
+}
+
+.tn-meta {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+  color: #fff;
+}
+
+.tn-pill {
+  color: #0f172a;           /* text on colored pill */
+  font-weight: 800;
+  border-radius: 999px;     /* pill shape */
+  padding: 2px 8px;
+  line-height: 1.2;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tn-source {
+  opacity: 0.9;
+}
+
+.tn-dot {
+  opacity: 0.6;
+}
+
+.tn-time {
+  opacity: 0.9;
+}
+
+.tn-thumb {
+  display: block;
+  width: 100%;
+  height: 120px;
+  border-radius: 1px;
+  overflow: hidden;
+  background: #0b0b0b;
+}
+
+.tn-thumb img,
+.tn-thumb.ph {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+  .tn-item {
+    grid-template-columns: 1fr; /* stack image below text */
+  }
+  .tn-thumb {
+    height: 160px;
+  }
+}

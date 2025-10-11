@@ -30,6 +30,7 @@ import TickerAdmin from './pages/admin/TickerAdmin.jsx';
 import SectionsPage from './admin/sections/SectionsPage.jsx';
 // add imports
 import SectionsV2Page from "./admin/sectionsV2/SectionsV2Page.jsx";
+import TopNews from "./pages/public/TopNews.jsx";
 
 
 
@@ -265,6 +266,7 @@ export default function App() {
         <Route path="/admin/ticker" element={<AdminShell><TickerAdmin /></AdminShell>} />
         <Route path="/admin/sections" element={<AdminShell><SectionsPage /></AdminShell>} />
         <Route path="/admin/sections-v2" element={<AdminShell><SectionsV2Page /></AdminShell>} />
+        <Route path="/top-news" element={<TopNews />} />
 
       </Routes>
     </ErrorBoundary>

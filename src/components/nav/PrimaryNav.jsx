@@ -3,13 +3,13 @@ import { Link } from 'react-router-dom';
 
 // Full set from your dropdown
 const LINKS = [
+  { label: 'Top News', path: '/top-news' },           // <-- ensure leading slash
   { label: 'World', slug: 'World' },
   { label: 'Politics', slug: 'Politics' },
   { label: 'Business', slug: 'Business' },
   { label: 'Entertainment', slug: 'Entertainment' },
   { label: 'General', slug: 'General' },
   { label: 'Health', slug: 'Health' },
-
   { label: 'Science', slug: 'Science' },
   { label: 'Sports', slug: 'Sports' },
   { label: 'Tech', slug: 'Tech' },
@@ -30,7 +30,7 @@ const INNER_STYLE = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  overflowX: 'auto',        // allow horizontal scroll on small screens
+  overflowX: 'auto',
   scrollbarWidth: 'thin',
 };
 
@@ -42,7 +42,7 @@ const UL_STYLE = {
   listStyle: 'none',
   padding: 0,
   margin: 0,
-  flexWrap: 'nowrap',       // keep one row; we scroll instead of wrapping
+  flexWrap: 'nowrap',
   whiteSpace: 'nowrap',
 };
 
@@ -66,24 +66,34 @@ const SEP_STYLE = {
   userSelect: 'none',
 };
 
+function hrefFor(link) {
+  if (link.path) {
+    // explicit path item like Top News
+    return link.path.startsWith('/') ? link.path : `/${link.path}`;
+  }
+  // category item
+  return `/category/${encodeURIComponent(link.slug)}`;
+}
+
 export default function PrimaryNav() {
   return (
     <nav style={WRAP_STYLE} aria-label="Primary">
       <div style={INNER_STYLE}>
         <ul style={UL_STYLE}>
-          {LINKS.map((l, idx) => (
-            <li key={l.slug} style={{ display: 'inline-flex', alignItems: 'center' }}>
-              <Link
-                to={`/category/${encodeURIComponent(l.slug)}`}
-                style={LINK_STYLE}
-              >
-                {l.label}
-              </Link>
-              {idx < LINKS.length - 1 && (
-                <span aria-hidden="true" style={SEP_STYLE}>|</span>
-              )}
-            </li>
-          ))}
+          {LINKS.map((l, idx) => {
+            const href = hrefFor(l);
+            const key = l.slug || l.path || l.label;
+            return (
+              <li key={key} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                <Link to={href} style={LINK_STYLE}>
+                  {l.label}
+                </Link>
+                {idx < LINKS.length - 1 && (
+                  <span aria-hidden="true" style={SEP_STYLE}>|</span>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </div>
     </nav>
