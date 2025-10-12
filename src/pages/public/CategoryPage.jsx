@@ -295,8 +295,9 @@ export default function CategoryPage() {
         setRailsLoading(true);
         setRailsError('');
         const res = await api.get('/api/sections/plan', {
-          params: { targetType: 'category', targetValue: slug },
-        });
+  params: { targetType: 'category', targetValue: String(slug || '').toLowerCase() },
+});
+
         const rows = Array.isArray(res.data) ? res.data : [];
         if (!cancel) setPlanSections(rows);
       } catch (e) {
@@ -348,11 +349,46 @@ export default function CategoryPage() {
   const LEFT_FIRST_PULLUP = -4;
   const RIGHT_FIRST_PULLUP = -4;
 
+    // TEMP DEBUG: remove after verification
+  if (typeof window !== 'undefined') {
+    // quick one-time peek
+    console.debug('planSections:', planSections);
+  }
+
   return (
     <>
       <SiteNav />
 
       <div style={pageWrap}>
+
+         {/* TEMP DEBUG: shows whether rails are loaded */}
+  <div
+    style={{
+      position: 'fixed',
+      bottom: 8,
+      left: 8,
+      background: '#111',
+      color: '#fff',
+      padding: '6px 8px',
+      fontSize: 12,
+      zIndex: 9999,
+      borderRadius: 4,
+    }}
+  >
+    rails: {String((planSections || []).filter(s => s.template?.startsWith('rail_')).length)}
+    {' | '}left:{' '}
+    {String(
+      ((planSections || [])
+        .filter(s => s.template?.startsWith('rail_')))
+        .filter(s => (s.side || 'right') === 'left').length
+    )}
+    {' | '}right:{' '}
+    {String(
+      ((planSections || [])
+        .filter(s => s.template?.startsWith('rail_')))
+        .filter(s => (s.side || 'right') === 'right').length
+    )}
+  </div>
         {hasAnyRails ? (
           <div style={gridWrap}>
             {/* LEFT RAIL */}

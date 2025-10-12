@@ -1,12 +1,11 @@
-// src/components/nav/PrimaryNav.jsx
 import { Link, useLocation } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
 
 const LINKS = [
   { label: 'Home', path: '/' },
   { label: 'Top News', path: '/top-news' },
-    { label: 'India', slug: 'Politics' },
+  { label: 'India', slug: 'Politics' },
   { label: 'Global', slug: 'World' },
-
   { label: 'Business', slug: 'Business' },
   { label: 'Entertainment', slug: 'Entertainment' },
   { label: 'General', slug: 'General' },
@@ -22,11 +21,6 @@ const WRAP_STYLE = {
   borderBottom: '1px solid rgba(0,0,0,0.2)',
 };
 
-/**
- * Outer container: NO scrollbars here.
- * We’ll place a child “scroller” div that can scroll horizontally
- * but with scrollbars visually hidden.
- */
 const OUTER_STYLE = {
   maxWidth: 1120,
   margin: '0 auto',
@@ -34,15 +28,11 @@ const OUTER_STYLE = {
   height: 48,
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'center',
+  justifyContent: 'flex-start',
   overflowX: 'hidden',
   overflowY: 'hidden',
 };
 
-/**
- * This inner scroller is the horizontal overflow area.
- * We hide scrollbars across browsers via CSS (class .nav-scroller).
- */
 const SCROLLER_STYLE = {
   width: '100%',
   height: '100%',
@@ -50,13 +40,15 @@ const SCROLLER_STYLE = {
   overflowY: 'hidden',
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'center',
+  justifyContent: 'flex-start',
+  WebkitOverflowScrolling: 'touch',
+  touchAction: 'pan-x',
 };
 
 const UL_STYLE = {
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'center',
+  justifyContent: 'flex-start',
   gap: 0,
   listStyle: 'none',
   padding: 0,
@@ -76,11 +68,12 @@ const LINK_BASE = {
   display: 'inline-block',
   textTransform: 'uppercase',
   whiteSpace: 'nowrap',
-  borderBottom: '3px solid transparent', // active indicator baseline
+  borderBottom: '3px solid transparent',
+  scrollSnapAlign: 'start',
 };
 
 const ACTIVE_DECORATION = {
-  borderBottomColor: '#ffffff', // active tab underline
+  borderBottomColor: '#ffffff',
   textShadow: '0 0 0 currentColor',
 };
 
@@ -97,36 +90,57 @@ function hrefFor(link) {
 }
 
 function isActive(link, pathname) {
-  // Home
   if (link.path === '/') return pathname === '/';
-
-  // Explicit paths (e.g., /top-news)
   if (link.path) return pathname.startsWith(link.path);
-
-  // Category pages
   const catPath = `/category/${encodeURIComponent(link.slug)}`;
   return pathname === catPath || pathname.startsWith(`${catPath}/`);
 }
 
+function isMobile() {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(max-width: 768px)').matches;
+}
+
 export default function PrimaryNav() {
   const { pathname } = useLocation();
+  const scrollerRef = useRef(null);
+  const activeRef = useRef(null);
+
+  // On mobile: always start at the first tab. Desktop: center active.
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    const activeEl = activeRef.current;
+    if (!scroller) return;
+
+    if (isMobile()) {
+      scroller.scrollTo({ left: 0, behavior: 'auto' });
+    } else if (activeEl) {
+      const elRect = activeEl.getBoundingClientRect();
+      const scRect = scroller.getBoundingClientRect();
+      const delta = (elRect.left + elRect.right) / 2 - (scRect.left + scRect.right) / 2;
+      scroller.scrollBy({ left: delta, behavior: 'smooth' });
+    }
+  }, [pathname]);
 
   return (
     <nav style={WRAP_STYLE} aria-label="Primary">
-      {/* Inline CSS just to hide scrollbars on the scroller, cross-browser */}
       <style>{`
         .nav-scroller {
-          scrollbar-width: none;       /* Firefox */
-          -ms-overflow-style: none;    /* IE/Edge legacy */
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+          scroll-snap-type: x proximity;
         }
-        .nav-scroller::-webkit-scrollbar {
-          display: none;               /* Chrome/Safari */
+        .nav-scroller::-webkit-scrollbar { display: none; }
+
+        @media (max-width: 768px) {
+          .primary-link { line-height: 44px; padding: 0 12px; font-size: 13px; }
+          .primary-sep { display: none; }
         }
       `}</style>
 
-      <div style={OUTER_STYLE}>
-        <div className="nav-scroller" style={SCROLLER_STYLE}>
-          <ul style={UL_STYLE}>
+      <div className="primary-outer" style={OUTER_STYLE}>
+        <div ref={scrollerRef} className="nav-scroller primary-scroller" style={SCROLLER_STYLE} tabIndex={0}>
+          <ul className="primary-list" style={UL_STYLE}>
             {LINKS.map((l, idx) => {
               const href = hrefFor(l);
               const key = l.slug || l.path || l.label;
@@ -138,13 +152,13 @@ export default function PrimaryNav() {
                   <Link
                     to={href}
                     style={style}
+                    className="primary-link"
                     aria-current={active ? 'page' : undefined}
+                    ref={active ? activeRef : null}
                   >
                     {l.label}
                   </Link>
-                  {idx < LINKS.length - 1 && (
-                    <span aria-hidden="true" style={SEP_STYLE}>|</span>
-                  )}
+                  {idx < LINKS.length - 1 && <span aria-hidden="true" className="primary-sep" style={SEP_STYLE}>|</span>}
                 </li>
               );
             })}
