@@ -1,40 +1,40 @@
 @import url('https://fonts.googleapis.com/css2?family=Newsreader:wght@400;700;800&display=swap');
 
 .railv6{
-  background: #fff;
-  border: 1px solid #e6e6e6;
-  border-radius: 4px;
+  background: #00c964;
+  border: 0px solid #e6e6e6;
+  border-radius: 1px;
   padding: 12px;
   font-family: 'Newsreader', serif;
-  color: #0f1a23;
+  color: #ffffff;
 }
 
 /* Centered compact heading with thin line */
 .railv6__head{
   display: grid;
   place-items: center;
-  border-bottom: 1px solid rgba(0,0,0,.15);
-  padding-bottom: 8px;
-  margin-bottom: 10px;
+  border-bottom: 0px solid rgba(0,0,0,.15);
+  padding-bottom: 1px;
+  margin-bottom: 0px;
 }
 .railv6__title{
-  font-weight: 800;
-  font-size: 14px;
-  color: #0b4da8;   /* blue-ish like screenshot */
+  font-weight: 600;
+  font-size: 34px;
+  color: #ffffff;   /* blue-ish like screenshot */
   letter-spacing: .3px;
 }
 
 /* Lead area */
 .railv6__lead{
   border-bottom: 1px solid rgba(0,0,0,.12);   /* thin divider */
-  padding-bottom: 12px;
-  margin-bottom: 12px;
+  padding-bottom: 1px;
+  margin-bottom: 1px;
 }
 .railv6__leadTitle{
   margin: 0 0 8px;
-  font-size: 15px;
-  line-height: 1.25;
-  font-weight: 800;
+  font-size: 16px;
+  line-height: 1.15;
+  font-weight: 600;
 }
 .railv6__leadTitle a{
   color: inherit;
@@ -45,9 +45,9 @@
   display: block;
   width: 100%;
   aspect-ratio: 16/9;
-  border-radius: 6px;
+  border-radius: 1px;
   overflow: hidden;
-  background: #eef1f4;
+  background: #eef4f0;
 }
 .railv6__leadMedia img{
   width: 100%;
@@ -82,7 +82,7 @@
 .railv6__rowThumb{
   width: 90px;
   aspect-ratio: 4/3;   /* small right thumb feel */
-  border-radius: 6px;
+  border-radius: 1px;
   overflow: hidden;
   background: #eef1f4;
   justify-self: end;

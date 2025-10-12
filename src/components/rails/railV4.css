@@ -55,7 +55,7 @@
 /* Rank badge */
 .railv4__rank {
   position: absolute;
-  top: 6.5rem;
+  top: 0.5rem;
   left: 8px;                 /* default: top-left */
   background: #d62323;       /* red square */
   color: #fff;               /* white number */
