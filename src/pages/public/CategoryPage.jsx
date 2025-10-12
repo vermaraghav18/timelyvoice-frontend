@@ -67,7 +67,7 @@ const mainCol = { minWidth: 0 };
 const listStyle = { display: 'flex', flexDirection: 'column', gap: 8 };
 
 const cardStyle = {
-  background: '#001236ff',
+  background: 'linear-gradient(135deg, #001236 0%, #002d6b 100%)',
   borderRadius: 1,
   border: '0px solid #e5e7eb',
   padding: 10,
@@ -130,21 +130,29 @@ function LeadCard({ a }) {
 
   return (
     <div style={leadCardWrap}>
+      {/* 1) Title first */}
+      <Link to={articleUrl} style={{ textDecoration: 'none', color: 'inherit' }}>
+        <h2 style={leadH}>{a.title}</h2>
+      </Link>
+
+      {/* 2) Image second */}
       {img && (
         <Link to={articleUrl}>
           <img src={img} alt={a.imageAlt || a.title || ''} style={leadImg} loading="lazy" />
         </Link>
       )}
-      <Link to={articleUrl} style={{ textDecoration: 'none', color: 'inherit' }}>
-        <h2 style={leadH}>{a.title}</h2>
-      </Link>
+
+      {/* 3) Summary third */}
       {summary && <p style={leadSummary}>{summary}</p>}
+
+      {/* Meta (unchanged, after summary) */}
       <div style={leadMeta}>
         <span>Updated {timeAgo(updated)}</span>
       </div>
     </div>
   );
 }
+
 
 /* ---------- Article Row (rest of the list) ---------- */
 function ArticleRow({ a }) {
