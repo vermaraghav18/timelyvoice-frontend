@@ -67,7 +67,7 @@ const mainCol = { minWidth: 0 };
 const listStyle = { display: 'flex', flexDirection: 'column', gap: 8 };
 
 const cardStyle = {
-  background: 'linear-gradient(135deg, #001236 0%, #002d6b 100%)',
+  background: 'linear-gradient(135deg, #001236 0%, #001e49ff 100%)',
   borderRadius: 1,
   border: '0px solid #e5e7eb',
   padding: 10,
