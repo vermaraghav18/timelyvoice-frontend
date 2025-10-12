@@ -1,5 +1,5 @@
 .tn-title {
-  margin: 16px 0 12px;
+  margin: 0px 0 10px;
   font-weight: 800;
   font-size: clamp(20px, 2.6vw, 28px);
   color: #fff;
@@ -21,6 +21,7 @@
 .tn-item {
   display: grid;
   grid-template-columns: 1fr 200px;
+  grid-template-areas: "left thumb";
   align-items: center;
   gap: 12px;
   background: rgba(255,255,255,0.03);
@@ -31,15 +32,16 @@
 }
 
 .tn-left {
-  min-width: 0; /* allow title to truncate gracefully */
+ min-width: 0;
+  grid-area: left; /* allow title to truncate gracefully */
 }
 
 .tn-item-title {
   color: #fff;
-  font-weight: 800;
+  font-weight: 500;
   text-decoration: none;
-  line-height: 1.2;
-  font-size: clamp(16px, 2.1vw, 20px);
+  line-height: 1.5;
+  font-size: clamp(17px, 2.1vw, 20px);
 }
 
 .tn-item-title:hover,
@@ -58,7 +60,7 @@
 }
 
 .tn-pill {
-  color: #0f172a;           /* text on colored pill */
+  color: #001444;           /* text on colored pill */
   font-weight: 800;
   border-radius: 999px;     /* pill shape */
   padding: 2px 8px;
@@ -85,7 +87,8 @@
   height: 120px;
   border-radius: 1px;
   overflow: hidden;
-  background: #0b0b0b;
+  background: #8d0707;
+  grid-area: thumb;
 }
 
 .tn-thumb img,
@@ -99,6 +102,7 @@
 @media (max-width: 720px) {
   .tn-item {
     grid-template-columns: 1fr; /* stack image below text */
+    grid-template-areas: "thumb" "left";
   }
   .tn-thumb {
     height: 160px;

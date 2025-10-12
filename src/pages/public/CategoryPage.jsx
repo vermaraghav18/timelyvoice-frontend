@@ -44,8 +44,8 @@ const normPath = (p = '') =>
 const pageWrap = {
   display: 'flex',
   justifyContent: 'center',
-  paddingTop: 5,
-  marginTop: 40,
+  paddingTop: 0,
+  marginTop: 12,
   marginBottom: 40,
   fontFamily: "'Newsreader', serif",
 };
