@@ -36,8 +36,7 @@ const toSlug = (s = '') =>
     .replace(/^-+|-+$/g, '');
 
 /* ---------- small utils ---------- */
-const normPath = (p = '') =>
-  String(p).trim().replace(/\/+$/, '') || '/'; // remove trailing slash (except root)
+const normPath = (p = '') => String(p).trim().replace(/\/+$/, '') || '/'; // remove trailing slash (except root)
 
 /* ---------- layout ---------- */
 // Responsive 3-col: Left Rail | Main | Right Rail
@@ -181,6 +180,22 @@ function ArticleRow({ a }) {
   );
 }
 
+/* ---------- helper: interleave rails after every N items (mobile) ---------- */
+function interleaveAfterEveryN(items, inserts, n) {
+  const out = [];
+  let j = 0;
+  for (let i = 0; i < items.length; i++) {
+    out.push({ type: 'article', data: items[i] });
+    if ((i + 1) % n === 0 && j < inserts.length) {
+      out.push({ type: 'rail', data: inserts[j++] });
+    }
+  }
+  while (j < inserts.length) {
+    out.push({ type: 'rail', data: inserts[j++] });
+  }
+  return out;
+}
+
 /* ---------- Category Page ---------- */
 export default function CategoryPage() {
   const { slug } = useParams();
@@ -200,6 +215,23 @@ export default function CategoryPage() {
   const [planSections, setPlanSections] = useState([]);
   const [railsLoading, setRailsLoading] = useState(false);
   const [railsError, setRailsError] = useState('');
+
+  // simple mobile check (kept in state to re-render on resize)
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 720px)').matches : false
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(max-width: 720px)');
+    const onChange = (e) => setIsMobile(e.matches);
+    mq.addEventListener?.('change', onChange);
+    // Safari fallback
+    mq.addListener?.(onChange);
+    return () => {
+      mq.removeEventListener?.('change', onChange);
+      mq.removeListener?.(onChange);
+    };
+  }, []);
 
   const canonical = useMemo(() => `${window.location.origin}/category/${slug}`, [slug]);
 
@@ -295,8 +327,8 @@ export default function CategoryPage() {
         setRailsLoading(true);
         setRailsError('');
         const res = await api.get('/api/sections/plan', {
-  params: { targetType: 'category', targetValue: String(slug || '').toLowerCase() },
-});
+          params: { targetType: 'category', targetValue: String(slug || '').toLowerCase() },
+        });
 
         const rows = Array.isArray(res.data) ? res.data : [];
         if (!cancel) setPlanSections(rows);
@@ -349,9 +381,15 @@ export default function CategoryPage() {
   const LEFT_FIRST_PULLUP = -4;
   const RIGHT_FIRST_PULLUP = -4;
 
-    // TEMP DEBUG: remove after verification
+  // ===== In-feed rails on MOBILE: after every 8 cards =====
+  const infeed = useMemo(() => {
+    if (!isMobile) return null;
+    // use the already-sorted `rails` list so placementIndex is respected
+    return interleaveAfterEveryN(rest, rails, 8);
+  }, [isMobile, rest, rails]);
+
+  // TEMP DEBUG
   if (typeof window !== 'undefined') {
-    // quick one-time peek
     console.debug('planSections:', planSections);
   }
 
@@ -360,43 +398,30 @@ export default function CategoryPage() {
       <SiteNav />
 
       <div style={pageWrap}>
+        {/* small on-screen debug counter (leave or remove) */}
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 8,
+            left: 8,
+            background: '#111',
+            color: '#fff',
+            padding: '6px 8px',
+            fontSize: 12,
+            zIndex: 9999,
+            borderRadius: 4,
+          }}
+        >
+          rails: {String(rails.length)} | left: {String(leftRails.length)} | right: {String(rightRails.length)}
+        </div>
 
-         {/* TEMP DEBUG: shows whether rails are loaded */}
-  <div
-    style={{
-      position: 'fixed',
-      bottom: 8,
-      left: 8,
-      background: '#111',
-      color: '#fff',
-      padding: '6px 8px',
-      fontSize: 12,
-      zIndex: 9999,
-      borderRadius: 4,
-    }}
-  >
-    rails: {String((planSections || []).filter(s => s.template?.startsWith('rail_')).length)}
-    {' | '}left:{' '}
-    {String(
-      ((planSections || [])
-        .filter(s => s.template?.startsWith('rail_')))
-        .filter(s => (s.side || 'right') === 'left').length
-    )}
-    {' | '}right:{' '}
-    {String(
-      ((planSections || [])
-        .filter(s => s.template?.startsWith('rail_')))
-        .filter(s => (s.side || 'right') === 'right').length
-    )}
-  </div>
-        {hasAnyRails ? (
+        {/* ======== DESKTOP / TABLET (3-column with side rails) ======== */}
+        {!isMobile && hasAnyRails ? (
           <div style={gridWrap}>
             {/* LEFT RAIL */}
             <aside style={railCol}>
               {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-              {!railsLoading && railsError && (
-                <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>
-              )}
+              {!railsLoading && railsError && <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>}
               {!railsLoading && !railsError && renderRails(leftRails, LEFT_FIRST_PULLUP)}
             </aside>
 
@@ -441,14 +466,12 @@ export default function CategoryPage() {
             {/* RIGHT RAIL */}
             <aside style={railCol}>
               {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-              {!railsLoading && railsError && (
-                <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>
-              )}
+              {!railsLoading && railsError && <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>}
               {!railsLoading && !railsError && renderRails(rightRails, RIGHT_FIRST_PULLUP)}
             </aside>
           </div>
         ) : (
-          // Fallback: single column when there are no rails configured for this category
+          /* ======== MOBILE (single column with in-feed rails) ======== */
           <div style={singleColWrap}>
             {loading && <p>Loading…</p>}
 
@@ -474,10 +497,18 @@ export default function CategoryPage() {
                 ) : (
                   <>
                     <LeadCard a={lead} />
+
+                    {/* interleaved list: 8 articles, then one rail, repeat */}
                     <div style={listStyle}>
-                      {rest.map((a) => (
-                        <ArticleRow key={a._id || a.id || a.slug} a={a} />
-                      ))}
+                      {(infeed || []).map((block, idx) =>
+                        block.type === 'article' ? (
+                          <ArticleRow key={(block.data._id || block.data.id || block.data.slug) + '-a'} a={block.data} />
+                        ) : (
+                          <div key={(block.data._id || block.data.id || block.data.slug || idx) + '-r'} style={{ margin: '4px 0' }}>
+                            <SectionRenderer section={block.data} />
+                          </div>
+                        )
+                      )}
                     </div>
                   </>
                 )}
