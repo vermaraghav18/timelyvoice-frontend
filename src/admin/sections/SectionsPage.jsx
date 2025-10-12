@@ -31,6 +31,7 @@ export default function SectionsPage() {
     moreLink: data.moreLink,
     placementIndex: data.placementIndex,
     enabled: data.enabled,
+    
   };
 
   // One-time debug: verify we're sending custom
