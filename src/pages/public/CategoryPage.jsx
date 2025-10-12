@@ -242,9 +242,15 @@ export default function CategoryPage() {
     setNotFound(false);
 
     Promise.all([
-      api.get(`/api/categories/slug/${encodeURIComponent(slug)}`, { validateStatus: () => true }),
-      api.get(`/api/articles?category=${encodeURIComponent(slug)}`, { validateStatus: () => true }),
-    ])
+  api.get(`/api/categories/slug/${encodeURIComponent(slug)}`, { validateStatus: () => true }),
+
+  // ✅ ask for up to 50 articles (or whatever your API supports)
+  api.get(`/api/articles`, {
+    params: { category: slug, limit: 50 },   // or { category: slug, page: 1, pageSize: 50 }
+    validateStatus: () => true
+  }),
+])
+
       .then(([cRes, aRes]) => {
         if (!alive) return;
 
