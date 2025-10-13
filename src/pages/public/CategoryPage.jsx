@@ -153,7 +153,6 @@ function LeadCard({ a }) {
   );
 }
 
-
 /* ---------- Article Row (rest of the list) ---------- */
 function ArticleRow({ a }) {
   const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
@@ -250,15 +249,12 @@ export default function CategoryPage() {
     setNotFound(false);
 
     Promise.all([
-  api.get(`/api/categories/slug/${encodeURIComponent(slug)}`, { validateStatus: () => true }),
-
-  // ✅ ask for up to 50 articles (or whatever your API supports)
-  api.get(`/api/articles`, {
-    params: { category: slug, limit: 50 },   // or { category: slug, page: 1, pageSize: 50 }
-    validateStatus: () => true
-  }),
-])
-
+      api.get(`/api/categories/slug/${encodeURIComponent(slug)}`, { validateStatus: () => true }),
+      api.get(`/api/articles`, {
+        params: { category: slug, limit: 50 },
+        validateStatus: () => true,
+      }),
+    ])
       .then(([cRes, aRes]) => {
         if (!alive) return;
 
@@ -485,7 +481,7 @@ export default function CategoryPage() {
             </aside>
           </div>
         ) : (
-          /* ======== MOBILE (single column with in-feed rails) ======== */
+          /* ======== SINGLE COLUMN (mobile OR desktop with no rails) ======== */
           <div style={singleColWrap}>
             {loading && <p>Loading…</p>}
 
@@ -512,18 +508,32 @@ export default function CategoryPage() {
                   <>
                     <LeadCard a={lead} />
 
-                    {/* interleaved list: 8 articles, then one rail, repeat */}
-                    <div style={listStyle}>
-                      {(infeed || []).map((block, idx) =>
-                        block.type === 'article' ? (
-                          <ArticleRow key={(block.data._id || block.data.id || block.data.slug) + '-a'} a={block.data} />
-                        ) : (
-                          <div key={(block.data._id || block.data.id || block.data.slug || idx) + '-r'} style={{ margin: '4px 0' }}>
-                            <SectionRenderer section={block.data} />
-                          </div>
-                        )
-                      )}
-                    </div>
+                    {/* If MOBILE: interleave rails after every 8; else: show a normal list */}
+                    {isMobile ? (
+                      <div style={listStyle}>
+                        {(infeed || []).map((block, idx) =>
+                          block.type === 'article' ? (
+                            <ArticleRow
+                              key={(block.data._id || block.data.id || block.data.slug) + '-a'}
+                              a={block.data}
+                            />
+                          ) : (
+                            <div
+                              key={(block.data._id || block.data.id || block.data.slug || idx) + '-r'}
+                              style={{ margin: '4px 0' }}
+                            >
+                              <SectionRenderer section={block.data} />
+                            </div>
+                          )
+                        )}
+                      </div>
+                    ) : (
+                      <div style={listStyle}>
+                        {rest.map((a) => (
+                          <ArticleRow key={a._id || a.id || a.slug} a={a} />
+                        ))}
+                      </div>
+                    )}
                   </>
                 )}
               </>
