@@ -1,0 +1,46 @@
+/* src/styles/scroll-optimizations.css */
+
+/* 1) Sections: Defer work for offscreen blocks */
+.cv-section,
+main [data-section],
+main [class*="Section"],
+main [class*="Rail"],
+main [class*="Grid"],
+main [class*="List"] {
+  /* Tell the browser it can skip layout/paint until scrolled into view */
+  content-visibility: auto;
+
+  /* Reserve a reasonable placeholder size to avoid jumps.
+     Tweak as you like—these values are just safe defaults. */
+  contain-intrinsic-size: 800px 600px;
+
+  /* Make sure each section is an independent layout context */
+  contain: layout style paint;
+}
+
+/* 2) Cards: same trick for many repeated items */
+.cv-card,
+[class*="Card"] {
+  content-visibility: auto;
+  contain-intrinsic-size: 280px 220px;
+  contain: layout style paint;
+}
+
+/* 3) Images: avoid layout thrash on decode; play nice with our AspectImage */
+img {
+  image-rendering: auto;
+}
+
+/* 4) Avoid accidental expensive effects on scroll */
+*[style*="box-shadow"], 
+[class*="shadow"] {
+  /* Just a nudge: large fancy shadows can be costly on huge lists */
+  will-change: auto;
+}
+
+/* 5) Sticky headers/rails (common on news sites) */
+.sticky,
+[class*="sticky"] {
+  backface-visibility: hidden;
+  transform: translateZ(0); /* creates a new compositor layer only for sticky bars */
+}

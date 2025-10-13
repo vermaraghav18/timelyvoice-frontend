@@ -4,6 +4,58 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>The Timely Voice</title>
+
+    <!-- Preconnect to your API (DEV) -->
+    <link rel="preconnect" href="http://localhost:4000" crossorigin>
+
+    <!-- Preconnect to your API (PROD) — set to your real API origin and keep only one of these lines in production -->
+    <!-- <link rel="preconnect" href="https://YOUR-API-DOMAIN.com" crossorigin> -->
+
+    <!-- Preconnect to Cloudinary (image CDN) -->
+    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
+    <link rel="dns-prefetch" href="//res.cloudinary.com">
+
+    <!-- Preload hero image (🔁 replace URL below with your real hero image path) -->
+    <link
+      rel="preload"
+      as="image"
+      href="https://res.cloudinary.com/YOUR-CLOUD/image/upload/f_auto,q_auto,w_1280/path/to/hero.jpg"
+      imagesrcset="
+        https://res.cloudinary.com/YOUR-CLOUD/image/upload/f_auto,q_auto,w_640/path/to/hero.jpg 640w,
+        https://res.cloudinary.com/YOUR-CLOUD/image/upload/f_auto,q_auto,w_1280/path/to/hero.jpg 1280w,
+        https://res.cloudinary.com/YOUR-CLOUD/image/upload/f_auto,q_auto,w_1920/path/to/hero.jpg 1920w
+      "
+      imagesizes="100vw"
+    />
+
+    <!-- Tiny critical CSS: stabilize header + hero before JS loads -->
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: #fff;
+      }
+
+      #root {
+        min-height: 100vh;
+      }
+
+      /* Prevent layout shift while hero loads */
+      .hero,
+      [data-hero] {
+        aspect-ratio: 16 / 9;
+        background-color: #f4f7f6;
+        overflow: hidden;
+      }
+
+      .hero img,
+      [data-hero] img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

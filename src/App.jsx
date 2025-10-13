@@ -1,5 +1,6 @@
 // src/App.jsx
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
+
 import { Routes, Route, useLocation } from 'react-router-dom';
 import axios from 'axios';
 
@@ -7,30 +8,32 @@ import axios from 'axios';
 import './styles/home.css';
 import './styles/aspectRatio.css';
 import './styles/typography.css';
+import './styles/scroll-optimizations.css';
 
-// Public pages
-import NotFound from './pages/public/NotFound.jsx';
-import SearchPage from './pages/public/SearchPage.jsx';
-import PublicHome from './pages/public/PublicHome.jsx';
-import CategoryPage from './pages/public/CategoryPage.jsx';
-import TagPage from './pages/public/TagPage.jsx';
-import ReaderArticle from './pages/public/Article.jsx';
 
-// Admin pages
-import AdminDashboard from './pages/admin/Dashboard.jsx';
-import AdminMedia from './pages/admin/MediaLibrary.jsx';
-import AdminShell from './layouts/AdminShell.jsx';
-import ArticlesPage from './pages/admin/ArticlesPage.jsx';
-import CategoriesPage from './pages/admin/CategoriesPage.jsx';
-import TagsPage from './pages/admin/TagsPage.jsx';
-import SettingsPage from './pages/admin/SettingsPage.jsx';
-import CommentsPage from './pages/admin/CommentsPage.jsx';
-import BreakingNewsAdmin from './pages/admin/BreakingNewsAdmin.jsx';
-import TickerAdmin from './pages/admin/TickerAdmin.jsx';
-import SectionsPage from './admin/sections/SectionsPage.jsx';
-// add imports
-import SectionsV2Page from "./admin/sectionsV2/SectionsV2Page.jsx";
-import TopNews from "./pages/public/TopNews.jsx";
+// Public pages (lazy)
+const NotFound = lazy(() => import('./pages/public/NotFound.jsx'));
+const SearchPage = lazy(() => import('./pages/public/SearchPage.jsx'));
+const PublicHome = lazy(() => import('./pages/public/PublicHome.jsx'));
+const CategoryPage = lazy(() => import('./pages/public/CategoryPage.jsx'));
+const TagPage = lazy(() => import('./pages/public/TagPage.jsx'));
+const ReaderArticle = lazy(() => import('./pages/public/Article.jsx'));
+const TopNews = lazy(() => import('./pages/public/TopNews.jsx'));
+
+// Admin pages (lazy)
+const AdminShell = lazy(() => import('./layouts/AdminShell.jsx'));
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard.jsx'));
+const AdminMedia = lazy(() => import('./pages/admin/MediaLibrary.jsx'));
+const ArticlesPage = lazy(() => import('./pages/admin/ArticlesPage.jsx'));
+const CategoriesPage = lazy(() => import('./pages/admin/CategoriesPage.jsx'));
+const TagsPage = lazy(() => import('./pages/admin/TagsPage.jsx'));
+const SettingsPage = lazy(() => import('./pages/admin/SettingsPage.jsx'));
+const CommentsPage = lazy(() => import('./pages/admin/CommentsPage.jsx'));
+const BreakingNewsAdmin = lazy(() => import('./pages/admin/BreakingNewsAdmin.jsx'));
+const TickerAdmin = lazy(() => import('./pages/admin/TickerAdmin.jsx'));
+const SectionsPage = lazy(() => import('./admin/sections/SectionsPage.jsx'));
+const SectionsV2Page = lazy(() => import('./admin/sectionsV2/SectionsV2Page.jsx'));
+
 
 
 
@@ -244,7 +247,8 @@ export default function App() {
   }, [loc.pathname, loc.search]);
 
   return (
-    <ErrorBoundary>
+  <ErrorBoundary>
+    <Suspense fallback={<div style={{padding:16}}>Loading…</div>}>
       <Routes>
         {/* Reader */}
         <Route path="/" element={<PublicHome />} />
@@ -252,6 +256,7 @@ export default function App() {
         <Route path="/tag/:slug" element={<TagPage />} />
         <Route path="/article/:slug" element={<ReaderArticle />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/top-news" element={<TopNews />} />
         <Route path="*" element={<NotFound />} />
 
         {/* Admin */}
@@ -266,9 +271,9 @@ export default function App() {
         <Route path="/admin/ticker" element={<AdminShell><TickerAdmin /></AdminShell>} />
         <Route path="/admin/sections" element={<AdminShell><SectionsPage /></AdminShell>} />
         <Route path="/admin/sections-v2" element={<AdminShell><SectionsV2Page /></AdminShell>} />
-        <Route path="/top-news" element={<TopNews />} />
-
       </Routes>
-    </ErrorBoundary>
-  );
+    </Suspense>
+  </ErrorBoundary>
+);
+
 }
