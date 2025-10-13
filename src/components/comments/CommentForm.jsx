@@ -1,9 +1,29 @@
-// CommentForm.jsx
-import { useState } from 'react';
+// src/components/comments/CommentForm.jsx
+import { useState, useEffect } from 'react';
 import { api, styles } from '../../App.jsx';
 import { track } from '../../lib/analytics';
 
-export default function CommentForm({ slug, parentId = null, onSubmitted }) {
+/** Detect mobile if parent doesn't pass isMobile */
+function useIsMobileFallback(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
+  );
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < breakpoint);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [breakpoint]);
+  return isMobile;
+}
+
+export default function CommentForm({
+  slug,
+  parentId = null,
+  onSubmitted,
+  isMobile: isMobileProp, // optional; parent can pass it
+}) {
+  const isMobile = typeof isMobileProp === 'boolean' ? isMobileProp : useIsMobileFallback(768);
+
   const [authorName, setName] = useState('');
   const [authorEmail, setEmail] = useState('');
   const [content, setContent] = useState('');
@@ -20,7 +40,6 @@ export default function CommentForm({ slug, parentId = null, onSubmitted }) {
         { authorName, authorEmail, content, parentId }
       );
 
-      // 🔔 analytics
       track('comment_submit', { slug, parent: !!parentId });
 
       setMsg(
@@ -39,32 +58,112 @@ export default function CommentForm({ slug, parentId = null, onSubmitted }) {
     }
   }
 
+  // ===== Styles =====
+  const wrap = {
+    marginTop: 12,
+    background: 'transparent',
+    borderRadius: 12,
+    // side gutters so fields don't touch the card edge
+    padding: isMobile ? '0 10px 10px' : '0 12px 12px',
+    boxSizing: 'border-box',
+  };
+
+  const title = {
+    margin: '0 0 10px',
+    color: '#ffffff',                // white heading
+    fontSize: isMobile ? 18 : 20,
+    fontWeight: 700,
+    letterSpacing: 0.2,
+  };
+
+  const grid = {
+    display: 'grid',
+    gap: isMobile ? 10 : 12,
+    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+  };
+
+  const fullRow = { gridColumn: isMobile ? 'auto' : '1 / -1' };
+
+  const field = {
+    width: '100%',
+    boxSizing: 'border-box',         // keep width inside gutters
+    background: '#0f1c44',
+    color: '#ffffff',
+    border: '1px solid #1e2a55',
+    borderRadius: 10,
+    padding: isMobile ? '10px 12px' : '12px 14px',
+    fontSize: isMobile ? 14 : 16,
+    lineHeight: 1.4,
+    outline: 'none',
+  };
+
+  const textarea = {
+    ...field,
+    minHeight: isMobile ? 90 : 110,
+    resize: 'vertical',
+  };
+
+  const btn = {
+    background: busy ? '#3a5599' : '#2e6bff',
+    color: '#ffffff',
+    border: '1px solid rgba(255,255,255,.14)',
+    borderRadius: 10,
+    padding: isMobile ? '10px 14px' : '12px 16px',
+    fontSize: isMobile ? 14 : 16,
+    fontWeight: 700,
+    cursor: busy ? 'not-allowed' : 'pointer',
+    transition: 'transform .12s ease, box-shadow .12s ease, background .12s ease',
+    boxShadow: busy ? 'none' : '0 8px 24px rgba(0,0,0,.25)',
+  };
+
+  const msgStyle = {
+    marginTop: 8,
+    color: '#e9edff',
+    fontSize: isMobile ? 13 : 14,
+  };
+
   return (
-    <form onSubmit={submit} style={{ marginTop: 12 }}>
-      <input
-        style={styles.input}
-        placeholder="Your name"
-        value={authorName}
-        onChange={(e) => setName(e.target.value)}
-        required
-      />
-      <input
-        style={styles.input}
-        placeholder="Email (optional, never shown)"
-        value={authorEmail}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <textarea
-        style={{ ...styles.input, minHeight: 100 }}
-        placeholder="Write a comment…"
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        required
-      />
-      <button disabled={busy} style={{ ...styles.button }}>
-        {busy ? 'Submitting…' : 'Post Comment'}
-      </button>
-      {msg && <div style={{ marginTop: 8 }}>{msg}</div>}
+    <form onSubmit={submit} style={wrap}>
+      {/* Heading */}
+      <h3 style={title}>Leave a comment</h3>
+
+      {/* Responsive grid: name + email; textarea full width */}
+      <div style={grid}>
+        <input
+          style={field}
+          placeholder="Your name"
+          value={authorName}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+        <input
+          style={field}
+          placeholder="Email (optional, never shown)"
+          value={authorEmail}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <textarea
+          style={{ ...textarea, ...fullRow }}
+          placeholder="Write a comment…"
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          required
+        />
+      </div>
+
+      {/* Button */}
+      <div style={{ marginTop: isMobile ? 10 : 12 }}>
+        <button
+          disabled={busy}
+          style={btn}
+          onMouseEnter={(e) => { if (!busy) e.currentTarget.style.background = '#3a7bff'; }}
+          onMouseLeave={(e) => { if (!busy) e.currentTarget.style.background = '#2e6bff'; }}
+        >
+          {busy ? 'Submitting…' : 'Post Comment'}
+        </button>
+      </div>
+
+      {msg && <div style={msgStyle}>{msg}</div>}
     </form>
   );
 }

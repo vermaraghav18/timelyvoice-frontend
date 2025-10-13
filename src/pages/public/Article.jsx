@@ -29,12 +29,26 @@ function estimateReadingTime(text = '', wpm = 200) {
   const minutes = Math.max(1, Math.ceil(words / wpm));
   return { minutes, words };
 }
+
+/** Simple viewport hook: returns true when width < breakpoint */
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
+  );
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < breakpoint);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [breakpoint]);
+  return isMobile;
+}
 /* ----------------------------------- */
 
 export default function ReaderArticle() {
   const { slug } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const isMobile = useIsMobile(768); // <— rails hidden below 768px
 
   const [article, setArticle] = useState(null);
   const [error, setError] = useState('');
@@ -114,8 +128,8 @@ export default function ReaderArticle() {
 
         // JSON-LD
         const categoryObj = doc.category || null;
-        const categoryName = categoryObj?.name || categoryObj || 'General';
-        const categorySlug = categoryObj?.slug || categoryName;
+ const categoryName = categoryObj?.name || categoryObj || 'General';
+ const categorySlug = categoryObj?.slug || categoryName;
 
         const articleData = {
           '@type': 'NewsArticle',
@@ -270,24 +284,28 @@ export default function ReaderArticle() {
   const outerContainer = {
     display: 'flex',
     justifyContent: 'center',
-    marginTop: 32,
-    marginBottom: 40,
+    marginTop: isMobile ? 16 : 32,
+    marginBottom: isMobile ? 24 : 40,
     fontFamily: "'Newsreader', serif",
   };
 
   const mainWrapper = {
     display: 'flex',
+    flexDirection: isMobile ? 'column' : 'row',
     justifyContent: 'center',
-    alignItems: 'flex-start',
-    gap: 8,
+    alignItems: isMobile ? 'stretch' : 'flex-start',
+    gap: isMobile ? 12 : 8,
     width: '100%',
-    maxWidth: 1040,
+    maxWidth: isMobile ? 640 : 1040,
     padding: '0 12px',
   };
 
-  // slimmer rails + wider article column
+  // on mobile we don't render rails at all
   const leftColumn   = { flex: '0 0 260px' };
-  const centerColumn = { flex: '0 0 480px' };
+  const centerColumn = {
+    flex: isMobile ? '1 1 auto' : '0 0 480px',
+    width: isMobile ? '100%' : 'auto',
+  };
   const rightColumn  = { flex: '0 0 260px' };
 
   const railWrapFix = { display: 'flow-root', marginTop: 0, paddingTop: 0 };
@@ -302,14 +320,14 @@ export default function ReaderArticle() {
   /* ---------- article styles ---------- */
   const titleH1 = {
     margin: '0 0 8px',
-    fontSize: 'clamp(18px, 2vw, 28px)',
+    fontSize: isMobile ? 'clamp(18px, 5.5vw, 26px)' : 'clamp(18px, 2vw, 28px)',
     lineHeight: 1.3,
     fontWeight: 600,
   };
 
   const sourceRow = {
-    margin: '10px 0 20px',
-    fontSize: 15,
+    margin: isMobile ? '6px 0 12px' : '10px 0 20px',
+    fontSize: isMobile ? 14 : 15,
     color: '#00ffbfff',
     fontWeight: 500,
   };
@@ -322,34 +340,38 @@ export default function ReaderArticle() {
     gap: 6,
     borderTop: '1px solid #e5e7eb',
     borderBottom: '1px solid #e5e7eb',
-    padding: '12px 0',
-    margin: '4px 0 8px',
+    padding: isMobile ? '10px 0' : '12px 0',
+    margin: isMobile ? '2px 0 8px' : '4px 0 8px',
     lineHeight: 1,
   };
 
-  const timeText = { color: '#ffffffff', fontSize: 15, fontWeight: 500 };
+  const timeText = { color: '#ffffffff', fontSize: isMobile ? 14 : 15, fontWeight: 500 };
 
   const summaryBox = {
     background: '#003a7cff',
     border: '0px solid #000000ff',
     color: '#ffffffff',
     borderRadius: 1,
-    padding: 12,
-    fontSize: 16,
+    padding: isMobile ? 10 : 12,
+    fontSize: isMobile ? 15 : 16,
     lineHeight: 1.5,
     margin: '0 0 12px',
   };
 
   const figureWrap = { margin: '0 0 12px' };
   const imgStyle = { width: '100%', height: 'auto', borderRadius: 1, background: '#f1f5f9' };
-  const figCap = { color: '#64748b', fontSize: 16, marginTop: 6 };
+  const figCap = { color: '#64748b', fontSize: isMobile ? 14 : 16, marginTop: 6 };
 
-  const prose = { fontSize: 'clamp(16px, 2.2vw, 18px)', lineHeight: 1.75, color: '#ffffffff' };
+  const prose = {
+    fontSize: isMobile ? 16 : 'clamp(16px, 2.2vw, 18px)',
+    lineHeight: 1.75,
+    color: '#ffffffff',
+  };
 
   // bottom share row
   const shareBottom = {
-    marginTop: 12,
-    paddingTop: 8,  
+    marginTop: isMobile ? 10 : 12,
+    paddingTop: isMobile ? 6 : 8,
     borderTop: '0px solid #e5e7eb',
   };
 
@@ -358,53 +380,52 @@ export default function ReaderArticle() {
       <SiteNav />
       <div style={outerContainer}>
         <div style={mainWrapper}>
-          {/* LEFT RAILS (odd indices) */}
-          <aside style={leftColumn}>
-            <div className="rail-wrap" style={railWrapFix}>
-              {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-              {!railsLoading && railsError && (
-                <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>
-              )}
-              {!railsLoading && !railsError && renderRails(leftRails)}
-            </div>
-          </aside>
+          {/* LEFT RAILS (odd indices) — hidden on mobile */}
+          {!isMobile && (
+            <aside style={leftColumn}>
+              <div className="rail-wrap" style={railWrapFix}>
+                {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
+                {!railsLoading && railsError && (
+                  <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>
+                )}
+                {!railsLoading && !railsError && renderRails(leftRails)}
+              </div>
+            </aside>
+          )}
 
           {/* CENTER ARTICLE */}
           <main style={centerColumn}>
             <article
-            className="card"
-            style={{
-              ...styles.card,
-              padding: 16,
-              marginTop: 0,
-              backgroundColor: '#001236ff', // lighter, smoother blue tone
-              color: '#FFFFFF',
-              border: 'none',             // removes white border
-              boxShadow: '0 0 0 0 transparent', // ensures no faint outline
-            }}
-          >
-
-
+              className="card"
+              style={{
+                ...styles.card,
+                padding: isMobile ? 12 : 16,
+                marginTop: 0,
+                backgroundColor: '#001236ff', // lighter, smoother blue tone
+                color: '#FFFFFF',
+                border: 'none',             // removes white border
+                boxShadow: '0 0 0 0 transparent', // ensures no faint outline
+              }}
+            >
               <h1 style={titleH1}>{article.title}</h1>
 
               <div style={sourceRow}>By {article.source || article.author || 'News Desk'}</div>
 
-              {/* keep thin updated row only */}
+              {/* thin updated row */}
               <div style={timeShareBar}>
                 <small style={timeText}>
-              {displayDate ? `Updated on: ${new Date(displayDate).toLocaleString()}` : ''}
-              {reading.minutes ? (
-                <>
-                  {' • '}
-                  <span style={{ color: '#ee6affff', fontWeight: 500  ,fontSize:18,}}>
-                    {reading.minutes} min read
-                  </span>
-                </>
-              ) : (
-                ''
-              )}
-            </small>
-
+                  {displayDate ? `Updated on: ${new Date(displayDate).toLocaleString()}` : ''}
+                  {reading.minutes ? (
+                    <>
+                      {' • '}
+                      <span style={{ color: '#ee6affff', fontWeight: 500, fontSize: isMobile ? 16 : 18 }}>
+                        {reading.minutes} min read
+                      </span>
+                    </>
+                  ) : (
+                    ''
+                  )}
+                </small>
               </div>
 
               {article.summary && <div style={summaryBox}>{article.summary}</div>}
@@ -433,19 +454,20 @@ export default function ReaderArticle() {
               />
 
               {/* Share at the end of the article */}
-              <div style={shareBottom}>
-                <ShareBar url={canonical} title={article.title} />
-              </div>
+             
             </article>
 
             {related.length > 0 && (
               <section style={{ marginTop: 16 }}>
-                <h3 style={{ margin: '8px 0 12px' }}>Related</h3>
+                <h3 style={{ margin: '8px 0 12px', color: '#ffffffff', fontSize: 28, fontWeight: 700 }}>
+  Related
+</h3>
+
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                    gap: 12,
+                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(220px, 1fr))',
+                    gap: isMobile ? 10 : 12,
                   }}
                 >
                   {related.map((a) => {
@@ -456,9 +478,17 @@ export default function ReaderArticle() {
                         href={`/article/${a.slug}`}
                         style={{ textDecoration: 'none', color: 'inherit' }}
                       >
-                        <article
-                          style={{ border: '0px solid #e8eceb', borderRadius: 1, padding: 12 }}
-                        >
+                       <article
+                            style={{
+                              background: '#001653ff',           // card bg
+                              color: '#e9edff',                // default text on the card
+                              border: '0px solid #1e2a55',     // subtle border
+                              borderRadius: 1,                // nicer rounding
+                              padding: isMobile ? 12 : 14,
+                              boxShadow: '0 6px 24px rgba(0,0,0,.25)' // optional depth
+                            }}
+                          >
+
                           {rImg && (
                             <div className="ar-16x9" style={{ marginBottom: 8 }}>
                               <img
@@ -478,7 +508,8 @@ export default function ReaderArticle() {
                             </div>
                           )}
                           <div style={{ fontWeight: 600, lineHeight: 1.3 }}>{a.title}</div>
-                          <small style={styles.muted}>
+                          <small style={{ ...styles.muted, color: '#0051ffff' ,}}>
+
                             {a.publishedAt || a.publishAt
                               ? new Date(a.publishedAt || a.publishAt).toLocaleDateString()
                               : ''}
@@ -492,22 +523,24 @@ export default function ReaderArticle() {
             )}
 
             <section style={{ marginTop: 24 }}>
-              <h2>Comments</h2>
-              <CommentForm slug={article.slug} onSubmitted={() => loadComments(article.slug)} />
-              <CommentThread comments={comments} />
-            </section>
+  <CommentForm slug={article.slug} onSubmitted={() => loadComments(article.slug)} />
+  <CommentThread comments={comments} />
+</section>
+
           </main>
 
-          {/* RIGHT RAILS (even indices) */}
-          <aside style={rightColumn}>
-            <div className="rail-wrap" style={railWrapFix}>
-              {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-              {!railsLoading && railsError && (
-                <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>
-              )}
-              {!railsLoading && !railsError && renderRails(rightRails)}
-            </div>
-          </aside>
+          {/* RIGHT RAILS (even indices) — hidden on mobile */}
+          {!isMobile && (
+            <aside style={rightColumn}>
+              <div className="rail-wrap" style={railWrapFix}>
+                {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
+                {!railsLoading && railsError && (
+                  <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>
+                )}
+                {!railsLoading && !railsError && renderRails(rightRails)}
+              </div>
+            </aside>
+          )}
         </div>
       </div>
       <SiteFooter />
