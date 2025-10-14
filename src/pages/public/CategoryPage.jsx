@@ -9,6 +9,34 @@ import SiteFooter from '../../components/SiteFooter.jsx';
 import SectionRenderer from '../../components/sections/SectionRenderer.jsx';
 import '../../styles/rails.css';
 
+/* ---------- Google AdSense: lightweight block component (added) ---------- */
+const ADS_CLIENT = 'ca-pub-8472487092329023';     // your AdSense publisher ID
+const ADS_SLOT_MAIN = '3149743917';               // ✅ your Ad slot ID
+const ADS_SLOT_SECOND = '3149743917';             // you can reuse the same slot
+
+
+function AdSenseBlock({ slot, style }) {
+  useEffect(() => {
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (e) {
+      // swallow AdSense push errors to avoid breaking render
+      // console.debug('AdSense push error', e);
+    }
+  }, []);
+  return (
+    <ins
+      className="adsbygoogle"
+      style={{ display: 'block', ...style }}
+      data-ad-client={ADS_CLIENT}
+      data-ad-slot={slot}
+      data-ad-format="auto"
+      data-full-width-responsive="true"
+    ></ins>
+  );
+}
+/* ------------------------------------------------------------------------ */
+
 /* ---------- helper: relative time ---------- */
 function timeAgo(input) {
   const d = input ? new Date(input) : null;
@@ -403,6 +431,9 @@ export default function CategoryPage() {
     console.debug('planSections:', planSections);
   }
 
+  // ----- determine if current category is "world" (lowercased) -----
+  const isWorldCategory = String(slug || '').toLowerCase() === 'world';
+
   return (
     <>
       <SiteNav />
@@ -462,9 +493,25 @@ export default function CategoryPage() {
                   ) : (
                     <>
                       <LeadCard a={lead} />
+
+                      {/* ✅ AdSense: show on World category after the lead card */}
+                      {isWorldCategory && (
+                        <div style={{ margin: '12px 0', textAlign: 'center' }}>
+                          <AdSenseBlock slot={ADS_SLOT_MAIN} />
+                        </div>
+                      )}
+
                       <div style={listStyle}>
-                        {rest.map((a) => (
-                          <ArticleRow key={a._id || a.id || a.slug} a={a} />
+                        {rest.map((a, idx) => (
+                          <div key={a._id || a.id || a.slug || idx}>
+                            <ArticleRow a={a} />
+                            {/* ✅ Optional second ad deeper in feed (e.g., after 5th item) */}
+                            {isWorldCategory && idx === 4 && (
+                              <div style={{ margin: '12px 0', textAlign: 'center' }}>
+                                <AdSenseBlock slot={ADS_SLOT_SECOND} />
+                              </div>
+                            )}
+                          </div>
                         ))}
                       </div>
                     </>
@@ -508,15 +555,27 @@ export default function CategoryPage() {
                   <>
                     <LeadCard a={lead} />
 
+                    {/* ✅ AdSense: show on World category after the lead card (mobile/single-col) */}
+                    {isWorldCategory && (
+                      <div style={{ margin: '12px 0', textAlign: 'center' }}>
+                        <AdSenseBlock slot={ADS_SLOT_MAIN} />
+                      </div>
+                    )}
+
                     {/* If MOBILE: interleave rails after every 8; else: show a normal list */}
                     {isMobile ? (
                       <div style={listStyle}>
                         {(infeed || []).map((block, idx) =>
                           block.type === 'article' ? (
-                            <ArticleRow
-                              key={(block.data._id || block.data.id || block.data.slug) + '-a'}
-                              a={block.data}
-                            />
+                            <div key={(block.data._id || block.data.id || block.data.slug || idx) + '-a'}>
+                              <ArticleRow a={block.data} />
+                              {/* ✅ Optional second ad after ~5th article block on mobile */}
+                              {isWorldCategory && idx === 8 && (
+                                <div style={{ margin: '12px 0', textAlign: 'center' }}>
+                                  <AdSenseBlock slot={ADS_SLOT_SECOND} />
+                                </div>
+                              )}
+                            </div>
                           ) : (
                             <div
                               key={(block.data._id || block.data.id || block.data.slug || idx) + '-r'}
@@ -529,8 +588,16 @@ export default function CategoryPage() {
                       </div>
                     ) : (
                       <div style={listStyle}>
-                        {rest.map((a) => (
-                          <ArticleRow key={a._id || a.id || a.slug} a={a} />
+                        {rest.map((a, idx) => (
+                          <div key={a._id || a.id || a.slug || idx}>
+                            <ArticleRow a={a} />
+                            {/* ✅ Optional second ad deeper in list (desktop single-col) */}
+                            {isWorldCategory && idx === 4 && (
+                              <div style={{ margin: '12px 0', textAlign: 'center' }}>
+                                <AdSenseBlock slot={ADS_SLOT_SECOND} />
+                              </div>
+                            )}
+                          </div>
                         ))}
                       </div>
                     )}
