@@ -9,21 +9,27 @@ import SiteFooter from '../../components/SiteFooter.jsx';
 import SectionRenderer from '../../components/sections/SectionRenderer.jsx';
 import '../../styles/rails.css';
 
-/* ---------- Google AdSense: lightweight block component (added) ---------- */
-const ADS_CLIENT = 'ca-pub-8472487092329023';     // your AdSense publisher ID
-const ADS_SLOT_MAIN = '3149743917';               // ✅ your Ad slot ID
-const ADS_SLOT_SECOND = '3149743917';             // you can reuse the same slot
+/* ---------- Google AdSense: lightweight blocks (added) ---------- */
+const ADS_CLIENT = 'ca-pub-8472487092329023';
+const ADS_SLOT_MAIN = '3149743917';      // responsive "auto"
+const ADS_SLOT_SECOND = '3149743917';    // reuse same
+const ADS_SLOT_FLUID_KEY = '1442744724'; // data-ad-layout-key
+const ADS_SLOT_IN_ARTICLE = '9569163673';
+const ADS_SLOT_AUTORELAXED = '2545424475';
 
-
-function AdSenseBlock({ slot, style }) {
+// Base push helper (avoids crashes if script not loaded yet)
+function useAdsPush(deps = []) {
   useEffect(() => {
     try {
       (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch (e) {
-      // swallow AdSense push errors to avoid breaking render
-      // console.debug('AdSense push error', e);
-    }
-  }, []);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+}
+
+// Standard responsive auto ad
+function AdSenseAuto({ slot, style }) {
+  useAdsPush([slot]);
   return (
     <ins
       className="adsbygoogle"
@@ -35,7 +41,51 @@ function AdSenseBlock({ slot, style }) {
     ></ins>
   );
 }
-/* ------------------------------------------------------------------------ */
+
+// Fluid with layout key
+function AdSenseFluidKey({ style }) {
+  useAdsPush([]);
+  return (
+    <ins
+      className="adsbygoogle"
+      style={{ display: 'block', ...style }}
+      data-ad-format="fluid"
+      data-ad-layout-key="-ge-1b-1q-el+13l"
+      data-ad-client={ADS_CLIENT}
+      data-ad-slot={ADS_SLOT_FLUID_KEY}
+    ></ins>
+  );
+}
+
+// In-article fluid (centered)
+function AdSenseInArticle({ style }) {
+  useAdsPush([]);
+  return (
+    <ins
+      className="adsbygoogle"
+      style={{ display: 'block', textAlign: 'center', ...style }}
+      data-ad-layout="in-article"
+      data-ad-format="fluid"
+      data-ad-client={ADS_CLIENT}
+      data-ad-slot={ADS_SLOT_IN_ARTICLE}
+    ></ins>
+  );
+}
+
+// Auto-relaxed (multiplex)
+function AdSenseAutoRelaxed({ style }) {
+  useAdsPush([]);
+  return (
+    <ins
+      className="adsbygoogle"
+      style={{ display: 'block', ...style }}
+      data-ad-format="autorelaxed"
+      data-ad-client={ADS_CLIENT}
+      data-ad-slot={ADS_SLOT_AUTORELAXED}
+    ></ins>
+  );
+}
+/* ---------------------------------------------------------------- */
 
 /* ---------- helper: relative time ---------- */
 function timeAgo(input) {
@@ -494,26 +544,50 @@ export default function CategoryPage() {
                     <>
                       <LeadCard a={lead} />
 
-                      {/* ✅ AdSense: show on World category after the lead card */}
+                      {/* ✅ Ads after the lead card (visible only on World) */}
                       {isWorldCategory && (
-                        <div style={{ margin: '12px 0', textAlign: 'center' }}>
-                          <AdSenseBlock slot={ADS_SLOT_MAIN} />
-                        </div>
+                        <>
+                          {/* existing responsive auto slot */}
+                          <div style={{ margin: '12px 0', textAlign: 'center' }}>
+                            <AdSenseAuto slot={ADS_SLOT_MAIN} />
+                          </div>
+
+                          {/* new in-article fluid */}
+                          <div style={{ margin: '12px 0' }}>
+                            <AdSenseInArticle />
+                          </div>
+                        </>
                       )}
 
                       <div style={listStyle}>
                         {rest.map((a, idx) => (
                           <div key={a._id || a.id || a.slug || idx}>
                             <ArticleRow a={a} />
-                            {/* ✅ Optional second ad deeper in feed (e.g., after 5th item) */}
+
+                            {/* ✅ deeper placements */}
+                            {isWorldCategory && idx === 2 && (
+                              <div style={{ margin: '12px 0' }}>
+                                {/* fluid with layout-key */}
+                                <AdSenseFluidKey />
+                              </div>
+                            )}
+
                             {isWorldCategory && idx === 4 && (
                               <div style={{ margin: '12px 0', textAlign: 'center' }}>
-                                <AdSenseBlock slot={ADS_SLOT_SECOND} />
+                                {/* second responsive auto (reuse slot) */}
+                                <AdSenseAuto slot={ADS_SLOT_SECOND} />
                               </div>
                             )}
                           </div>
                         ))}
                       </div>
+
+                      {/* ✅ bottom of main column: auto-relaxed block */}
+                      {isWorldCategory && (
+                        <div style={{ margin: '16px 0' }}>
+                          <AdSenseAutoRelaxed />
+                        </div>
+                      )}
                     </>
                   )}
                 </>
@@ -555,11 +629,16 @@ export default function CategoryPage() {
                   <>
                     <LeadCard a={lead} />
 
-                    {/* ✅ AdSense: show on World category after the lead card (mobile/single-col) */}
+                    {/* ✅ Ads after the lead card (mobile/single-col) */}
                     {isWorldCategory && (
-                      <div style={{ margin: '12px 0', textAlign: 'center' }}>
-                        <AdSenseBlock slot={ADS_SLOT_MAIN} />
-                      </div>
+                      <>
+                        <div style={{ margin: '12px 0', textAlign: 'center' }}>
+                          <AdSenseAuto slot={ADS_SLOT_MAIN} />
+                        </div>
+                        <div style={{ margin: '12px 0' }}>
+                          <AdSenseInArticle />
+                        </div>
+                      </>
                     )}
 
                     {/* If MOBILE: interleave rails after every 8; else: show a normal list */}
@@ -569,10 +648,18 @@ export default function CategoryPage() {
                           block.type === 'article' ? (
                             <div key={(block.data._id || block.data.id || block.data.slug || idx) + '-a'}>
                               <ArticleRow a={block.data} />
-                              {/* ✅ Optional second ad after ~5th article block on mobile */}
+
+                              {/* fluid with layout-key after ~3rd article chunk on mobile */}
+                              {isWorldCategory && idx === 3 && (
+                                <div style={{ margin: '12px 0' }}>
+                                  <AdSenseFluidKey />
+                                </div>
+                              )}
+
+                              {/* second responsive auto later in feed */}
                               {isWorldCategory && idx === 8 && (
                                 <div style={{ margin: '12px 0', textAlign: 'center' }}>
-                                  <AdSenseBlock slot={ADS_SLOT_SECOND} />
+                                  <AdSenseAuto slot={ADS_SLOT_SECOND} />
                                 </div>
                               )}
                             </div>
@@ -591,14 +678,29 @@ export default function CategoryPage() {
                         {rest.map((a, idx) => (
                           <div key={a._id || a.id || a.slug || idx}>
                             <ArticleRow a={a} />
-                            {/* ✅ Optional second ad deeper in list (desktop single-col) */}
+
+                            {/* desktop single-col: fluid w/ key after 3rd */}
+                            {isWorldCategory && idx === 2 && (
+                              <div style={{ margin: '12px 0' }}>
+                                <AdSenseFluidKey />
+                              </div>
+                            )}
+
+                            {/* desktop single-col: second auto after 5th */}
                             {isWorldCategory && idx === 4 && (
                               <div style={{ margin: '12px 0', textAlign: 'center' }}>
-                                <AdSenseBlock slot={ADS_SLOT_SECOND} />
+                                <AdSenseAuto slot={ADS_SLOT_SECOND} />
                               </div>
                             )}
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {/* bottom: auto-relaxed */}
+                    {isWorldCategory && (
+                      <div style={{ margin: '16px 0' }}>
+                        <AdSenseAutoRelaxed />
                       </div>
                     )}
                   </>
