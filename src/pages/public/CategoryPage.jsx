@@ -360,14 +360,27 @@ export default function CategoryPage() {
   }, [slug, navigate]);
 
   /* SEO */
-  useEffect(() => {
-    removeManagedHeadTags();
-    const title = category ? `${category.name} — NewsSite` : `Category — NewsSite`;
-    const desc = category?.description || `Latest ${category?.name || ''} stories on NewsSite`.trim();
-    upsertTag('title', {}, { textContent: title });
-    upsertTag('meta', { name: 'description', content: desc || 'Browse category on NewsSite' });
-    upsertTag('link', { rel: 'canonical', href: canonical });
-  }, [category, canonical]);
+/* SEO */
+useEffect(() => {
+  removeManagedHeadTags();
+  const title = category ? `${category.name} — NewsSite` : `Category — NewsSite`;
+  const desc = category?.description || `Latest ${category?.name || ''} stories on NewsSite`.trim();
+
+  upsertTag('title', {}, { textContent: title });
+  upsertTag('meta', { name: 'description', content: desc || 'Browse category on NewsSite' });
+  upsertTag('link', { rel: 'canonical', href: canonical });
+
+  // ✅ Add RSS feed discovery link
+  if (slug) {
+    upsertTag('link', {
+      rel: 'alternate',
+      type: 'application/rss+xml',
+      title: `Timely Voice — ${category?.name || slug}`,
+      href: `${window.location.origin}/rss/${encodeURIComponent(slug)}.xml`,
+    });
+  }
+}, [category, canonical, slug]);
+
 
   /* fetch sections for THIS page path (head_v1/head_v2 etc.) — optional page banners */
   useEffect(() => {
