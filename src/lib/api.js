@@ -29,3 +29,29 @@ export async function apiMultipart(path, formData, headers = {}) {
 export function authHeader(token) {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
+
+export async function apiGet(path) {
+  const token = localStorage.getItem("adminToken");
+  const r = await fetch(path, {
+    headers: { Authorization: token ? `Bearer ${token}` : undefined }
+  });
+  if (!r.ok) throw new Error(`GET ${path} failed: ${r.status}`);
+  return await r.json();
+}
+
+export async function apiPost(path, body) {
+  const token = localStorage.getItem("adminToken");
+  const r = await fetch(path, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: token ? `Bearer ${token}` : undefined
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!r.ok) {
+    const t = await r.text().catch(() => "");
+    throw new Error(`POST ${path} failed: ${r.status} ${t}`);
+  }
+  return await r.json();
+}

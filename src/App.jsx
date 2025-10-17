@@ -33,6 +33,11 @@ const BreakingNewsAdmin = lazy(() => import('./pages/admin/BreakingNewsAdmin.jsx
 const TickerAdmin = lazy(() => import('./pages/admin/TickerAdmin.jsx'));
 const SectionsPage = lazy(() => import('./admin/sections/SectionsPage.jsx'));
 const SectionsV2Page = lazy(() => import('./admin/sectionsV2/SectionsV2Page.jsx'));
+// Autmotion (lazy)
+const AutmotionFeedsPage = lazy(() => import('./pages/admin/autmotion/FeedsPage.jsx'));
+const AutmotionQueuePage = lazy(() => import('./pages/admin/autmotion/QueuePage.jsx'));
+const AutmotionDraftsPage = lazy(() => import('./pages/admin/autmotion/DraftsPage.jsx'));
+
 
 
 
@@ -271,6 +276,11 @@ export default function App() {
         <Route path="/admin/ticker" element={<AdminShell><TickerAdmin /></AdminShell>} />
         <Route path="/admin/sections" element={<AdminShell><SectionsPage /></AdminShell>} />
         <Route path="/admin/sections-v2" element={<AdminShell><SectionsV2Page /></AdminShell>} />
+                {/* === Autmotion routes === */}
+        <Route path="/admin/autmotion/feeds" element={<AdminShell><AutmotionFeedsPage /></AdminShell>} />
+        <Route path="/admin/autmotion/queue" element={<AdminShell><AutmotionQueuePage /></AdminShell>} />
+        <Route path="/admin/autmotion/drafts" element={<AdminShell><AutmotionDraftsPage /></AdminShell>} />
+
       </Routes>
     </Suspense>
   </ErrorBoundary>
