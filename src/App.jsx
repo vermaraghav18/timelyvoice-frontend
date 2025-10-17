@@ -38,6 +38,8 @@ const AutmotionFeedsPage = lazy(() => import('./pages/admin/autmotion/FeedsPage.
 const AutmotionQueuePage = lazy(() => import('./pages/admin/autmotion/QueuePage.jsx'));
 const AutmotionDraftsPage = lazy(() => import('./pages/admin/autmotion/DraftsPage.jsx'));
 
+const AutmotionXSourcesPage = lazy(() => import('./pages/admin/autmotion/XSourcesPage.jsx'));
+const AutmotionXQueuePage = lazy(() => import('./pages/admin/autmotion/XQueuePage.jsx'));
 
 
 
@@ -280,6 +282,10 @@ export default function App() {
         <Route path="/admin/autmotion/feeds" element={<AdminShell><AutmotionFeedsPage /></AdminShell>} />
         <Route path="/admin/autmotion/queue" element={<AdminShell><AutmotionQueuePage /></AdminShell>} />
         <Route path="/admin/autmotion/drafts" element={<AdminShell><AutmotionDraftsPage /></AdminShell>} />
+        <Route path="/admin/autmotion/x-sources" element={<AdminShell><AutmotionXSourcesPage /></AdminShell>} />
+        <Route path="/admin/autmotion/x-queue" element={<AdminShell><AutmotionXQueuePage /></AdminShell>} />
+
+
 
       </Routes>
     </Suspense>

@@ -28,6 +28,9 @@ export default function AdminShell({ children }) {
          <NavItem to="/admin/autmotion/feeds" label="Feeds" icon={DocumentIcon} />
         <NavItem to="/admin/autmotion/queue" label="Queue" icon={DocumentIcon} />
         <NavItem to="/admin/autmotion/drafts" label="Drafts" icon={DocumentIcon} />
+        <NavItem to="/admin/autmotion/x-sources" label="X Sources" icon={DocumentIcon} />
+        <NavItem to="/admin/autmotion/x-queue" label="X Queue" icon={DocumentIcon} />
+
 
         </nav>
       </aside>
