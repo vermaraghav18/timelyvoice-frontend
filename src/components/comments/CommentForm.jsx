@@ -22,7 +22,8 @@ export default function CommentForm({
   onSubmitted,
   isMobile: isMobileProp, // optional; parent can pass it
 }) {
-  const isMobile = typeof isMobileProp === 'boolean' ? isMobileProp : useIsMobileFallback(768);
+  const isMobile =
+    typeof isMobileProp === 'boolean' ? isMobileProp : useIsMobileFallback(768);
 
   const [authorName, setName] = useState('');
   const [authorEmail, setEmail] = useState('');
@@ -68,12 +69,41 @@ export default function CommentForm({
     boxSizing: 'border-box',
   };
 
+  // (kept for reference; not used after we switch to the pill heading)
   const title = {
     margin: '0 0 10px',
-    color: '#ffffff',                // white heading
+    color: '#ffffff',
     fontSize: isMobile ? 18 : 20,
     fontWeight: 700,
     letterSpacing: 0.2,
+  };
+
+  // NEW: pill heading + side lines (matches Keep Reading)
+  const pillHeadingWrap = {
+    margin: '8px 0 16px',
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '12px',
+  };
+  const lineStyle = {
+    flex: '1',
+    height: '2px',
+    background: 'rgba(255,255,255,0.3)',
+    maxWidth: '140px',
+  };
+  const pillHeading = {
+    background: 'linear-gradient(135deg, #abcc16 0%, #9dff00 100%)', // Sports green
+    color: '#000',
+    fontWeight: 800,
+    padding: isMobile ? '6px 14px' : '6px 16px',
+    fontSize: isMobile ? 18 : 20,
+    lineHeight: 1.2,
+    borderRadius: 0,                          // no border radius
+    boxShadow: '3px 3px 0 rgba(0,0,0,1)',     // solid shadow
+    margin: 0,
+    whiteSpace: 'nowrap',
   };
 
   const grid = {
@@ -86,7 +116,7 @@ export default function CommentForm({
 
   const field = {
     width: '100%',
-    boxSizing: 'border-box',         // keep width inside gutters
+    boxSizing: 'border-box',
     background: '#0f1c44',
     color: '#ffffff',
     border: '1px solid #1e2a55',
@@ -124,8 +154,12 @@ export default function CommentForm({
 
   return (
     <form onSubmit={submit} style={wrap}>
-      {/* Heading */}
-      <h3 style={title}>Leave a comment</h3>
+      {/* Heading: centered pill with side lines */}
+      <div style={pillHeadingWrap}>
+        <div style={lineStyle} />
+        <h3 style={pillHeading}>Leave a comment</h3>
+        <div style={lineStyle} />
+      </div>
 
       {/* Responsive grid: name + email; textarea full width */}
       <div style={grid}>
@@ -156,8 +190,12 @@ export default function CommentForm({
         <button
           disabled={busy}
           style={btn}
-          onMouseEnter={(e) => { if (!busy) e.currentTarget.style.background = '#3a7bff'; }}
-          onMouseLeave={(e) => { if (!busy) e.currentTarget.style.background = '#2e6bff'; }}
+          onMouseEnter={(e) => {
+            if (!busy) e.currentTarget.style.background = '#3a7bff';
+          }}
+          onMouseLeave={(e) => {
+            if (!busy) e.currentTarget.style.background = '#2e6bff';
+          }}
         >
           {busy ? 'Submitting…' : 'Post Comment'}
         </button>

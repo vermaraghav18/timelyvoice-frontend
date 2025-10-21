@@ -110,6 +110,10 @@ export default function ReaderArticle() {
   const [railsLoading, setRailsLoading] = useState(true);
   const [railsError, setRailsError] = useState('');
 
+  // (1) ===== Next-up states =====
+  const [nextSlug, setNextSlug] = useState(null);
+  const [nextArticle, setNextArticle] = useState(null);
+
   // Comments loader
   async function loadComments(articleSlug) {
     const { data } = await api.get(
@@ -274,26 +278,47 @@ export default function ReaderArticle() {
     if (article?.slug) loadComments(article.slug);
   }, [article?.slug]);
 
-  /* ---------- fetch homepage rails plan ---------- */
+  /* ---------- (2) compute next slug from Top News order ---------- */
   useEffect(() => {
     let cancel = false;
     (async () => {
       try {
-        setRailsLoading(true);
-        setRailsError('');
-        const res = await api.get('/api/sections/plan', {
-          params: { targetType: 'homepage', targetValue: '/' },
-        });
-        if (!cancel) setHomeSections(Array.isArray(res.data) ? res.data : []);
-      } catch (e) {
-        if (!cancel) setRailsError('Failed to load rails');
-        console.error(e);
-      } finally {
-        if (!cancel) setRailsLoading(false);
+        if (!article?.slug) return;
+        const res = await api.get('/api/top-news', { params: { limit: 50, page: 1 } });
+        const list = Array.isArray(res?.data?.items) ? res.data.items : [];
+        const idx = list.findIndex(x => x.slug === article.slug);
+        if (idx !== -1 && list[idx + 1]) {
+          if (!cancel) setNextSlug(list[idx + 1].slug);
+        } else {
+          if (!cancel) setNextSlug(null);
+        }
+      } catch {
+        if (!cancel) setNextSlug(null);
       }
     })();
     return () => { cancel = true; };
-  }, []);
+  }, [article?.slug]);
+
+  /* ---------- (3) fetch next article when we have nextSlug ---------- */
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      try {
+        if (!nextSlug) {
+          if (!cancel) setNextArticle(null);
+          return;
+        }
+        const res = await api.get(`/api/articles/slug/${encodeURIComponent(nextSlug)}`, {
+          validateStatus: (s) => s >= 200 && s < 300,
+          headers: { 'Cache-Control': 'no-cache' },
+        });
+        if (!cancel) setNextArticle(res.data || null);
+      } catch {
+        if (!cancel) setNextArticle(null);
+      }
+    })();
+    return () => { cancel = true; };
+  }, [nextSlug]);
 
   /* ---------- derived ---------- */
   const displayDate = article?.updatedAt || article?.publishedAt || article?.publishAt || article?.createdAt;
@@ -371,16 +396,22 @@ export default function ReaderArticle() {
 
   const timeText = { color: '#ffffffff', fontSize: isMobile ? 14 : 15, fontWeight: 500 };
 
-  const summaryBox = {
-    background: '#003a7cff',
-    border: '0px solid #000000ff',
-    color: '#ffffffff',
-    borderRadius: 1,
-    padding: isMobile ? 10 : 12,
-    fontSize: isMobile ? 17 : 18,
-    lineHeight: 1.6,
-    margin: '0 0 12px',
-  };
+const summaryBox = {
+  background: '#003a7cff',
+  border: '0',
+  color: '#ffffff',
+  borderRadius: 0,                 // optional: remove rounding for crisper edge
+  padding: isMobile ? 12 : 16,
+  fontSize: isMobile ? 17 : 18,
+  lineHeight: 1.75,
+  margin: '0 0 16px',
+  // solid, hard-edged shadow (no blur):
+  // 1) a solid bottom bar, and
+  // 2) a thin outline so it doesn't melt into the background
+  boxShadow: '0 8px 20px 0 #000, 0 0 0 1px rgba(255,255,255,0.06)',
+};
+
+
 
   const figureWrap = { margin: '0 0 12px' };
   const imgStyle = { width: '100%', height: 'auto', borderRadius: 1, background: '#f1f5f9' };
@@ -402,6 +433,133 @@ export default function ReaderArticle() {
     [article?.bodyHtml, article?.body]
   );
   const paragraphs = useMemo(() => splitParagraphs(normalizedBody), [normalizedBody]);
+
+  // ------- (4) Light inline renderer for "Next up" -------
+  function NextArticleInline({ doc, isMobile }) {
+    if (!doc) return null;
+
+    const imageUrl = doc.coverImageUrl || doc.imageUrl || '';
+    const imageAlt = doc.imageAlt || doc.title || '';
+    const bodyHtml = doc.bodyHtml || doc.body || '';
+    const normalized = normalizeBody(bodyHtml);
+    const paras = splitParagraphs(normalized);
+
+    const titleH = {
+      margin: '0 0 8px',
+      fontSize: isMobile ? 'clamp(18px, 5.5vw, 26px)' : 'clamp(18px, 2vw, 28px)',
+      lineHeight: 1.3,
+      fontWeight: 600,
+    };
+    const srcRow = {
+      margin: isMobile ? '6px 0 12px' : '10px 0 20px',
+      fontSize: isMobile ? 14 : 15,
+      color: '#00ffbfff',
+      fontWeight: 500,
+    };
+    const imgS = { width: '100%', height: 'auto', borderRadius: 1, background: '#f1f5f9' };
+    const bodyWrap = { maxWidth: '70ch', margin: '0 auto' };
+    const proseS = {
+      fontSize: isMobile ? 19 : 'clamp(19px, 2.2vw, 22px)',
+      lineHeight: 1.9,
+      color: '#ffffffff',
+    };
+
+    return (
+      <>
+        {/* divider + pill heading "Next up" */}
+        <div style={{ width: '100%', height: 1, background: 'rgba(255,255,255,0.25)', margin: '20px 0' }} />
+        <div
+          style={{
+            margin: '8px 0 16px',
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px',
+          }}
+        >
+          <div style={{ flex: 1, height: 2, background: 'rgba(255,255,255,0.3)', maxWidth: 140 }} />
+          <span
+            style={{
+              background: 'linear-gradient(135deg, #abcc16 0%, #9dff00 100%)',
+              color: '#000',
+              fontWeight: 800,
+              padding: '6px 16px',
+              fontSize: 20,
+              lineHeight: 1.2,
+              borderRadius: 0,
+              boxShadow: '3px 3px 0 rgba(0,0,0,1)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Next up
+          </span>
+          <div style={{ flex: 1, height: 2, background: 'rgba(255,255,255,0.3)', maxWidth: 140 }} />
+        </div>
+
+        <article
+          className="card"
+          style={{
+            ...styles.card,
+            padding: isMobile ? 12 : 16,
+            marginTop: 0,
+            backgroundColor: '#001236ff',
+            color: '#FFFFFF',
+            border: 'none',
+            boxShadow: '0 0 0 0 transparent',
+          }}
+        >
+          <a href={`/article/${doc.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <h2 style={titleH}>{doc.title}</h2>
+          </a>
+          <div style={srcRow}>By {doc.source || doc.author || 'News Desk'}</div>
+          {imageUrl && (
+            <figure style={{ margin: '0 0 12px' }}>
+              <img
+                src={imageUrl}
+                alt={imageAlt}
+                loading="lazy"
+                decoding="async"
+                width="1280"
+                height="720"
+                style={imgS}
+              />
+              {doc.imageAlt ? (
+                <figcaption style={{ color: '#64748b', fontSize: isMobile ? 14 : 16, marginTop: 6 }}>
+                  {doc.imageAlt}
+                </figcaption>
+              ) : null}
+            </figure>
+          )}
+
+          <div className="article-body" style={{ ...proseS, ...bodyWrap }}>
+            {paras.map((html, i) => (
+              <div key={`n-${i}`} dangerouslySetInnerHTML={{ __html: html }} />
+            ))}
+          </div>
+
+          {/* continue link */}
+          <div style={{ marginTop: 12 }}>
+            <a
+              href={`/article/${doc.slug}`}
+              style={{
+                display: 'inline-block',
+                textDecoration: 'none',
+                background: '#2e6bff',
+                color: '#fff',
+                padding: '10px 14px',
+                border: '1px solid rgba(255,255,255,.14)',
+                boxShadow: '0 8px 24px rgba(0,0,0,.25)',
+                fontWeight: 700,
+              }}
+            >
+              Continue to full article →
+            </a>
+          </div>
+        </article>
+      </>
+    );
+  }
 
   // Early returns AFTER all hooks are declared
   if (error) {
@@ -549,99 +707,190 @@ export default function ReaderArticle() {
               {/* <div style={shareBottom}><ShareBar /></div> */}
             </article>
 
-           {related.length > 0 && (
-  <section style={{ marginTop: 16 }}>
-    <h3 style={{ margin: '8px 0 12px', color: '#ffffffff', fontSize: 28, fontWeight: 700 }}>
-      Keep Reading
-    </h3>
-
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(220px, 1fr))',
-        gap: isMobile ? 10 : 12,
-      }}
-    >
-      {related.map((a) => {
-        const rImg = a.coverImageUrl || a.imageUrl || '';
-
-        // ——— UNIFORM CARD SIZING (MOBILE HEIGHT INCREASED) ———
-        const IMG_H = isMobile ? 230 : 150; // ↑ increased mobile image height
-        const TITLE_FS = isMobile ? 17 : 16; // slight bump to match taller card
-        const TITLE_LH = 1.3;
-        const TITLE_LINES = 3;
-        const TITLE_MIN_H = Math.ceil(TITLE_FS * TITLE_LH * TITLE_LINES);
-
-        return (
-          <a
-            key={a._id || a.id || a.slug}
-            href={`/article/${a.slug}`}
-            style={{ textDecoration: 'none', color: 'inherit' }}
-          >
-            <article
-              style={{
-                background: 'linear-gradient(135deg, #0a2a6b 0%, #163a8a 50%, #1d4ed8 100%)',
-                color: '#e9edff',
-                border: '0 none',
-                borderRadius: 0,
-                padding: 0,
-                boxShadow: '0 6px 24px rgba(0,0,0,.25)',
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-                overflow: 'hidden',
-              }}
-            >
-              {rImg && (
-                <img
-                  src={rImg}
-                  alt={a.imageAlt || a.title || ''}
-                  loading="lazy"
-                  decoding="async"
-                  width="640"
-                  height={IMG_H}
-                  style={{
-                    width: '100%',
-                    height: IMG_H,          // fixed, taller on mobile
-                    objectFit: 'cover',
-                    display: 'block',
-                    margin: 0,
-                    borderRadius: 0,
-                    background: '#0b1f44',
-                    flex: '0 0 auto',
-                  }}
-                />
-              )}
-
-              <div style={{ padding: isMobile ? 10 : 12 }}>
+            {related.length > 0 && (
+              <section style={{ marginTop: 16 }}>
                 <div
                   style={{
-                    fontWeight: 600,
-                    lineHeight: TITLE_LH,
-                    fontSize: TITLE_FS,
-                    minHeight: TITLE_MIN_H, // keeps card height uniform
-                    display: '-webkit-box',
-                    WebkitLineClamp: TITLE_LINES,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
+                    margin: '8px 0 16px',
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '12px', // space between lines and pill
                   }}
                 >
-                  {a.title}
+                  {/* left line */}
+                  <div
+                    style={{
+                      flex: '1',
+                      height: '2px',
+                      background: 'rgba(255,255,255,0.3)',
+                      maxWidth: '140px',
+                    }}
+                  ></div>
+
+                  {/* pill */}
+                  <span
+                    style={{
+                      background: 'linear-gradient(135deg, #abcc16 0%, #9dff00 100%)',
+                      color: '#000',
+                      fontWeight: 1000,
+                      padding: '6px 16px',
+                      fontSize: 21,
+                      lineHeight: 1.2,
+                      borderRadius: 0,
+                      boxShadow: '5px 5px 0 rgba(0,0,0,1)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      letterSpacing: 0.2,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Keep Reading
+                  </span>
+
+                  {/* right line */}
+                  <div
+                    style={{
+                      flex: '1',
+                      height: '2px',
+                      background: 'rgba(255,255,255,0.3)',
+                      maxWidth: '140px',
+                    }}
+                  ></div>
                 </div>
-                {/* date intentionally removed */}
-              </div>
-            </article>
-          </a>
-        );
-      })}
-    </div>
-  </section>
-)}
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(220px, 1fr))',
+                    gap: isMobile ? 10 : 12,
+                  }}
+                >
+                  {related.map((a) => {
+                    const rImg = a.coverImageUrl || a.imageUrl || '';
+
+                    // ——— UNIFORM CARD SIZING (MOBILE HEIGHT INCREASED) ———
+                    const IMG_H = isMobile ? 230 : 150; // ↑ increased mobile image height
+                    const TITLE_FS = isMobile ? 17 : 16; // slight bump to match taller card
+                    const TITLE_LH = 1.3;
+                    const TITLE_LINES = 3;
+                    const TITLE_MIN_H = Math.ceil(TITLE_FS * TITLE_LH * TITLE_LINES);
+
+                    return (
+                      <a
+                        key={a._id || a.id || a.slug}
+                        href={`/article/${a.slug}`}
+                        style={{ textDecoration: 'none', color: 'inherit' }}
+                      >
+                        <article
+                          style={{
+                            background: 'linear-gradient(135deg, #0a2a6b 0%, #163a8a 50%, #1d4ed8 100%)',
+                            color: '#e9edff',
+                            border: '0 none',
+                            borderRadius: 0,
+                            padding: 0,
+                            boxShadow: '0 6px 24px rgba(0,0,0,.25)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            height: '100%',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {rImg && (
+                            <div style={{ position: 'relative' }}>
+                              {/* centered pill over the image */}
+                              <span
+                                style={{
+                                  position: 'absolute',
+                                  top: 4,
+                                  left: '13%',
+                                  transform: 'translateX(-50%)',
+                                  zIndex: 2,
+                                  pointerEvents: 'none',
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    background: 'linear-gradient(135deg, #abcc16 0%, #9dff00 100%)',
+                                    color: '#000',
+                                    fontWeight: 700,
+                                    padding: '2px 8px',
+                                    fontSize: 12,
+                                    lineHeight: 1.3,
+                                    borderRadius: 0,
+                                    boxShadow: '3px 3px 0 rgba(0,0,0,1)',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                >
+                                  {a.category || 'Sports'}
+                                </span>
+                              </span>
+
+                              <img
+                                src={rImg}
+                                alt={a.imageAlt || a.title || ''}
+                                loading="lazy"
+                                decoding="async"
+                                width="640"
+                                height={IMG_H}
+                                style={{
+                                  width: '100%',
+                                  height: IMG_H,
+                                  objectFit: 'cover',
+                                  display: 'block',
+                                  margin: 0,
+                                  borderRadius: 0,
+                                  background: '#0b1f44',
+                                  flex: '0 0 auto',
+                                }}
+                              />
+                            </div>
+                          )}
+
+                          <div style={{ padding: isMobile ? 10 : 12 }}>
+                            <div
+                              style={{
+                                fontWeight: 600,
+                                lineHeight: TITLE_LH,
+                                fontSize: TITLE_FS,
+                                minHeight: TITLE_MIN_H,
+                                display: '-webkit-box',
+                                WebkitLineClamp: TITLE_LINES,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                              }}
+                            >
+                              {a.title}
+                            </div>
+                          </div>
+                        </article>
+                      </a>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+            {/* thin divider after Keep Reading */}
+            <div
+              style={{
+                width: '100%',
+                height: '1px',
+                background: 'rgba(255, 255, 255, 0.25)',
+                margin: '20px 0',
+              }}
+            ></div>
 
             <section style={{ marginTop: 24 }}>
               <CommentForm slug={article.slug} onSubmitted={() => loadComments(article.slug)} />
               <CommentThread comments={comments} />
             </section>
+
+            {/* (5) Render the inline "Next up" article after comments */}
+            {nextArticle ? <NextArticleInline doc={nextArticle} isMobile={isMobile} /> : null}
           </main>
 
           {/* RIGHT RAILS (even indices) — hidden on mobile */}

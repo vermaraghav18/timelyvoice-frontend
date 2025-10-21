@@ -73,8 +73,8 @@
 
 /* Plain centered source text */
 .tn-source {
-  color: hsl(0, 0%, 100%);         /* soft neutral tone */
-  font-weight: 100;
+  color: hsl(268, 100%, 50%);         /* soft neutral tone */
+  font-weight: 400;
   font-size: 14px;
   background: none;
   border: none;
