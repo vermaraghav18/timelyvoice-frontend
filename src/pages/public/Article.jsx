@@ -549,94 +549,94 @@ export default function ReaderArticle() {
               {/* <div style={shareBottom}><ShareBar /></div> */}
             </article>
 
-            {related.length > 0 && (
-              <section style={{ marginTop: 16 }}>
-                <h3 style={{ margin: '8px 0 12px', color: '#ffffffff', fontSize: 28, fontWeight: 700 }}>
-                  Keep Reading
-                </h3>
+           {related.length > 0 && (
+  <section style={{ marginTop: 16 }}>
+    <h3 style={{ margin: '8px 0 12px', color: '#ffffffff', fontSize: 28, fontWeight: 700 }}>
+      Keep Reading
+    </h3>
 
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(220px, 1fr))',
+        gap: isMobile ? 10 : 12,
+      }}
+    >
+      {related.map((a) => {
+        const rImg = a.coverImageUrl || a.imageUrl || '';
+
+        // ——— UNIFORM CARD SIZING (MOBILE HEIGHT INCREASED) ———
+        const IMG_H = isMobile ? 230 : 150; // ↑ increased mobile image height
+        const TITLE_FS = isMobile ? 17 : 16; // slight bump to match taller card
+        const TITLE_LH = 1.3;
+        const TITLE_LINES = 3;
+        const TITLE_MIN_H = Math.ceil(TITLE_FS * TITLE_LH * TITLE_LINES);
+
+        return (
+          <a
+            key={a._id || a.id || a.slug}
+            href={`/article/${a.slug}`}
+            style={{ textDecoration: 'none', color: 'inherit' }}
+          >
+            <article
+              style={{
+                background: 'linear-gradient(135deg, #0a2a6b 0%, #163a8a 50%, #1d4ed8 100%)',
+                color: '#e9edff',
+                border: '0 none',
+                borderRadius: 0,
+                padding: 0,
+                boxShadow: '0 6px 24px rgba(0,0,0,.25)',
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                overflow: 'hidden',
+              }}
+            >
+              {rImg && (
+                <img
+                  src={rImg}
+                  alt={a.imageAlt || a.title || ''}
+                  loading="lazy"
+                  decoding="async"
+                  width="640"
+                  height={IMG_H}
+                  style={{
+                    width: '100%',
+                    height: IMG_H,          // fixed, taller on mobile
+                    objectFit: 'cover',
+                    display: 'block',
+                    margin: 0,
+                    borderRadius: 0,
+                    background: '#0b1f44',
+                    flex: '0 0 auto',
+                  }}
+                />
+              )}
+
+              <div style={{ padding: isMobile ? 10 : 12 }}>
                 <div
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(220px, 1fr))',
-                    gap: isMobile ? 10 : 12,
+                    fontWeight: 600,
+                    lineHeight: TITLE_LH,
+                    fontSize: TITLE_FS,
+                    minHeight: TITLE_MIN_H, // keeps card height uniform
+                    display: '-webkit-box',
+                    WebkitLineClamp: TITLE_LINES,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
                   }}
                 >
-                  {related.map((a) => {
-                    const rImg = a.coverImageUrl || a.imageUrl || '';
-
-                    // ——— UNIFORM CARD SIZING ———
-                    const IMG_H = isMobile ? 160 : 150; // fixed image height
-                    const TITLE_FS = isMobile ? 16 : 16;
-                    const TITLE_LH = 1.3;
-                    const TITLE_LINES = 3;
-                    const TITLE_MIN_H = Math.ceil(TITLE_FS * TITLE_LH * TITLE_LINES);
-
-                    return (
-                      <a
-                        key={a._id || a.id || a.slug}
-                        href={`/article/${a.slug}`}
-                        style={{ textDecoration: 'none', color: 'inherit' }}
-                      >
-                        <article
-                          style={{
-                            background: 'linear-gradient(135deg, #0a2a6b 0%, #163a8a 50%, #1d4ed8 100%)',
-                            color: '#e9edff',
-                            border: '0 none',
-                            borderRadius: 0,
-                            padding: 0,
-                            boxShadow: '0 6px 24px rgba(0,0,0,.25)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            height: '100%', // allow equal tile heights
-                            overflow: 'hidden',
-                          }}
-                        >
-                          {rImg && (
-                            <img
-                              src={rImg}
-                              alt={a.imageAlt || a.title || ''}
-                              loading="lazy"
-                              decoding="async"
-                              width="640"
-                              height={IMG_H}
-                              style={{
-                                width: '100%',
-                                height: IMG_H,   // fixed height for all cards
-                                objectFit: 'cover',
-                                display: 'block',
-                                margin: 0,
-                                borderRadius: 0,
-                                background: '#0b1f44',
-                                flex: '0 0 auto',
-                              }}
-                            />
-                          )}
-
-                          <div style={{ padding: isMobile ? 10 : 12 }}>
-                            <div
-                              style={{
-                                fontWeight: 600,
-                                lineHeight: TITLE_LH,
-                                fontSize: TITLE_FS,
-                                minHeight: TITLE_MIN_H, // fixed min height = 3 lines
-                                display: '-webkit-box',
-                                WebkitLineClamp: TITLE_LINES,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                              }}
-                            >
-                              {a.title}
-                            </div>
-                            {/* date intentionally removed */}
-                          </div>
-                        </article>
-                      </a>
-                    );
-                  })}
+                  {a.title}
                 </div>
-              </section>
-            )}
+                {/* date intentionally removed */}
+              </div>
+            </article>
+          </a>
+        );
+      })}
+    </div>
+  </section>
+)}
 
             <section style={{ marginTop: 24 }}>
               <CommentForm slug={article.slug} onSubmitted={() => loadComments(article.slug)} />
