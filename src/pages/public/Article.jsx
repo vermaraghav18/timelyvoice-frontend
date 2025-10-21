@@ -42,6 +42,55 @@ function useIsMobile(breakpoint = 768) {
   }, [breakpoint]);
   return isMobile;
 }
+
+/** Normalize article body to paragraphs */
+function normalizeBody(htmlOrText = '') {
+  let s = String(htmlOrText || '').trim();
+  if (!/<p[\s>]/i.test(s)) {
+    s = s
+      .replace(/\r\n?/g, '\n')
+      .split(/\n{2,}/g)
+      .map(p => p.trim())
+      .filter(Boolean)
+      .map(p => `<p>${p}</p>`)
+      .join('');
+  }
+  s = s.replace(/<p>\s*<\/p>/gi, '');
+  return s;
+}
+
+/** Split normalized HTML into array of paragraph HTML strings */
+function splitParagraphs(normalizedHtml = '') {
+  if (!normalizedHtml) return [];
+  return normalizedHtml
+    .split(/<\/p>/i)
+    .map(chunk => chunk.trim())
+    .filter(Boolean)
+    .map(chunk => (chunk.endsWith('</p>') ? chunk : `${chunk}</p>`));
+}
+
+/** Simple in-article AdSense slot */
+function AdSlot({ slotId = 'in-article-1', client = 'ca-pub-XXXXXXXXXXXXXXX', slot = '1234567890' }) {
+  useEffect(() => {
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch {}
+  }, []);
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0' }}>
+      <ins
+        className="adsbygoogle"
+        style={{ display: 'block', textAlign: 'center', minHeight: 90 }}
+        data-ad-client={client}
+        data-ad-slot={slot}
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+        data-adtest="on"   /* remove when live */
+        id={slotId}
+      />
+    </div>
+  );
+}
 /* ----------------------------------- */
 
 export default function ReaderArticle() {
@@ -128,8 +177,8 @@ export default function ReaderArticle() {
 
         // JSON-LD
         const categoryObj = doc.category || null;
- const categoryName = categoryObj?.name || categoryObj || 'General';
- const categorySlug = categoryObj?.slug || categoryName;
+        const categoryName = categoryObj?.name || categoryObj || 'General';
+        const categorySlug = categoryObj?.slug || categoryName;
 
         const articleData = {
           '@type': 'NewsArticle',
@@ -246,34 +295,10 @@ export default function ReaderArticle() {
     return () => { cancel = true; };
   }, []);
 
-  if (error) {
-    return (
-      <>
-        <SiteNav />
-        <main id="content" className="container">
-          <div style={{ color: 'crimson' }}>{error}</div>
-        </main>
-        <SiteFooter />
-      </>
-    );
-  }
-
-  if (!article) {
-    return (
-      <>
-        <SiteNav />
-        <main id="content" className="container">
-          <div style={{ padding: 24 }}>Loading…</div>
-        </main>
-        <SiteFooter />
-      </>
-    );
-  }
-
   /* ---------- derived ---------- */
-  const displayDate = article.updatedAt || article.publishedAt || article.publishAt || article.createdAt;
-  const imageUrl = article.coverImageUrl || article.imageUrl || '';
-  const imageAlt = article.imageAlt || article.title || '';
+  const displayDate = article?.updatedAt || article?.publishedAt || article?.publishAt || article?.createdAt;
+  const imageUrl = article?.coverImageUrl || article?.imageUrl || '';
+  const imageAlt = article?.imageAlt || article?.title || '';
 
   // rails: alternate right, left, right, left…
   const rails = homeSections.filter((s) => s.template?.startsWith('rail_'));
@@ -332,7 +357,6 @@ export default function ReaderArticle() {
     fontWeight: 500,
   };
 
-  // thin updated-time row
   const timeShareBar = {
     display: 'flex',
     alignItems: 'center',
@@ -353,8 +377,8 @@ export default function ReaderArticle() {
     color: '#ffffffff',
     borderRadius: 1,
     padding: isMobile ? 10 : 12,
-    fontSize: isMobile ? 15 : 16,
-    lineHeight: 1.5,
+    fontSize: isMobile ? 17 : 18,
+    lineHeight: 1.6,
     margin: '0 0 12px',
   };
 
@@ -362,21 +386,87 @@ export default function ReaderArticle() {
   const imgStyle = { width: '100%', height: 'auto', borderRadius: 1, background: '#f1f5f9' };
   const figCap = { color: '#64748b', fontSize: isMobile ? 14 : 16, marginTop: 6 };
 
+  const articleBodyWrapper = { maxWidth: '70ch', margin: '0 auto' };
+
   const prose = {
-    fontSize: isMobile ? 16 : 'clamp(16px, 2.2vw, 18px)',
-    lineHeight: 1.75,
+    fontSize: isMobile ? 19 : 'clamp(19px, 2.2vw, 22px)',
+    lineHeight: 1.9,
     color: '#ffffffff',
   };
 
-  // bottom share row
-  const shareBottom = {
-    marginTop: isMobile ? 10 : 12,
-    paddingTop: isMobile ? 6 : 8,
-    borderTop: '0px solid #e5e7eb',
-  };
+  const shareBottom = { marginTop: isMobile ? 10 : 12, paddingTop: isMobile ? 6 : 8, borderTop: '0px solid #e5e7eb' };
+
+  // ---- BODY PREP ----
+  const normalizedBody = useMemo(
+    () => normalizeBody(article?.bodyHtml || article?.body || ''),
+    [article?.bodyHtml, article?.body]
+  );
+  const paragraphs = useMemo(() => splitParagraphs(normalizedBody), [normalizedBody]);
+
+  // Early returns AFTER all hooks are declared
+  if (error) {
+    return (
+      <>
+        <SiteNav />
+        <main id="content" className="container">
+          <div style={{ color: 'crimson' }}>{error}</div>
+        </main>
+        <SiteFooter />
+      </>
+    );
+  }
+
+  if (!article) {
+    return (
+      <>
+        <SiteNav />
+        <main id="content" className="container">
+          <div style={{ padding: 24 }}>Loading…</div>
+        </main>
+        <SiteFooter />
+      </>
+    );
+  }
 
   return (
     <>
+      {/* Styles scoped to .article-body for professional rhythm */}
+      <style>{`
+        .article-body p {
+          margin: 1.25em 0;
+          line-height: 1.85;
+          font-size: 19px;
+          color: #e8ecf1;
+        }
+        .article-body p:first-of-type::first-letter {
+          font-size: 2.6em;
+          font-weight: 700;
+          float: left;
+          line-height: 1;
+          margin-right: 8px;
+          color: #00bfff;
+        }
+        .article-body h2 {
+          font-size: 22px;
+          margin-top: 1.8em;
+          margin-bottom: 0.8em;
+          border-left: 3px solid #00bfff;
+          padding-left: 10px;
+          color: #ffffff;
+        }
+        .article-body a {
+          color: #61dafb;
+          text-decoration: underline;
+        }
+        .article-body blockquote {
+          border-left: 4px solid #00bfff;
+          padding-left: 12px;
+          margin: 1.6em 0;
+          font-style: italic;
+          color: #d4d4d4;
+        }
+      `}</style>
+
       <SiteNav />
       <div style={outerContainer}>
         <div style={mainWrapper}>
@@ -401,10 +491,10 @@ export default function ReaderArticle() {
                 ...styles.card,
                 padding: isMobile ? 12 : 16,
                 marginTop: 0,
-                backgroundColor: '#001236ff', // lighter, smoother blue tone
+                backgroundColor: '#001236ff',
                 color: '#FFFFFF',
-                border: 'none',             // removes white border
-                boxShadow: '0 0 0 0 transparent', // ensures no faint outline
+                border: 'none',
+                boxShadow: '0 0 0 0 transparent',
               }}
             >
               <h1 style={titleH1}>{article.title}</h1>
@@ -446,22 +536,24 @@ export default function ReaderArticle() {
                 </figure>
               )}
 
-              <div
-                ref={bodyRef}
-                className="prose"
-                style={prose}
-                dangerouslySetInnerHTML={{ __html: article.bodyHtml || article.body || '' }}
-              />
+              {/* Structured body with inline ad after paragraph 2 */}
+              <div ref={bodyRef} className="article-body" style={{ ...prose, ...articleBodyWrapper }}>
+                {paragraphs.length === 0 ? null : paragraphs.map((html, i) => (
+                  <div key={`p-${i}`}>
+                    <div dangerouslySetInnerHTML={{ __html: html }} />
+                    {i === 1 && <AdSlot slotId="in-article-1" />}
+                  </div>
+                ))}
+              </div>
 
-              {/* Share at the end of the article */}
-             
+              {/* <div style={shareBottom}><ShareBar /></div> */}
             </article>
 
             {related.length > 0 && (
               <section style={{ marginTop: 16 }}>
                 <h3 style={{ margin: '8px 0 12px', color: '#ffffffff', fontSize: 28, fontWeight: 700 }}>
-  Related
-</h3>
+                  Keep Reading
+                </h3>
 
                 <div
                   style={{
@@ -472,48 +564,72 @@ export default function ReaderArticle() {
                 >
                   {related.map((a) => {
                     const rImg = a.coverImageUrl || a.imageUrl || '';
+
+                    // ——— UNIFORM CARD SIZING ———
+                    const IMG_H = isMobile ? 160 : 150; // fixed image height
+                    const TITLE_FS = isMobile ? 16 : 16;
+                    const TITLE_LH = 1.3;
+                    const TITLE_LINES = 3;
+                    const TITLE_MIN_H = Math.ceil(TITLE_FS * TITLE_LH * TITLE_LINES);
+
                     return (
                       <a
                         key={a._id || a.id || a.slug}
                         href={`/article/${a.slug}`}
                         style={{ textDecoration: 'none', color: 'inherit' }}
                       >
-                       <article
-                            style={{
-                              background: '#001653ff',           // card bg
-                              color: '#e9edff',                // default text on the card
-                              border: '0px solid #1e2a55',     // subtle border
-                              borderRadius: 1,                // nicer rounding
-                              padding: isMobile ? 12 : 14,
-                              boxShadow: '0 6px 24px rgba(0,0,0,.25)' // optional depth
-                            }}
-                          >
-
+                        <article
+                          style={{
+                            background: 'linear-gradient(135deg, #0a2a6b 0%, #163a8a 50%, #1d4ed8 100%)',
+                            color: '#e9edff',
+                            border: '0 none',
+                            borderRadius: 0,
+                            padding: 0,
+                            boxShadow: '0 6px 24px rgba(0,0,0,.25)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            height: '100%', // allow equal tile heights
+                            overflow: 'hidden',
+                          }}
+                        >
                           {rImg && (
-                            <div className="ar-16x9" style={{ marginBottom: 8 }}>
-                              <img
-                                src={rImg}
-                                alt={a.imageAlt || a.title || ''}
-                                loading="lazy"
-                                decoding="async"
-                                width="640"
-                                height="360"
-                                style={{
-                                  width: '100%',
-                                  height: 'auto',
-                                  borderRadius: 1,
-                                  background: '#f1f5f9',
-                                }}
-                              />
-                            </div>
+                            <img
+                              src={rImg}
+                              alt={a.imageAlt || a.title || ''}
+                              loading="lazy"
+                              decoding="async"
+                              width="640"
+                              height={IMG_H}
+                              style={{
+                                width: '100%',
+                                height: IMG_H,   // fixed height for all cards
+                                objectFit: 'cover',
+                                display: 'block',
+                                margin: 0,
+                                borderRadius: 0,
+                                background: '#0b1f44',
+                                flex: '0 0 auto',
+                              }}
+                            />
                           )}
-                          <div style={{ fontWeight: 600, lineHeight: 1.3 }}>{a.title}</div>
-                          <small style={{ ...styles.muted, color: '#0051ffff' ,}}>
 
-                            {a.publishedAt || a.publishAt
-                              ? new Date(a.publishedAt || a.publishAt).toLocaleDateString()
-                              : ''}
-                          </small>
+                          <div style={{ padding: isMobile ? 10 : 12 }}>
+                            <div
+                              style={{
+                                fontWeight: 600,
+                                lineHeight: TITLE_LH,
+                                fontSize: TITLE_FS,
+                                minHeight: TITLE_MIN_H, // fixed min height = 3 lines
+                                display: '-webkit-box',
+                                WebkitLineClamp: TITLE_LINES,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                              }}
+                            >
+                              {a.title}
+                            </div>
+                            {/* date intentionally removed */}
+                          </div>
                         </article>
                       </a>
                     );
@@ -523,10 +639,9 @@ export default function ReaderArticle() {
             )}
 
             <section style={{ marginTop: 24 }}>
-  <CommentForm slug={article.slug} onSubmitted={() => loadComments(article.slug)} />
-  <CommentThread comments={comments} />
-</section>
-
+              <CommentForm slug={article.slug} onSubmitted={() => loadComments(article.slug)} />
+              <CommentThread comments={comments} />
+            </section>
           </main>
 
           {/* RIGHT RAILS (even indices) — hidden on mobile */}
