@@ -7,10 +7,10 @@ const LINKS = [
   { label: 'India', slug: 'Politics' },
   { label: 'World', slug: 'World' },
   { label: 'Finance', slug: 'Business' },
-  { label: 'Entertainment', slug: 'Entertainment' },
+  { label: 'FilmyBazaar', slug: 'Entertainment' },
   { label: 'Health', slug: 'Health' },
-  { label: 'Sports', slug: 'Sports' },
-  { label: 'Tech', slug: 'Tech' },
+  { label: 'Sports & Tech', slug: 'Sports' },
+
 ];
 
 const WRAP_STYLE = {

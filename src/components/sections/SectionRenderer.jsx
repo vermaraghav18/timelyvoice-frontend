@@ -25,7 +25,14 @@ import RailV7 from "../rails/RailV7.jsx";
 import RailV8 from "../rails/RailV8";
 import TopV1 from "./TopV1.jsx";
 import TopV2 from "./TopV2.jsx";
-
+import FilmyBazaarRailV1 from "./FilmyBazaarRailV1.jsx";
+import FilmyBazaarRailV2 from "./FilmyBazaarRailV2";
+import FilmyBazaarRailV3 from "./FilmyBazaarRailV3";
+import FilmyBazaarRailV4 from "./FilmyBazaarRailV4";
+import SportsRailV1 from "../rails/SportsRailV1.jsx";
+import SportsV2 from "./SportsV2.jsx"; 
+import SportsV3 from "./SportsV3.jsx"; 
+import TechMainV1 from "./TechMainV1.jsx";  // 👈 add
 
 const TEMPLATES = {
   head_v1: NewsHeadSection,
@@ -54,6 +61,15 @@ const TEMPLATES = {
   rail_v6: RailV6,
   rail_v7: RailV7,
   rail_v8: RailV8,
+  rail_filmybazaar_v1: FilmyBazaarRailV1,
+  rail_filmybazaar_v2: FilmyBazaarRailV2,
+  rail_filmybazaar_v3: FilmyBazaarRailV3,
+  rail_filmybazaar_v4: FilmyBazaarRailV4,
+  rail_sports_v1: SportsRailV1, // 👈 add this
+  sports_v2: SportsV2,
+  sports_v3: SportsV3,   
+  tech_main_v1: TechMainV1,  // 👈 add
+
 };
 
 export default function SectionRenderer({ section }) {

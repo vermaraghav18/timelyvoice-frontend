@@ -1,0 +1,140 @@
+@import url("https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Cabin:wght@700&display=swap");
+
+:root {
+  --fbz4-outer-bg: #30353d;
+  --fbz4-inner-bg: #1d2228;
+  --fbz4-title:    #ff7a1a;
+  --fbz4-text:     #f2f5fb;
+  --fbz4-text-dim: #c3c9d6;
+
+  --fbz4-gap: 6px;
+  --fbz4-cols: 2;
+  --fbz4-img-radius: 0px;
+  --fbz4-outer-radius: 0px;
+  --fbz4-inner-radius: 0px;
+}
+
+/* OUTER light-grey box */
+.fbz4-outer {
+  background: var(--fbz4-outer-bg);
+  border-radius: var(--fbz4-outer-radius);
+  padding: 10px 8px 12px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset;
+}
+
+/* HEADER: centered */
+.fbz4-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 2px 12px 8px;
+  text-align: center;
+}
+
+.fbz4-title {
+  margin: 0;
+  color: var(--fbz4-title);
+  font-family: "Luckiest Guy", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.55rem;
+  line-height: 1.05;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  text-shadow:
+    -1px 0 #121212,
+     1px 0 #121212,
+     0 -1px #121212,
+     0  1px #121212,
+     1px 2px #121212;
+}
+
+.fbz4-more {
+  margin-top: 4px;
+  color: var(--fbz4-text);
+  text-decoration: none;
+  opacity: 0.9;
+  font-size: 0.84rem;
+}
+
+/* INNER dark-grey box */
+.fbz4-inner {
+  background: var(--fbz4-inner-bg);
+  border-radius: var(--fbz4-inner-radius);
+  padding: 8px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4) inset;
+}
+
+/* GRID 2x2 */
+.fbz4-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--fbz4-cols), 1fr);
+  gap: var(--fbz4-gap);
+}
+
+.fbz4-empty {
+  color: var(--fbz4-text-dim);
+  text-align: center;
+  padding: 16px 6px;
+}
+
+/* CARD */
+.fbz4-card {
+  background: var(--fbz4-card-bg);
+  border-radius: 0px;
+  padding: 0px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Image on top, 16:9, squared corners */
+.fbz4-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 0px;
+  overflow: hidden;
+  background: #0b1a4a;
+  margin-top: 0.5rem;
+  box-shadow: 0 10px 0 rgba(255,255,255,0.06) inset;
+}
+
+.fbz4-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.fbz4-thumb--ph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #202632 0%, #121821 100%);
+}
+
+/* ✅ Full title — no clamp, no truncation */
+.fbz4-headline {
+  margin-top: 4px;
+  color: var(--fbz4-text);
+  font-family: "Cabin", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.65rem;
+  line-height: 1.4;
+  text-decoration: none;
+  overflow: visible;
+  white-space: normal; /* allow full wrap */
+}
+
+/* Hover subtleties */
+.fbz4-card:hover .fbz4-thumb img {
+  transform: scale(1.02);
+  transition: transform 200ms ease;
+}
+
+/* Mobile tweaks */
+@media (max-width: 768px) {
+  .fbz4-title { font-size: 1.18rem; }
+  .fbz4-inner { padding: 6px; }
+  .fbz4-grid { gap: 4px; }
+  .fbz4-headline { font-size: 0.86rem; }
+}

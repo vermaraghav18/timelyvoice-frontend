@@ -1,0 +1,104 @@
+/* frontend/src/components/sections/filmybazaar_v2.css */
+@import url("https://fonts.googleapis.com/css2?family=Cabin:wght@700&display=swap");
+
+:root {
+  --fbz2-bg: #06143a;
+  --fbz2-text: #e9f0ff;
+  --fbz2-text-dim: #aab6d6;
+  --fbz2-accent-from: #ff7a1a;
+  --fbz2-accent-to: #ff3d00;
+  --fbz2-row-bg: rgba(255,255,255,0.02);
+  --fbz2-row-hover: rgba(255,255,255,0.06);
+  --fbz2-divider: rgba(255,255,255,0.08);
+}
+
+/* Container */
+.fbz2-rail {
+  margin-top: 0.25rem;
+  background: var(--fbz2-bg);
+  border-radius: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Top orange gradient bar */
+.fbz2-topbar {
+  background: linear-gradient(90deg, var(--fbz2-accent-from), var(--fbz2-accent-to));
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.fbz2-title {
+  margin: 0;
+  color: #fff;
+  font-family: "Cabin", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Arial, sans-serif;
+  font-weight: 100;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.fbz2-more {
+  color: #fff;
+  text-decoration: none;
+  opacity: 0.95;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+/* List */
+.fbz2-list { padding: 8px; }
+.fbz2-empty { color: var(--fbz2-text-dim); text-align: center; padding: 24px 8px; }
+
+/* Row: title LEFT, image RIGHT — smaller defaults + tighter gap */
+.fbz2-row {
+  display: grid;
+  grid-template-columns: 1fr var(--img-w, 84px); /* default reduced */
+  align-items: center;
+  gap: var(--gap, 8px);                          /* default reduced */
+  background: var(--fbz2-row-bg);
+  padding: 8px;                                   /* default reduced */
+  transition: background 160ms ease;
+}
+.fbz2-row:hover { background: var(--fbz2-row-hover); }
+
+/* Optional dividers */
+.fbz2-rail[data-dividers="1"] .fbz2-row + .fbz2-row {
+  border-top: 1px solid var(--fbz2-divider);
+}
+
+/* Left (text) */
+.fbz2-left { min-width: 0; }
+.fbz2-headline {
+  color: var(--fbz2-text);
+  font-family: "Cabin", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Arial, sans-serif;
+  font-weight: 500;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  text-decoration: none;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Right (image) */
+.fbz2-right { justify-self: end; }
+.fbz2-thumb {
+  width: var(--img-w, 74px);                      /* default reduced */
+  aspect-ratio: 16/9;
+  display: block;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #0b1a4a;
+}
+.fbz2-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.fbz2-thumb--placeholder {
+  background: linear-gradient(135deg, #0e215c 0%, #0a1842 100%);
+}

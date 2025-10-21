@@ -1,4 +1,3 @@
-// frontend/src/pages/public/TopNews.jsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, upsertTag } from "../../App.jsx";
@@ -6,29 +5,16 @@ import SiteNav from "../../components/SiteNav.jsx";
 import SiteFooter from "../../components/SiteFooter.jsx";
 import "./TopNews.css";
 
-function timeAgo(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const diff = Math.max(0, Date.now() - d.getTime());
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins} min ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} hour${hrs > 1 ? "s" : ""} ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days} day${days > 1 ? "s" : ""} ago`;
-}
-
 const CAT_COLORS = {
-  World: "#3B82F6",
-  Politics: "#F59E0B",
-  Business: "#10B981",
-  Entertainment: "#A855F7",
-  General: "#6B7280",
-  Health: "#EF4444",
-  Science: "#22D3EE",
-  Sports: "#84CC16",
-  Tech: "#FB7185",
+  World: "linear-gradient(135deg, #3B82F6 0%, #0073ff 100%)",
+  Politics: "linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)",
+  Business: "linear-gradient(135deg, #10B981 0%, #34D399 100%)",
+  Entertainment: "linear-gradient(135deg, #A855F7 0%, #C084FC 100%)",
+  General: "linear-gradient(135deg, #6B7280 0%, #9CA3AF 100%)",
+  Health: "linear-gradient(135deg, #EF4444 0%, #F87171 100%)",
+  Science: "linear-gradient(135deg, #22D3EE 0%, #67E8F9 100%)",
+  Sports: "linear-gradient(135deg, #abcc16 0%, #9dff00 100%)",
+  Tech: "linear-gradient(135deg, #FB7185 0%, #FDA4AF 100%)",
 };
 
 function articleHref(slug) {
@@ -85,26 +71,47 @@ export default function TopNews() {
           <ul className="tn-list">
             {items.map((a) => {
               const href = articleHref(a.slug);
-              const t = timeAgo(a.publishedAt);
               const color = CAT_COLORS[a.category] || "#4B5563";
 
               return (
                 <li className="tn-item" key={a.id || a._id || a.slug}>
                   <div className="tn-left">
-                    <Link to={href} className="tn-item-title">{a.title}</Link>
+                    <Link to={href} className="tn-item-title">
+                      {a.title}
+                    </Link>
+
+                    {(a.summary || a.description || a.excerpt) && (
+                      <p className="tn-summary">
+                        {a.summary || a.description || a.excerpt}
+                      </p>
+                    )}
+
+                    {/* Divider line */}
+                    <div className="tn-divider"></div>
+
+                    {/* Source pill */}
                     <div className="tn-meta">
-                      <span className="tn-pill" style={{ backgroundColor: color }}>
-                        {a.category}
-                      </span>
-                      <span className="tn-source">The Timely Voice</span>
-                      {t ? <span className="tn-dot">•</span> : null}
-                      {t ? <span className="tn-time">{t}</span> : null}
-                    </div>
+  <span className="tn-source">The Timely Voice</span>
+</div>
+
                   </div>
 
                   <Link to={href} className="tn-thumb">
+                    <span className="tn-badge">
+                      <span
+                        className="tn-pill"
+                        style={{ background: color }}
+                      >
+                        {a.category}
+                      </span>
+                    </span>
+
                     {a.imageUrl ? (
-                      <img src={a.imageUrl} alt={a.imageAlt || a.title} loading="lazy" />
+                      <img
+                        src={a.imageUrl}
+                        alt={a.imageAlt || a.title}
+                        loading="lazy"
+                      />
                     ) : (
                       <div className="tn-thumb ph" />
                     )}

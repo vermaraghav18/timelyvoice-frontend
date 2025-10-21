@@ -120,12 +120,15 @@ const normPath = (p = '') => String(p).trim().replace(/\/+$/, '') || '/'; // rem
 // Responsive 3-col: Left Rail | Main | Right Rail
 const pageWrap = {
   display: 'flex',
-  justifyContent: 'center',
+  flexDirection: 'column',   // 👈 add this
+  alignItems: 'center',      // 👈 add this to keep children centered
+  justifyContent: 'flex-start',
   paddingTop: 0,
-  marginTop: 12,
+  marginTop: 1,
   marginBottom: 40,
   fontFamily: "'Newsreader', serif",
 };
+
 const gridWrap = {
   width: '100%',
   maxWidth: 1200,
@@ -457,6 +460,30 @@ useEffect(() => {
       .filter((s) => s?.template?.startsWith('rail_') && s?.enabled !== false)
       .sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
   }, [planSections]);
+// ✅ full-bleed hero blocks (like sports_v2) from the category plan
+
+
+const heroBlocks = useMemo(() => {
+  return (planSections || [])
+    .filter((s) => s?.template === 'sports_v2' && s?.enabled !== false)
+    .sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
+}, [planSections]);
+
+// ✅ horizontal cards blocks (sports_v3) from the category plan
+const sportsV3Blocks = useMemo(() => {
+  return (planSections || [])
+    .filter((s) => s?.template === 'sports_v3' && s?.enabled !== false)
+    .sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
+}, [planSections]);
+
+// ✅ tech_main_v1 blocks from the category plan
+const techMainBlocks = useMemo(() => {
+  return (planSections || [])
+    .filter((s) => s?.template === 'tech_main_v1' && s?.enabled !== false)
+    .sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
+}, [planSections]);
+
+  
 
   const leftRails = rails.filter((s) => (s.side || 'right') === 'left');
   const rightRails = rails.filter((s) => (s.side || 'right') === 'right');
@@ -502,6 +529,18 @@ useEffect(() => {
       <SiteNav />
 
       <div style={pageWrap}>
+
+                {/* ======== FULL-WIDTH HEROES (e.g., sports_v2) ABOVE THE GRID ======== */}
+        {heroBlocks.map((sec) => (
+          <div
+            key={sec._id || sec.id || sec.slug}
+            /* match your page container width so it aligns with the grid */
+            style={{ width: '100%', maxWidth: 1200, padding: '0 12px', marginBottom: 12 }}
+          >
+            <SectionRenderer section={sec} />
+          </div>
+        ))}
+
         {/* small on-screen debug counter (leave or remove) */}
         <div
           style={{
@@ -550,6 +589,21 @@ useEffect(() => {
                       <SectionRenderer section={sec} />
                     </div>
                   ))}
+                  {/* sports_v3 (horizontal cards) */}
+                  {sportsV3Blocks.map((sec) => (
+                    <div key={sec._id || sec.id || sec.slug} style={{ marginBottom: 12 }}>
+                      <SectionRenderer section={sec} />
+                    </div>
+                  ))}
+
+                  {/* tech_main_v1 (feature + stacked + headlines) */}
+                  {techMainBlocks.map((sec) => (
+                    <div key={sec._id || sec.id || sec.slug} style={{ marginBottom: 12 }}>
+                      <SectionRenderer section={sec} />
+                    </div>
+                  ))}
+
+
 
                   {(!articles || articles.length === 0) ? (
                     <p style={{ textAlign: 'center' }}>No articles yet.</p>

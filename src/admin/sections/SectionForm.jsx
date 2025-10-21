@@ -151,6 +151,15 @@ const [pinLoading, setPinLoading] = useState(false);
             <option value="rail_v6">Rail (v6) – Lead + Stack</option>
             <option value="rail_v7">Rail (v7) – Image Promo</option>
             <option value="rail_v8">Rail (v8) – News Card</option>
+            <option value="rail_filmybazaar_v1">FilmyBazaar (v1) — Rail</option>
+            <option value="rail_filmybazaar_v2">FilmyBazaar (v2) — Rail</option>
+            <option value="rail_filmybazaar_v3">FilmyBazaar (v3) — Deck</option>
+            <option value="rail_filmybazaar_v4">FilmyBazaar (v4) — 2×2 Grid</option>
+             <option value="rail_sports_v1">Sports (v1) — Rail</option> {/* 👈 add this */} 
+              <option value="sports_v2">Sports (v2) — Full-Width Hero</option>     
+              <option value="sports_v3">Sports (v3) — Horizontal Cards</option>
+              <option value="tech_main_v1">Tech (main v1) — Feature + Stacked + Headlines</option>
+
           </select>
         </div>
 

@@ -1,0 +1,95 @@
+.sports-rail-v1 {
+  display: block;
+  width: 100%;
+}
+
+.sports-rail-v1__title {
+  font-size: 0rem;
+  font-weight: 700;
+  margin: 0 0 12px;
+  line-height: 1.2;
+  letter-spacing: 0.2px;
+}
+
+.sports-rail-v1__list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sports-rail-v1__item {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.sports-rail-v1__thumbWrap {
+  display: block;
+  width: 100px;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: #e5e7eb;
+}
+
+.sports-rail-v1__thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sports-rail-v1__thumb--placeholder {
+  background: #e5e7eb;
+}
+
+.sports-rail-v1__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sports-rail-v1__badge {
+  display: inline-flex;
+  align-self: flex-start;
+  font-size: 13px;
+  line-height: 1;
+  padding: 4px 6px;
+  background: #00a116;   /* your Secondary from palette */
+  color: #fff;
+  border-radius: 1px;
+  letter-spacing: 0.3px;
+}
+
+.sports-rail-v1__headline {
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.05;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.sports-rail-v1__headline:hover {
+  text-decoration: underline;
+}
+
+.sports-rail-v1__time {
+  font-size: 0px;
+  color: #ffffff;
+}
+
+.sports-rail-v1__more {
+  margin-top: 10px;
+}
+
+.sports-rail-v1__moreLink {
+  font-size: 12px;
+  text-decoration: none;
+  color: #1D9A8E;   /* your Primary */
+  font-weight: 600;
+}
+
+.sports-rail-v1__moreLink:hover {
+  text-decoration: underline;
+}
