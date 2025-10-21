@@ -418,24 +418,33 @@ export default function SiteNav() {
                 >
                   The Timely Voice
                 </Link>
-                <img
-                  src="/images/google-news.png"
-                  alt="Google News"
-                  style={{
-                    position: 'absolute',
-                    right: gRight,
-                    top: '50%',
-                    transform: 'translateY(-50%) rotate(3deg)',
-                    width: gSize,
-                    height: 'auto',
-                    zIndex: 3,
-                    borderRadius: 8,
-                    border: '3px solid #000',
-                    boxShadow: '6px 8px 0 #000',
-                    pointerEvents: 'none',
-                    userSelect: 'none',
-                  }}
-                />
+               <div
+  style={{
+    position: 'absolute',
+    right: '-48px',            // same position as desktop (move +/- to tweak)
+    top: '70%',
+    transform: 'translateY(-50%) rotate(3deg)',
+    background: '#ffffff',     // solid white background
+    borderRadius: '10px',      // rounded corners
+    border: '3px solid #000',
+    boxShadow: '6px 8px 0 #000', // hard, no-blur shadow
+    padding: '4px',              // white edge around the icon
+    zIndex: 3,
+  }}
+>
+  <img
+    src="/images/google-news.png"
+    alt="Google News"
+    style={{
+      display: 'block',
+      width: '45px',           // same size as desktop; change to '40px' if too big
+      height: 'auto',
+      pointerEvents: 'none',
+      userSelect: 'none',
+    }}
+  />
+</div>
+
               </div>
             </div>
 
