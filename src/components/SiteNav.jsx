@@ -338,7 +338,8 @@ export default function SiteNav() {
               aria-label="The Timely Voice — Home"
               style={{
                 ...logoStyle,
-                background: '#00c462ff', // bright green like the Sports tag
+                 background: 'linear-gradient(130deg, #008080 0%, #00aaaaff 100%)',
+         
                 color: '#ffffffff',
                  border: '3px solid #000', // ✅ added black border
                 padding: '6px 14px',
