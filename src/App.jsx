@@ -1,7 +1,7 @@
 // src/App.jsx
 import { useEffect, lazy, Suspense } from 'react';
 
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import axios from 'axios';
 
 // Import global CSS helpers
@@ -40,8 +40,6 @@ const AutmotionDraftsPage = lazy(() => import('./pages/admin/autmotion/DraftsPag
 
 const AutmotionXSourcesPage = lazy(() => import('./pages/admin/autmotion/XSourcesPage.jsx'));
 const AutmotionXQueuePage = lazy(() => import('./pages/admin/autmotion/XQueuePage.jsx'));
-
-
 
 
 // Analytics
@@ -94,7 +92,7 @@ export const styles = {
   button: { padding: '10px 14px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#f8fafc', cursor: 'pointer' },
   danger: { padding: '10px 14px', borderRadius: 10, border: '1px solid #fee2e2', background: '#fef2f2', cursor: 'pointer' },
   badge: { marginLeft: 8, padding: '2px 8px', borderRadius: 999, fontSize: 12, background: '#eef2ff', border: '1px solid #e5e7eb' },
-  card: { border: '1px solid #eee', borderRadius: 12, padding: 16, background: '#fff', boxShadow: '0 1px 1px rgba(0,0,0,0.02)', marginBottom: 12 },
+  card: { border: "1px solid #eee", borderRadius: 12, padding: 16, background: "#fff", boxShadow: "0 1px 1px rgba(0,0,0,0.02)", marginBottom: 12 },
   h3: { margin: '0 0 6px' },
   p: { margin: '8px 0 0' },
   muted: { color: '#666' },
@@ -254,42 +252,39 @@ export default function App() {
   }, [loc.pathname, loc.search]);
 
   return (
-  <ErrorBoundary>
-    <Suspense fallback={<div style={{padding:16}}>Loading…</div>}>
-      <Routes>
-        {/* Reader */}
-        <Route path="/" element={<PublicHome />} />
-        <Route path="/category/:slug" element={<CategoryPage />} />
-        <Route path="/tag/:slug" element={<TagPage />} />
-        <Route path="/article/:slug" element={<ReaderArticle />} />
-        <Route path="/search" element={<SearchPage />} />
-        <Route path="/top-news" element={<TopNews />} />
-        <Route path="*" element={<NotFound />} />
+    <ErrorBoundary>
+      <Suspense fallback={<div style={{padding:16}}>Loading…</div>}>
+        <Routes>
+          {/* Reader */}
+          {/* Redirect root to Top News */}
+          <Route path="/" element={<Navigate to="/top-news" replace />} />
+          <Route path="/category/:slug" element={<CategoryPage />} />
+          <Route path="/tag/:slug" element={<TagPage />} />
+          <Route path="/article/:slug" element={<ReaderArticle />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/top-news" element={<TopNews />} />
+          <Route path="*" element={<NotFound />} />
 
-        {/* Admin */}
-        <Route path="/admin" element={<AdminShell><AdminDashboard /></AdminShell>} />
-        <Route path="/admin/articles" element={<AdminShell><ArticlesPage /></AdminShell>} />
-        <Route path="/admin/media" element={<AdminShell><AdminMedia /></AdminShell>} />
-        <Route path="/admin/categories" element={<AdminShell><CategoriesPage /></AdminShell>} />
-        <Route path="/admin/tags" element={<AdminShell><TagsPage /></AdminShell>} />
-        <Route path="/admin/settings" element={<AdminShell><SettingsPage /></AdminShell>} />
-        <Route path="/admin/comments" element={<AdminShell><CommentsPage /></AdminShell>} />
-        <Route path="/admin/breaking" element={<AdminShell><BreakingNewsAdmin /></AdminShell>} />
-        <Route path="/admin/ticker" element={<AdminShell><TickerAdmin /></AdminShell>} />
-        <Route path="/admin/sections" element={<AdminShell><SectionsPage /></AdminShell>} />
-        <Route path="/admin/sections-v2" element={<AdminShell><SectionsV2Page /></AdminShell>} />
-                {/* === Autmotion routes === */}
-        <Route path="/admin/autmotion/feeds" element={<AdminShell><AutmotionFeedsPage /></AdminShell>} />
-        <Route path="/admin/autmotion/queue" element={<AdminShell><AutmotionQueuePage /></AdminShell>} />
-        <Route path="/admin/autmotion/drafts" element={<AdminShell><AutmotionDraftsPage /></AdminShell>} />
-        <Route path="/admin/autmotion/x-sources" element={<AdminShell><AutmotionXSourcesPage /></AdminShell>} />
-        <Route path="/admin/autmotion/x-queue" element={<AdminShell><AutmotionXQueuePage /></AdminShell>} />
-
-
-
-      </Routes>
-    </Suspense>
-  </ErrorBoundary>
-);
-
+          {/* Admin */}
+          <Route path="/admin" element={<AdminShell><AdminDashboard /></AdminShell>} />
+          <Route path="/admin/articles" element={<AdminShell><ArticlesPage /></AdminShell>} />
+          <Route path="/admin/media" element={<AdminShell><AdminMedia /></AdminShell>} />
+          <Route path="/admin/categories" element={<AdminShell><CategoriesPage /></AdminShell>} />
+          <Route path="/admin/tags" element={<AdminShell><TagsPage /></AdminShell>} />
+          <Route path="/admin/settings" element={<AdminShell><SettingsPage /></AdminShell>} />
+          <Route path="/admin/comments" element={<AdminShell><CommentsPage /></AdminShell>} />
+          <Route path="/admin/breaking" element={<AdminShell><BreakingNewsAdmin /></AdminShell>} />
+          <Route path="/admin/ticker" element={<AdminShell><TickerAdmin /></AdminShell>} />
+          <Route path="/admin/sections" element={<AdminShell><SectionsPage /></AdminShell>} />
+          <Route path="/admin/sections-v2" element={<AdminShell><SectionsV2Page /></AdminShell>} />
+          {/* === Autmotion routes === */}
+          <Route path="/admin/autmotion/feeds" element={<AdminShell><AutmotionFeedsPage /></AdminShell>} />
+          <Route path="/admin/autmotion/queue" element={<AdminShell><AutmotionQueuePage /></AdminShell>} />
+          <Route path="/admin/autmotion/drafts" element={<AdminShell><AutmotionDraftsPage /></AdminShell>} />
+          <Route path="/admin/autmotion/x-sources" element={<AdminShell><AutmotionXSourcesPage /></AdminShell>} />
+          <Route path="/admin/autmotion/x-queue" element={<AdminShell><AutmotionXQueuePage /></AdminShell>} />
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
+  );
 }

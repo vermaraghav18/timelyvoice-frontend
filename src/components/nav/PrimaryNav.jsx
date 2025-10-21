@@ -104,11 +104,12 @@ export default function PrimaryNav() {
   const scrollerRef = useRef(null);
   const activeRef = useRef(null);
 
-  // Which links remain visible? Only "Top News".
-  const visibleIndexes = LINKS.map((l, i) => (l.label === 'Top News' ? i : -1)).filter(i => i >= 0);
+  // Make Top News and India visible
+  const visibleLabels = ['Top News', 'India'];
+  const visibleIndexes = LINKS.map((l, i) => (visibleLabels.includes(l.label) ? i : -1)).filter(i => i >= 0);
   const lastVisibleIndex = visibleIndexes.length ? visibleIndexes[visibleIndexes.length - 1] : -1;
 
-  // On mobile: always start at the first tab. Desktop: center active.
+  // On mobile: always start at first tab. Desktop: center active.
   useEffect(() => {
     const scroller = scrollerRef.current;
     const activeEl = activeRef.current;
@@ -144,7 +145,7 @@ export default function PrimaryNav() {
         <div ref={scrollerRef} className="nav-scroller primary-scroller" style={SCROLLER_STYLE} tabIndex={0}>
           <ul className="primary-list" style={UL_STYLE}>
             {LINKS.map((l, idx) => {
-              const isTop = l.label === 'Top News'; // only this one is shown
+              const isVisible = visibleLabels.includes(l.label);
               const href = hrefFor(l);
               const key = l.slug || l.path || l.label;
               const active = isActive(l, pathname);
@@ -154,24 +155,24 @@ export default function PrimaryNav() {
                 <li
                   key={key}
                   style={{
-                    display: isTop ? 'inline-flex' : 'none', // hide all others
+                    display: isVisible ? 'inline-flex' : 'none',
                     alignItems: 'center',
                   }}
                 >
                   <Link
-                    to={isTop ? href : '#'}
-                    style={isTop ? style : { ...LINK_BASE, pointerEvents: 'none', cursor: 'default' }}
+                    to={isVisible ? href : '#'}
+                    style={isVisible ? style : { ...LINK_BASE, pointerEvents: 'none', cursor: 'default' }}
                     className="primary-link"
-                    aria-current={active && isTop ? 'page' : undefined}
-                    aria-hidden={isTop ? undefined : true}
-                    tabIndex={isTop ? 0 : -1}
-                    ref={active && isTop ? activeRef : null}
+                    aria-current={active && isVisible ? 'page' : undefined}
+                    aria-hidden={isVisible ? undefined : true}
+                    tabIndex={isVisible ? 0 : -1}
+                    ref={active && isVisible ? activeRef : null}
                   >
-                    {isTop ? l.label : ''}
+                    {isVisible ? l.label : ''}
                   </Link>
 
-                  {/* separator only if this visible item isn't the last visible */}
-                  {isTop && idx !== lastVisibleIndex && (
+                  {/* separator only if not last visible */}
+                  {isVisible && idx !== lastVisibleIndex && (
                     <span aria-hidden="true" className="primary-sep" style={SEP_STYLE}>
                       |
                     </span>
