@@ -421,7 +421,7 @@ export default function SiteNav() {
                <div
   style={{
     position: 'absolute',
-    right: '-48px',            // same position as desktop (move +/- to tweak)
+    right: '-38px',            // same position as desktop (move +/- to tweak)
     top: '70%',
     transform: 'translateY(-50%) rotate(3deg)',
     background: '#ffffff',     // solid white background
@@ -437,7 +437,7 @@ export default function SiteNav() {
     alt="Google News"
     style={{
       display: 'block',
-      width: '45px',           // same size as desktop; change to '40px' if too big
+      width: '36px',           // same size as desktop; change to '40px' if too big
       height: 'auto',
       pointerEvents: 'none',
       userSelect: 'none',
