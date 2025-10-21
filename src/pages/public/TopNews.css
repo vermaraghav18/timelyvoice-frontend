@@ -73,9 +73,9 @@
 
 /* Plain centered source text */
 .tn-source {
-  color: #a0a0a0;         /* soft neutral tone */
+  color: hsl(0, 0%, 100%);         /* soft neutral tone */
   font-weight: 100;
-  font-size: 12px;
+  font-size: 14px;
   background: none;
   border: none;
   box-shadow: none;
