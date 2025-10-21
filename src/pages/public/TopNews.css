@@ -135,6 +135,6 @@
     grid-template-areas: "thumb" "left";
   }
   .tn-thumb {
-    height: 220px;
+    height: 280px; /* was 220px */
   }
 }
