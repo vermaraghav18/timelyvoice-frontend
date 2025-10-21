@@ -1,3 +1,4 @@
+// frontend/src/admin/sections/SectionsPage.jsx
 import { useEffect, useMemo, useState } from "react";
 import { listSections, createSection, updateSection, deleteSection } from "./sections.api.js";
 import SectionForm from "./SectionForm.jsx";
@@ -9,68 +10,85 @@ export default function SectionsPage() {
 
   async function load() {
     setLoading(true);
-    try { setRows(await listSections()); } finally { setLoading(false); }
+    try {
+      const data = await listSections();
+      setRows(Array.isArray(data) ? data : []);
+    } finally {
+      setLoading(false);
+    }
   }
-  useEffect(() => { load(); }, []);
 
+  useEffect(() => {
+    load();
+  }, []);
+
+  // CREATE
   async function handleCreate(data) {
-  // Build an explicit payload so custom/side never get dropped
-  const payload = {
-    title: data.title,
-    slug: data.slug,
-    template: data.template,
-    capacity: data.capacity,
+    // Build an explicit payload so custom/side never get dropped
+    const payload = {
+      title: data.title || "",
+      slug: data.slug || "",
+      template: data.template || "",
+      capacity: Number(data.capacity ?? 0),
 
-    // 🔑 keep these — backend needs them
-    side: data.side ?? "",
-    custom: data.custom ?? {},
+      // 🔑 keep these — backend needs them even if empty
+      side: data.side ?? "",               // e.g., "left" | "right" for rails; "" otherwise
+      custom: data.custom ?? {},           // e.g., { afterNth: 3, ... }
 
-    target: data.target,
-    feed: data.feed,
-    pins: data.pins,
-    moreLink: data.moreLink,
-    placementIndex: data.placementIndex,
-    enabled: data.enabled,
-    
-  };
+      target: data.target || { type: "", value: "" },
+      feed: data.feed || { mode: "auto" },
+      pins: Array.isArray(data.pins) ? data.pins : [],
+      moreLink: data.moreLink || "",
+      placementIndex: Number(data.placementIndex ?? 0),
+      enabled: Boolean(data.enabled),
+    };
 
-  // One-time debug: verify we're sending custom
-  console.log("DEBUG create payload:", payload);
+    // optional debug
+    // console.log("create payload:", payload);
 
-  await createSection(payload);
-  setShowCreate(false);
-  await load();
-}
+    await createSection(payload);
+    setShowCreate(false);
+    await load();
+  }
 
-
+  // ENABLE / DISABLE
   async function toggleEnabled(row) {
-    if (!row._id) return;
+    if (!row?._id) return;
     await updateSection(row._id, { enabled: !row.enabled });
     await load();
   }
 
+  // ORDER UP/DOWN
   async function move(row, dir) {
-    const sorted = [...rows].sort((a,b)=>a.placementIndex-b.placementIndex);
-    const idx = sorted.findIndex(r => r._id === row._id);
+    const sorted = [...rows].sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
+    const idx = sorted.findIndex((r) => r._id === row._id);
     const swapIdx = idx + dir;
-    if (swapIdx < 0 || swapIdx >= sorted.length) return;
-    const a = sorted[idx], b = sorted[swapIdx];
-    await updateSection(a._id, { placementIndex: b.placementIndex });
-    await updateSection(b._id, { placementIndex: a.placementIndex });
+    if (idx < 0 || swapIdx < 0 || swapIdx >= sorted.length) return;
+
+    const a = sorted[idx];
+    const b = sorted[swapIdx];
+
+    await updateSection(a._id, { placementIndex: b.placementIndex ?? 0 });
+    await updateSection(b._id, { placementIndex: a.placementIndex ?? 0 });
     await load();
   }
 
+  // DELETE
   async function removeRow(row) {
-    if (!row._id) return;
-    if (!confirm(`Delete section "${row.title}"?`)) return;
+    if (!row?._id) return;
+    if (!confirm(`Delete section "${row.title || row.slug}"?`)) return;
     await deleteSection(row._id);
     await load();
   }
 
+  // TABLE BODY
   const body = useMemo(() => {
     if (loading) return <p>Loading…</p>;
     if (!rows.length) return <p>No sections yet.</p>;
-    const sorted = [...rows].sort((a,b)=>a.placementIndex - b.placementIndex);
+
+    const sorted = [...rows].sort(
+      (a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0)
+    );
 
     return (
       <table className="w-full border text-sm">
@@ -81,6 +99,8 @@ export default function SectionsPage() {
             <th className="text-left p-2 border">Template</th>
             <th className="text-left p-2 border">Capacity</th>
             <th className="text-left p-2 border">Target</th>
+            <th className="text-left p-2 border">Side</th>
+            <th className="text-left p-2 border">After&nbsp;Nth</th>
             <th className="text-left p-2 border">More</th>
             <th className="text-left p-2 border">Enabled</th>
             <th className="text-left p-2 border">Actions</th>
@@ -88,26 +108,68 @@ export default function SectionsPage() {
         </thead>
         <tbody>
           {sorted.map((r, i) => (
-            <tr key={r._id || r.slug}>
+            <tr key={r._id || r.slug || i}>
               <td className="p-2 border">
                 <div className="flex gap-1">
-                  <button className="px-2 py-1 border rounded" onClick={()=>move(r, -1)} disabled={i===0}>↑</button>
-                  <button className="px-2 py-1 border rounded" onClick={()=>move(r, +1)} disabled={i===sorted.length-1}>↓</button>
+                  <button
+                    className="px-2 py-1 border rounded"
+                    onClick={() => move(r, -1)}
+                    disabled={i === 0}
+                    title="Move up"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    className="px-2 py-1 border rounded"
+                    onClick={() => move(r, +1)}
+                    disabled={i === sorted.length - 1}
+                    title="Move down"
+                  >
+                    ↓
+                  </button>
                 </div>
               </td>
-              <td className="p-2 border">{r.title}</td>
+
+              <td className="p-2 border">
+                <div className="font-medium">{r.title || "(untitled)"}</div>
+                <div className="text-gray-500">{r.slug}</div>
+              </td>
+
               <td className="p-2 border">{r.template}</td>
               <td className="p-2 border">{r.capacity}</td>
-              <td className="p-2 border">{r.target?.type} → {r.target?.value}</td>
-              <td className="p-2 border">{r.moreLink}</td>
+
               <td className="p-2 border">
-                <button className={`px-2 py-1 rounded ${r.enabled ? "bg-green-600 text-white" : "bg-gray-200"}`}
-                  onClick={()=>toggleEnabled(r)}>
+                {r.target?.type} → {r.target?.value}
+              </td>
+
+              <td className="p-2 border">
+                {r.side || "—"}
+              </td>
+
+              <td className="p-2 border">
+                {r.custom?.afterNth ?? "—"}
+              </td>
+
+              <td className="p-2 border">{r.moreLink || "—"}</td>
+
+              <td className="p-2 border">
+                <button
+                  className={`px-2 py-1 rounded ${
+                    r.enabled ? "bg-green-600 text-white" : "bg-gray-200"
+                  }`}
+                  onClick={() => toggleEnabled(r)}
+                >
                   {r.enabled ? "On" : "Off"}
                 </button>
               </td>
+
               <td className="p-2 border">
-                <button className="px-2 py-1 border rounded" onClick={()=>removeRow(r)}>Delete</button>
+                <button
+                  className="px-2 py-1 border rounded"
+                  onClick={() => removeRow(r)}
+                >
+                  Delete
+                </button>
               </td>
             </tr>
           ))}
@@ -119,8 +181,13 @@ export default function SectionsPage() {
   return (
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Homepage Sections</h1>
-        <button className="px-3 py-2 rounded bg-black text-white" onClick={()=>setShowCreate(true)}>+ New Section</button>
+        <h1 className="text-xl font-semibold">Sections</h1>
+        <button
+          className="px-3 py-2 rounded bg-black text-white"
+          onClick={() => setShowCreate(true)}
+        >
+          + New Section
+        </button>
       </div>
 
       {body}
@@ -130,11 +197,15 @@ export default function SectionsPage() {
           <div className="bg-white rounded-xl p-4 w-[640px] max-w-[95vw]">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-medium">Create Section</h2>
-              <button onClick={()=>setShowCreate(false)} className="px-2 py-1">✕</button>
+              <button onClick={() => setShowCreate(false)} className="px-2 py-1">
+                ✕
+              </button>
             </div>
+
+            {/* SectionForm is where you expose the input for custom.afterNth, side, etc. */}
             <SectionForm
               onSubmit={handleCreate}
-              onCancel={()=>setShowCreate(false)}
+              onCancel={() => setShowCreate(false)}
             />
           </div>
         </div>

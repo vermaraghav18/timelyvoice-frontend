@@ -30,9 +30,46 @@ import FilmyBazaarRailV2 from "./FilmyBazaarRailV2";
 import FilmyBazaarRailV3 from "./FilmyBazaarRailV3";
 import FilmyBazaarRailV4 from "./FilmyBazaarRailV4";
 import SportsRailV1 from "../rails/SportsRailV1.jsx";
-import SportsV2 from "./SportsV2.jsx"; 
-import SportsV3 from "./SportsV3.jsx"; 
-import TechMainV1 from "./TechMainV1.jsx";  // 👈 add
+import SportsV2 from "./SportsV2.jsx";
+import SportsV3 from "./SportsV3.jsx";
+import TechMainV1 from "./TechMainV1.jsx";
+
+// --- helper getters (robust to different payload shapes) ---
+function normTemplate(t) {
+  return String(t || "").toLowerCase().replace(/-/g, "_");
+}
+function getTitle(section = {}) {
+  return (
+    section.title ??
+    section.heading ??
+    section.label ??
+    section.name ??
+    section.data?.title ??
+    section.data?.heading ??
+    ""
+  );
+}
+function getItems(section = {}) {
+  return (
+    section.items ??
+    section.data?.items ??
+    section.payload?.items ??
+    section.content?.items ??
+    []
+  );
+}
+function getMoreLink(section = {}) {
+  return section.moreLink ?? section.data?.moreLink ?? "";
+}
+function getCustom(section = {}) {
+  return section.custom ?? section.data?.custom ?? {};
+}
+function getSide(section = {}) {
+  return section.side ?? section.data?.side ?? "";
+}
+function getMaxItems(section = {}, fallback = 6) {
+  return section.maxItems ?? section.data?.maxItems ?? fallback;
+}
 
 const TEMPLATES = {
   head_v1: NewsHeadSection,
@@ -55,36 +92,56 @@ const TEMPLATES = {
   main_v5: MainV5,
   main_v6: MainV6,
   main_v7: MainV7,
+
   rail_v3: RailV3,
   rail_v4: RailV4,
   rail_v5: RailV5,
   rail_v6: RailV6,
   rail_v7: RailV7,
   rail_v8: RailV8,
+
   rail_filmybazaar_v1: FilmyBazaarRailV1,
   rail_filmybazaar_v2: FilmyBazaarRailV2,
   rail_filmybazaar_v3: FilmyBazaarRailV3,
   rail_filmybazaar_v4: FilmyBazaarRailV4,
-  rail_sports_v1: SportsRailV1, // 👈 add this
-  sports_v2: SportsV2,
-  sports_v3: SportsV3,   
-  tech_main_v1: TechMainV1,  // 👈 add
 
+  rail_sports_v1: SportsRailV1,
+  sports_v2: SportsV2,
+  sports_v3: SportsV3,
+  tech_main_v1: TechMainV1,
 };
 
 export default function SectionRenderer({ section }) {
   if (!section || !section.template) return null;
-  const Cmp = TEMPLATES[section.template];
-  if (!Cmp) return null;
+
+  // Normalize template to match keys like rail_v6 even if backend sends "rail-V6" etc.
+  const key = normTemplate(section.template);
+  const Cmp = TEMPLATES[key];
+  if (!Cmp) {
+    if (import.meta?.env?.MODE !== "production") {
+      // Helpful in dev to see why a section didn't render
+      console.debug("Unknown section template:", section.template, section);
+    }
+    return null;
+  }
+
+  // Extract consistent props
+  const title = getTitle(section);
+  const items = getItems(section);
+  const moreLink = getMoreLink(section);
+  const custom = getCustom(section);
+  const side = getSide(section);
+  const maxItems = getMaxItems(section, 6);
 
   return (
     <Cmp
       section={section}
-      title={section.title || ""}
-      items={section.items || []}
-      moreLink={section.moreLink || ""}
-      custom={section.custom || {}}   
-      side={section.side || ""}         
+      title={title}
+      items={items}
+      moreLink={moreLink}
+      custom={custom}
+      side={side}
+      maxItems={maxItems}
     />
   );
 }

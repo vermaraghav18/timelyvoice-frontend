@@ -1,10 +1,12 @@
+/* Import fonts */
 @import url('https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap');
 
 .sec-wrap {
   border: 1px solid #eee;
   border-radius: 1px;
   padding: 16px;
-  background: #fff;
+  background: #dbe6ff;
   margin: 0;
   font-family: 'Newsreader', serif;
 }
@@ -55,23 +57,21 @@
 }
 .thumb-ph { width: 100%; height: 100%; background: #e5e7eb; }
 
-/* 🟦 Tag overlay (bottom-left) */
-/* Tag overlay on image */
+/* Tag overlay (default fallback) */
 .tag-overlay {
   position: absolute;
   bottom: 8px;
   left: 8px;
-  background: #1B4965;         /* 🔵 change this color (dark navy blue) */
+  background: #1B4965;
   color: #fff;
   font-weight: 800;
   font-size: 11px;
   text-transform: uppercase;
   padding: 4px 8px;
-  border-radius: 1px;          /* 🟢 reduced to 1px as requested */
+  border-radius: 1px;
   line-height: 1;
   letter-spacing: 0.3px;
 }
-
 
 /* Title & meta */
 .grid-card-title {
@@ -80,6 +80,7 @@
   color: #000;
   margin-bottom: 12px;
   margin-top: 10px;
+  padding: 0 12px; /* ✅ Added padding inside card title */
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -109,7 +110,6 @@
   background: #d4d4d8;
   border-radius: 999px;
 }
-
 .carousel-row::-webkit-scrollbar-track { background: transparent; }
 
 .sec-wrap.sec-compact {
@@ -129,7 +129,7 @@
    🎯 HeroV1 — add thin top & bottom borders to section
 ========================================================= */
 .hero-v1.sec-wrap {
-  border: 0;                                /* remove default box border */
+  border: 0;
   border-top: 1px solid #cfd5da;
   border-bottom: 1px solid #cfd5da;
   border-radius: 0;
@@ -141,15 +141,11 @@
 /* ================================
    FeatureV1 — Dark blue container
    ================================ */
-
-/* Section wrapper (the outer white box) */
 .feature-v1.sec-wrap {
-  background: #1B4965;              /* dark blue */
-  color: #ffffff;                   /* default text color inside */
-  border-color: #163955;            /* darker blue border */
+  background: #1B4965;
+  color: #ffffff;
+  border-color: #163955;
 }
-
-/* Section header */
 .feature-v1 .sec-head {
   border-bottom: 1px  rgba(255, 255, 255, 0.35);
 }
@@ -157,44 +153,57 @@
   color: #ffffff;
 }
 .feature-v1 .sec-more {
-  color: #FFC947;                   /* accent link; tweak if you prefer white */
+  color: #FFC947;
 }
-
-/* The feature card itself */
 .feature-v1 .feature-v1__card {
-  background: #1B4965;              /* match section */
+  background: #1B4965;
   border: 1px solid #163955;
   border-radius: 1px;
 }
-
-/* Text block inside the card */
 .feature-v1 .feature-v1__text h3 {
   color: #ffffff !important;
 }
 .feature-v1 .feature-v1__text p {
-  color: #eaf4f8 !important;        /* soft white for body */
+  color: #eaf4f8 !important;
 }
 .feature-v1 .feature-v1__text small {
-  color: #d7e3ea !important;        /* lighter meta text */
+  color: #d7e3ea !important;
 }
-
-/* Optional: give the media area a subtle frame so it sits on dark bg nicely */
 .feature-v1 .feature-v1__media {
   background: rgba(255,255,255,0.06);
   border-radius: 6px;
 }
-
-/* FeatureV1: remove inner card border */
 .feature-v1 .feature-v1__card,
 .feature-v1 .card,
 .feature-v1 .grid-card {
   border: 0 !important;
-  box-shadow: none !important;   /* in case any shadow looks like a border */
+  box-shadow: none !important;
 }
-
-/* keep focus styles accessible but without border outline */
 .feature-v1 .feature-v1__card:focus,
 .feature-v1 .feature-v1__card:focus-visible {
   outline: 2px solid rgba(255,255,255,0.35);
   outline-offset: 2px;
+}
+
+/* ============================
+   ✅ CarouselV1 Scoped Styles
+   ============================ */
+
+/* Apply Rubik font to all text inside this component */
+.carousel-v1,
+.carousel-v1 * {
+  font-family: 'Rubik', sans-serif !important;
+}
+
+/* Reduce heading size */
+.carousel-v1 .sec-title {
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+/* Purple gradient tag overlay */
+.carousel-v1 .tag-overlay {
+  background: linear-gradient(135deg, #7C3AED 0%, #A855F7 100%);
+  color: #fff;
+  border: 0;
 }

@@ -29,7 +29,7 @@ export default function CarouselSection({ title, items = [], moreLink }) {
   if (!Array.isArray(items) || items.length === 0) return null;
 
   return (
-    <section className="sec-wrap sec-compact">
+    <section className="sec-wrap sec-compact carousel-v1">
       {/* header */}
       <div className="sec-head">
         <h2 className="sec-title">{title}</h2>
@@ -75,7 +75,6 @@ export default function CarouselSection({ title, items = [], moreLink }) {
                 </div>
 
                 <div className="grid-card-title">{a.title}</div>
-
               </Link>
             );
           })}

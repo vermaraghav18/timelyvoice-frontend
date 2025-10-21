@@ -26,14 +26,17 @@ export default function SectionForm({ initial = {}, onSubmit, onCancel }) {
     // rail side
     side: initial.side || "", // "", "left", "right"
 
-    // simple custom (rail_v7 / rail_v8 etc.)
+       // simple custom (rail_v7 / rail_v8 etc. + afterNth for main-column placement)
     custom:
       initial.custom || {
         imageUrl: "",
         alt: "",
         linkUrl: "",
         aspect: "16/9",
+        // Leave blank to render at the top; set 3 to place after 3rd news card, etc.
+        afterNth: "",
       },
+
   });
 
   function update(key, value) {
@@ -73,10 +76,18 @@ const [pinLoading, setPinLoading] = useState(false);
       }
     }
 
+        // Build payload and normalize afterNth to a number (omit if blank)
     const payload = {
       ...form,
       capacity: isSingleCapTemplate ? 1 : form.capacity,
+      custom: {
+        ...(form.custom || {}),
+        ...(form.custom?.afterNth === "" || form.custom?.afterNth == null
+          ? {}                                // omit when blank
+          : { afterNth: Number(form.custom.afterNth) }), // store as number
+      },
     };
+
     await onSubmit(payload);
   }
 
@@ -201,6 +212,30 @@ const [pinLoading, setPinLoading] = useState(false);
           </p>
         </div>
       )}
+
+            {/* After Nth Card (main column insertion point) */}
+      <div>
+        <label className="block text-sm font-medium">After Nth Card (main column)</label>
+        <input
+          type="number"
+          min={0}
+          className="border rounded p-2 w-full"
+          placeholder="blank = top"
+          value={form.custom?.afterNth ?? ""}
+          onChange={(e) =>
+            setForm((f) => ({
+              ...f,
+              custom: { ...(f.custom || {}), afterNth: e.target.value },
+            }))
+          }
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Leave blank to render at the top. Set to <b>3</b> to place this section
+          <b> after the 3rd news card</b> on category pages. Ignored for
+          <code> rail_*</code> and <code> head_*</code> templates.
+        </p>
+      </div>
+
 
       <div className="grid grid-cols-2 gap-3">
         <div>

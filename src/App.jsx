@@ -1,7 +1,6 @@
 // src/App.jsx
 import { useEffect, lazy, Suspense } from 'react';
-
-import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import axios from 'axios';
 
 // Import global CSS helpers
@@ -9,7 +8,6 @@ import './styles/home.css';
 import './styles/aspectRatio.css';
 import './styles/typography.css';
 import './styles/scroll-optimizations.css';
-
 
 // Public pages (lazy)
 const NotFound = lazy(() => import('./pages/public/NotFound.jsx'));
@@ -37,10 +35,8 @@ const SectionsV2Page = lazy(() => import('./admin/sectionsV2/SectionsV2Page.jsx'
 const AutmotionFeedsPage = lazy(() => import('./pages/admin/autmotion/FeedsPage.jsx'));
 const AutmotionQueuePage = lazy(() => import('./pages/admin/autmotion/QueuePage.jsx'));
 const AutmotionDraftsPage = lazy(() => import('./pages/admin/autmotion/DraftsPage.jsx'));
-
 const AutmotionXSourcesPage = lazy(() => import('./pages/admin/autmotion/XSourcesPage.jsx'));
 const AutmotionXQueuePage = lazy(() => import('./pages/admin/autmotion/XQueuePage.jsx'));
-
 
 // Analytics
 import { initAnalytics, notifyRouteChange, track } from './lib/analytics';
@@ -92,7 +88,7 @@ export const styles = {
   button: { padding: '10px 14px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#f8fafc', cursor: 'pointer' },
   danger: { padding: '10px 14px', borderRadius: 10, border: '1px solid #fee2e2', background: '#fef2f2', cursor: 'pointer' },
   badge: { marginLeft: 8, padding: '2px 8px', borderRadius: 999, fontSize: 12, background: '#eef2ff', border: '1px solid #e5e7eb' },
-  card: { border: "1px solid #eee", borderRadius: 12, padding: 16, background: "#fff", boxShadow: "0 1px 1px rgba(0,0,0,0.02)", marginBottom: 12 },
+  card: { border: '1px solid #eee', borderRadius: 12, padding: 16, background: '#fff', boxShadow: '0 1px 1px rgba(0,0,0,0.02)', marginBottom: 12 },
   h3: { margin: '0 0 6px' },
   p: { margin: '8px 0 0' },
   muted: { color: '#666' },
@@ -123,17 +119,6 @@ export async function uploadImageViaCloudinary(file) {
 }
 
 /* ============ SEO helpers (SAFE) ============ */
-/**
- * Create or update a head tag by tagName and attributes.
- * IMPORTANT: tagName must be a bare tag like 'meta' | 'link' | 'title' | 'script'.
- * Never pass CSS selectors here.
- *
- * Usage examples:
- *   upsertTag('title', {}, { textContent: 'My Title' });
- *   upsertTag('meta', { name: 'description', content: '...' });
- *   upsertTag('meta', { property: 'og:title', content: '...' });
- *   upsertTag('link', { rel: 'canonical', href: canonicalUrl });
- */
 export function upsertTag(tagName, attrs = {}, { textContent } = {}) {
   if (!tagName || /[\[\]#.:]/.test(tagName)) {
     throw new Error(`upsertTag: tagName must be a bare tag (received "${tagName}")`);
@@ -174,7 +159,6 @@ export function setJsonLd(obj) {
   document.head.appendChild(s);
 }
 
-/** Add or replace a named JSON-LD block (kept separate by data-jsonld-id) */
 export function addJsonLd(id, obj) {
   const head = document.head;
   let s = head.querySelector(
@@ -201,7 +185,6 @@ export function buildDescriptionClient(doc = {}) {
   return String(raw).replace(/\s+/g, ' ').slice(0, 160);
 }
 
-/* Helper: emit BreadcrumbList JSON-LD via addJsonLd */
 export function emitBreadcrumbs(trail = []) {
   const itemListElement = trail.map((c, i) => ({
     '@type': 'ListItem',
@@ -253,16 +236,15 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <Suspense fallback={<div style={{padding:16}}>Loading…</div>}>
+      <Suspense fallback={<div style={{ padding: 16 }}>Loading…</div>}>
         <Routes>
-          {/* Reader */}
-          {/* Redirect root to Top News */}
-          <Route path="/" element={<Navigate to="/top-news" replace />} />
+          {/* Public */}
+          <Route path="/" element={<PublicHome />} />
+          <Route path="/top-news" element={<TopNews />} />
           <Route path="/category/:slug" element={<CategoryPage />} />
           <Route path="/tag/:slug" element={<TagPage />} />
           <Route path="/article/:slug" element={<ReaderArticle />} />
           <Route path="/search" element={<SearchPage />} />
-          <Route path="/top-news" element={<TopNews />} />
           <Route path="*" element={<NotFound />} />
 
           {/* Admin */}
@@ -277,7 +259,7 @@ export default function App() {
           <Route path="/admin/ticker" element={<AdminShell><TickerAdmin /></AdminShell>} />
           <Route path="/admin/sections" element={<AdminShell><SectionsPage /></AdminShell>} />
           <Route path="/admin/sections-v2" element={<AdminShell><SectionsV2Page /></AdminShell>} />
-          {/* === Autmotion routes === */}
+          {/* Autmotion */}
           <Route path="/admin/autmotion/feeds" element={<AdminShell><AutmotionFeedsPage /></AdminShell>} />
           <Route path="/admin/autmotion/queue" element={<AdminShell><AutmotionQueuePage /></AdminShell>} />
           <Route path="/admin/autmotion/drafts" element={<AdminShell><AutmotionDraftsPage /></AdminShell>} />

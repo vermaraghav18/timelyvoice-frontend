@@ -5,19 +5,18 @@ import { api, removeManagedHeadTags, upsertTag } from '../../App.jsx';
 import SiteNav from '../../components/SiteNav.jsx';
 import SiteFooter from '../../components/SiteFooter.jsx';
 
-// Sections renderer (used for head_* and rail_* templates)
+// Sections renderer
 import SectionRenderer from '../../components/sections/SectionRenderer.jsx';
 import '../../styles/rails.css';
 
-/* ---------- Google AdSense: lightweight blocks (added) ---------- */
+/* ---------- Google AdSense: lightweight blocks ---------- */
 const ADS_CLIENT = 'ca-pub-8472487092329023';
-const ADS_SLOT_MAIN = '3149743917';      // responsive "auto"
-const ADS_SLOT_SECOND = '3149743917';    // reuse same
-const ADS_SLOT_FLUID_KEY = '1442744724'; // data-ad-layout-key
+const ADS_SLOT_MAIN = '3149743917';
+const ADS_SLOT_SECOND = '3149743917';
+const ADS_SLOT_FLUID_KEY = '1442744724';
 const ADS_SLOT_IN_ARTICLE = '9569163673';
 const ADS_SLOT_AUTORELAXED = '2545424475';
 
-// Base push helper (avoids crashes if script not loaded yet)
 function useAdsPush(deps = []) {
   useEffect(() => {
     try {
@@ -27,7 +26,6 @@ function useAdsPush(deps = []) {
   }, deps);
 }
 
-// Standard responsive auto ad
 function AdSenseAuto({ slot, style }) {
   useAdsPush([slot]);
   return (
@@ -42,7 +40,6 @@ function AdSenseAuto({ slot, style }) {
   );
 }
 
-// Fluid with layout key
 function AdSenseFluidKey({ style }) {
   useAdsPush([]);
   return (
@@ -57,7 +54,6 @@ function AdSenseFluidKey({ style }) {
   );
 }
 
-// In-article fluid (centered)
 function AdSenseInArticle({ style }) {
   useAdsPush([]);
   return (
@@ -72,7 +68,6 @@ function AdSenseInArticle({ style }) {
   );
 }
 
-// Auto-relaxed (multiplex)
 function AdSenseAutoRelaxed({ style }) {
   useAdsPush([]);
   return (
@@ -114,17 +109,18 @@ const toSlug = (s = '') =>
     .replace(/^-+|-+$/g, '');
 
 /* ---------- small utils ---------- */
-const normPath = (p = '') => String(p).trim().replace(/\/+$/, '') || '/'; // remove trailing slash (except root)
+const normPath = (p = '') => String(p).trim().replace(/\/+$/, '') || '/';
 
 /* ---------- layout ---------- */
-// Responsive 3-col: Left Rail | Main | Right Rail
+const TOP_GAP = 16;
+
 const pageWrap = {
   display: 'flex',
-  flexDirection: 'column',   // 👈 add this
-  alignItems: 'center',      // 👈 add this to keep children centered
+  flexDirection: 'column',
+  alignItems: 'center',
   justifyContent: 'flex-start',
   paddingTop: 0,
-  marginTop: 1,
+  marginTop: TOP_GAP,
   marginBottom: 40,
   fontFamily: "'Newsreader', serif",
 };
@@ -137,11 +133,13 @@ const gridWrap = {
   gridTemplateColumns: '260px 1fr 260px',
   gap: 16,
 };
+
 const singleColWrap = {
   width: '100%',
   maxWidth: 760,
   padding: '0 12px',
 };
+
 const railCol = { minWidth: 0 };
 const mainCol = { minWidth: 0 };
 
@@ -155,7 +153,6 @@ const cardStyle = {
   boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
 };
 
-// keep in sync with thumbnail width (110px)
 const rowLayout = (hasThumb) => ({
   display: 'grid',
   gridTemplateColumns: hasThumb ? '1fr 110px' : '1fr',
@@ -163,7 +160,7 @@ const rowLayout = (hasThumb) => ({
   alignItems: 'center',
 });
 
-const titleStyle = { margin: 0, fontSize: 15, fontWeight: 400, lineHeight: 1.3, color: '#ffffffff' };
+const titleStyle = { margin: 0, fontSize: 17, fontWeight: 500, lineHeight: 1.3, color: '#ffffffff' ,fontFamily: "'Oxygen', sans-serif",};
 const metaRow = {
   marginTop: 14,
   fontSize: 12,
@@ -185,17 +182,22 @@ const leadCardWrap = {
   padding: 12,
   boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
 };
+
+// increased image height
 const leadImg = {
   width: '100%',
-  height: 240,
+  height: 320, // was 240
   objectFit: 'cover',
   borderRadius: 2,
   display: 'block',
   marginBottom: 10,
 };
+
 const leadH = { margin: '0 0 6px', fontSize: 21, lineHeight: 1.25, fontWeight: 600, color: '#ffffffff' };
 const leadMeta = { marginTop: 6, fontSize: 12, color: '#ee6affff', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' };
-const leadSummary = { fontSize: 15, color: '#b9b9b9ff', marginTop: 4 };
+
+// bigger summary + clickable
+const leadSummary = { fontSize: 18, color: '#b9b9b9ff', marginTop: 6, lineHeight: 1.6 };
 
 function LeadCard({ a }) {
   if (!a) return null;
@@ -211,22 +213,26 @@ function LeadCard({ a }) {
 
   return (
     <div style={leadCardWrap}>
-      {/* 1) Title first */}
+      {/* 1) Title */}
       <Link to={articleUrl} style={{ textDecoration: 'none', color: 'inherit' }}>
         <h2 style={leadH}>{a.title}</h2>
       </Link>
 
-      {/* 2) Image second */}
+      {/* 2) Image */}
       {img && (
-        <Link to={articleUrl}>
+        <Link to={articleUrl} style={{ display: 'block' }}>
           <img src={img} alt={a.imageAlt || a.title || ''} style={leadImg} loading="lazy" />
         </Link>
       )}
 
-      {/* 3) Summary third */}
-      {summary && <p style={leadSummary}>{summary}</p>}
+      {/* 3) Summary — clickable */}
+      {summary && (
+        <Link to={articleUrl} style={{ textDecoration: 'none', color: 'inherit' }}>
+          <p style={leadSummary}>{summary}</p>
+        </Link>
+      )}
 
-      {/* Meta (unchanged, after summary) */}
+      {/* Meta */}
       <div style={leadMeta}>
         <span>Updated {timeAgo(updated)}</span>
       </div>
@@ -234,7 +240,7 @@ function LeadCard({ a }) {
   );
 }
 
-/* ---------- Article Row (rest of the list) ---------- */
+/* ---------- Article Row (rest) ---------- */
 function ArticleRow({ a }) {
   const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
   const categoryName = a.category || 'General';
@@ -288,7 +294,7 @@ function interleaveAfterEveryN(items, inserts, n) {
 export default function CategoryPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { pathname } = useLocation(); // e.g. "/category/world"
+  const { pathname } = useLocation();
   const pagePath = normPath(pathname);
 
   const [category, setCategory] = useState(null);
@@ -299,12 +305,11 @@ export default function CategoryPage() {
   // page-scoped sections (for head_* blocks)
   const [pageSections, setPageSections] = useState([]);
 
-  // category plan (rails + any other sections if you decide later)
+  // category plan (rails + ALL other sections)
   const [planSections, setPlanSections] = useState([]);
   const [railsLoading, setRailsLoading] = useState(false);
   const [railsError, setRailsError] = useState('');
 
-  // simple mobile check (kept in state to re-render on resize)
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' ? window.matchMedia('(max-width: 720px)').matches : false
   );
@@ -313,7 +318,6 @@ export default function CategoryPage() {
     const mq = window.matchMedia('(max-width: 720px)');
     const onChange = (e) => setIsMobile(e.matches);
     mq.addEventListener?.('change', onChange);
-    // Safari fallback
     mq.addListener?.(onChange);
     return () => {
       mq.removeEventListener?.('change', onChange);
@@ -363,29 +367,26 @@ export default function CategoryPage() {
   }, [slug, navigate]);
 
   /* SEO */
-/* SEO */
-useEffect(() => {
-  removeManagedHeadTags();
-  const title = category ? `${category.name} — NewsSite` : `Category — NewsSite`;
-  const desc = category?.description || `Latest ${category?.name || ''} stories on NewsSite`.trim();
+  useEffect(() => {
+    removeManagedHeadTags();
+    const title = category ? `${category.name} — NewsSite` : `Category — NewsSite`;
+    const desc = category?.description || `Latest ${category?.name || ''} stories on NewsSite`.trim();
 
-  upsertTag('title', {}, { textContent: title });
-  upsertTag('meta', { name: 'description', content: desc || 'Browse category on NewsSite' });
-  upsertTag('link', { rel: 'canonical', href: canonical });
+    upsertTag('title', {}, { textContent: title });
+    upsertTag('meta', { name: 'description', content: desc || 'Browse category on NewsSite' });
+    upsertTag('link', { rel: 'canonical', href: canonical });
 
-  // ✅ Add RSS feed discovery link
-  if (slug) {
-    upsertTag('link', {
-      rel: 'alternate',
-      type: 'application/rss+xml',
-      title: `Timely Voice — ${category?.name || slug}`,
-      href: `${window.location.origin}/rss/${encodeURIComponent(slug)}.xml`,
-    });
-  }
-}, [category, canonical, slug]);
+    if (slug) {
+      upsertTag('link', {
+        rel: 'alternate',
+        type: 'application/rss+xml',
+        title: `Timely Voice — ${category?.name || slug}`,
+        href: `${window.location.origin}/rss/${encodeURIComponent(slug)}.xml`,
+      });
+    }
+  }, [category, canonical, slug]);
 
-
-  /* fetch sections for THIS page path (head_v1/head_v2 etc.) — optional page banners */
+  /* fetch sections for THIS page path (head_*) */
   useEffect(() => {
     let cancel = false;
     (async () => {
@@ -393,7 +394,6 @@ useEffect(() => {
         const res = await api.get('/api/sections', { params: { path: pagePath } });
         const items = Array.isArray(res.data) ? res.data : [];
 
-        // keep sections that belong to THIS path + are enabled
         const filtered = items.filter(
           (s) =>
             s?.enabled !== false &&
@@ -401,7 +401,6 @@ useEffect(() => {
             normPath(s?.target?.value) === pagePath
         );
 
-        // Dedupe by _id and sort by placementIndex
         const seen = new Set();
         const deduped = [];
         for (const s of filtered) {
@@ -423,7 +422,49 @@ useEffect(() => {
     };
   }, [pagePath]);
 
-  // ✅ FETCH CATEGORY-SCOPED PLAN (rails live here)
+  // ====== PLAN sections (category-scoped) ======
+
+  // Head banners for this path (top-only)
+  const headBlocks = pageSections.filter((s) => s.template?.startsWith('head_'));
+
+  // Rails (left/right)
+  const rails = useMemo(() => {
+    return (planSections || [])
+      .filter((s) => s?.template?.startsWith('rail_') && s?.enabled !== false)
+      .sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
+  }, [planSections]);
+
+  const leftRails = rails.filter((s) => (s.side || 'right') === 'left');
+  const rightRails = rails.filter((s) => (s.side || 'right') === 'right');
+
+  // All non-rail, non-head blocks from the plan
+  const mainBlocks = useMemo(() => {
+    return (planSections || [])
+      .filter(
+        (s) =>
+          s?.enabled !== false &&
+          !String(s?.template || '').startsWith('rail_') &&
+          !String(s?.template || '').startsWith('head_')
+      )
+      .sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
+  }, [planSections]);
+
+  // Split into top vs. inset (afterNth)
+  const { topBlocks, insetBlocks } = useMemo(() => {
+    const tops = [];
+    const insets = [];
+    for (const s of mainBlocks) {
+      const nRaw = s?.custom?.afterNth;
+      const n = nRaw === '' || nRaw == null ? null : Number(nRaw);
+      if (!Number.isFinite(n) || n <= 0) tops.push(s); // blank or 0 -> top
+      else insets.push({ ...s, __after: n });
+    }
+    // keep declared order for tops; for insets sort by afterNth then placementIndex
+    insets.sort((a, b) => (a.__after - b.__after) || ((a.placementIndex ?? 0) - (b.placementIndex ?? 0)));
+    return { topBlocks: tops, insetBlocks: insets };
+  }, [mainBlocks]);
+
+  // fetch the plan
   useEffect(() => {
     let cancel = false;
     (async () => {
@@ -433,7 +474,6 @@ useEffect(() => {
         const res = await api.get('/api/sections/plan', {
           params: { targetType: 'category', targetValue: String(slug || '').toLowerCase() },
         });
-
         const rows = Array.isArray(res.data) ? res.data : [];
         if (!cancel) setPlanSections(rows);
       } catch (e) {
@@ -451,124 +491,64 @@ useEffect(() => {
     };
   }, [slug]);
 
-  // page “banner” blocks (e.g., head_v1/head_v2). These render above main list.
-  const headBlocks = pageSections.filter((s) => s.template?.startsWith('head_'));
+  const lead = articles?.[0] || null;
+  const rest = Array.isArray(articles) && articles.length > 1 ? articles.slice(1) : [];
+  const hasAnyRails = leftRails.length > 0 || rightRails.length > 0;
 
-  // ✅ rails from plan: respect side + placementIndex
-  const rails = useMemo(() => {
-    return (planSections || [])
-      .filter((s) => s?.template?.startsWith('rail_') && s?.enabled !== false)
-      .sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
-  }, [planSections]);
-// ✅ full-bleed hero blocks (like sports_v2) from the category plan
+  const LEFT_FIRST_PULLUP = 0;
+  const RIGHT_FIRST_PULLUP = 0;
 
+  const infeed = useMemo(() => {
+    if (!isMobile) return null;
+    return interleaveAfterEveryN(rest, rails, 8);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile, rest, rails]);
 
-const heroBlocks = useMemo(() => {
-  return (planSections || [])
-    .filter((s) => s?.template === 'sports_v2' && s?.enabled !== false)
-    .sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
-}, [planSections]);
+  const isWorldCategory = String(slug || '').toLowerCase() === 'world';
 
-// ✅ horizontal cards blocks (sports_v3) from the category plan
-const sportsV3Blocks = useMemo(() => {
-  return (planSections || [])
-    .filter((s) => s?.template === 'sports_v3' && s?.enabled !== false)
-    .sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
-}, [planSections]);
-
-// ✅ tech_main_v1 blocks from the category plan
-const techMainBlocks = useMemo(() => {
-  return (planSections || [])
-    .filter((s) => s?.template === 'tech_main_v1' && s?.enabled !== false)
-    .sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
-}, [planSections]);
-
-  
-
-  const leftRails = rails.filter((s) => (s.side || 'right') === 'left');
-  const rightRails = rails.filter((s) => (s.side || 'right') === 'right');
-
-  const renderRails = (items, firstPullup = 0) =>
-    items.map((sec, i) => (
-      <div
-        key={sec.id || sec._id || sec.slug || `${sec.template}-${i}`}
-        style={{ marginTop: i === 0 ? firstPullup : 12 }}
-      >
+  // helper to render any inset blocks that should appear after index idx (1-based)
+  const renderInsetAfter = (idx) => {
+    const blocks = insetBlocks.filter((b) => b.__after === idx);
+    if (!blocks.length) return null;
+    return blocks.map((sec) => (
+      <div key={sec._id || sec.id || sec.slug} style={{ margin: '12px 0' }}>
         <SectionRenderer section={sec} />
       </div>
     ));
-
-  // split first article (lead) and the rest
-  const lead = articles?.[0] || null;
-  const rest = Array.isArray(articles) && articles.length > 1 ? articles.slice(1) : [];
-
-  // Responsive decision: if no rails at all, fall back to your original single-column layout
-  const hasAnyRails = leftRails.length > 0 || rightRails.length > 0;
-
-  // Slight negative margin to pull first rail up if its template has top padding
-  const LEFT_FIRST_PULLUP = -4;
-  const RIGHT_FIRST_PULLUP = -4;
-
-  // ===== In-feed rails on MOBILE: after every 8 cards =====
-  const infeed = useMemo(() => {
-    if (!isMobile) return null;
-    // use the already-sorted `rails` list so placementIndex is respected
-    return interleaveAfterEveryN(rest, rails, 8);
-  }, [isMobile, rest, rails]);
-
-  // TEMP DEBUG
-  if (typeof window !== 'undefined') {
-    console.debug('planSections:', planSections);
-  }
-
-  // ----- determine if current category is "world" (lowercased) -----
-  const isWorldCategory = String(slug || '').toLowerCase() === 'world';
+  };
 
   return (
     <>
       <SiteNav />
 
       <div style={pageWrap}>
-
-                {/* ======== FULL-WIDTH HEROES (e.g., sports_v2) ABOVE THE GRID ======== */}
-        {heroBlocks.map((sec) => (
+        {/* Full-width page head banners bound to this path */}
+        {headBlocks.map((sec) => (
           <div
             key={sec._id || sec.id || sec.slug}
-            /* match your page container width so it aligns with the grid */
             style={{ width: '100%', maxWidth: 1200, padding: '0 12px', marginBottom: 12 }}
           >
             <SectionRenderer section={sec} />
           </div>
         ))}
 
-        {/* small on-screen debug counter (leave or remove) */}
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 8,
-            left: 8,
-            background: '#111',
-            color: '#fff',
-            padding: '6px 8px',
-            fontSize: 12,
-            zIndex: 9999,
-            borderRadius: 4,
-          }}
-        >
-          rails: {String(rails.length)} | left: {String(leftRails.length)} | right: {String(rightRails.length)}
-        </div>
-
-        {/* ======== DESKTOP / TABLET (3-column with side rails) ======== */}
+        {/* DESKTOP/TABLET 3-col layout with side rails */}
         {!isMobile && hasAnyRails ? (
           <div style={gridWrap}>
             {/* LEFT RAIL */}
             <aside style={railCol}>
               {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
               {!railsLoading && railsError && <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>}
-              {!railsLoading && !railsError && renderRails(leftRails, LEFT_FIRST_PULLUP)}
+              {!railsLoading && !railsError &&
+                leftRails.map((sec, i) => (
+                  <div key={sec._id || sec.id || sec.slug || i} style={{ marginTop: i === 0 ? LEFT_FIRST_PULLUP : 12 }}>
+                    <SectionRenderer section={sec} />
+                  </div>
+                ))
+              }
             </aside>
 
-            {/* MAIN */}
+            {/* MAIN COLUMN */}
             <main style={mainCol}>
               {loading && <p>Loading…</p>}
 
@@ -583,43 +563,27 @@ const techMainBlocks = useMemo(() => {
 
               {!loading && !notFound && (
                 <>
-                  {/* page-scoped head sections (top banners) */}
-                  {headBlocks.map((sec) => (
-                    <div key={sec._id || sec.id || sec.slug} style={{ marginBottom: 12 }}>
-                      <SectionRenderer section={sec} />
-                    </div>
-                  ))}
-                  {/* sports_v3 (horizontal cards) */}
-                  {sportsV3Blocks.map((sec) => (
+                  {/* TOP non-rail blocks (no afterNth / afterNth=0) */}
+                  {topBlocks.map((sec) => (
                     <div key={sec._id || sec.id || sec.slug} style={{ marginBottom: 12 }}>
                       <SectionRenderer section={sec} />
                     </div>
                   ))}
 
-                  {/* tech_main_v1 (feature + stacked + headlines) */}
-                  {techMainBlocks.map((sec) => (
-                    <div key={sec._id || sec.id || sec.slug} style={{ marginBottom: 12 }}>
-                      <SectionRenderer section={sec} />
-                    </div>
-                  ))}
-
-
-
+                  {/* Article list */}
                   {(!articles || articles.length === 0) ? (
                     <p style={{ textAlign: 'center' }}>No articles yet.</p>
                   ) : (
                     <>
                       <LeadCard a={lead} />
 
-                      {/* ✅ Ads after the lead card (visible only on World) */}
+                      {/* Ads after the lead card (visible only on World) */}
                       {isWorldCategory && (
                         <>
-                          {/* existing responsive auto slot */}
                           <div style={{ margin: '12px 0', textAlign: 'center' }}>
                             <AdSenseAuto slot={ADS_SLOT_MAIN} />
                           </div>
 
-                          {/* new in-article fluid */}
                           <div style={{ margin: '12px 0' }}>
                             <AdSenseInArticle />
                           </div>
@@ -631,17 +595,17 @@ const techMainBlocks = useMemo(() => {
                           <div key={a._id || a.id || a.slug || idx}>
                             <ArticleRow a={a} />
 
-                            {/* ✅ deeper placements */}
+                            {/* 🔽 Insert any blocks whose custom.afterNth === idx+1 */}
+                            {renderInsetAfter(idx + 1)}
+
                             {isWorldCategory && idx === 2 && (
                               <div style={{ margin: '12px 0' }}>
-                                {/* fluid with layout-key */}
                                 <AdSenseFluidKey />
                               </div>
                             )}
 
                             {isWorldCategory && idx === 4 && (
                               <div style={{ margin: '12px 0', textAlign: 'center' }}>
-                                {/* second responsive auto (reuse slot) */}
                                 <AdSenseAuto slot={ADS_SLOT_SECOND} />
                               </div>
                             )}
@@ -649,7 +613,6 @@ const techMainBlocks = useMemo(() => {
                         ))}
                       </div>
 
-                      {/* ✅ bottom of main column: auto-relaxed block */}
                       {isWorldCategory && (
                         <div style={{ margin: '16px 0' }}>
                           <AdSenseAutoRelaxed />
@@ -665,11 +628,17 @@ const techMainBlocks = useMemo(() => {
             <aside style={railCol}>
               {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
               {!railsLoading && railsError && <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>}
-              {!railsLoading && !railsError && renderRails(rightRails, RIGHT_FIRST_PULLUP)}
+              {!railsLoading && !railsError &&
+                rightRails.map((sec, i) => (
+                  <div key={sec._id || sec.id || sec.slug || i} style={{ marginTop: i === 0 ? RIGHT_FIRST_PULLUP : 12 }}>
+                    <SectionRenderer section={sec} />
+                  </div>
+                ))
+              }
             </aside>
           </div>
         ) : (
-          /* ======== SINGLE COLUMN (mobile OR desktop with no rails) ======== */
+          // SINGLE COLUMN (mobile or no rails)
           <div style={singleColWrap}>
             {loading && <p>Loading…</p>}
 
@@ -684,7 +653,8 @@ const techMainBlocks = useMemo(() => {
 
             {!loading && !notFound && (
               <>
-                {headBlocks.map((sec) => (
+                {/* TOP non-rail blocks */}
+                {topBlocks.map((sec) => (
                   <div key={sec._id || sec.id || sec.slug} style={{ marginBottom: 12 }}>
                     <SectionRenderer section={sec} />
                   </div>
@@ -696,7 +666,7 @@ const techMainBlocks = useMemo(() => {
                   <>
                     <LeadCard a={lead} />
 
-                    {/* ✅ Ads after the lead card (mobile/single-col) */}
+                    {/* Ads after the lead card (mobile/single-col) */}
                     {isWorldCategory && (
                       <>
                         <div style={{ margin: '12px 0', textAlign: 'center' }}>
@@ -708,7 +678,7 @@ const techMainBlocks = useMemo(() => {
                       </>
                     )}
 
-                    {/* If MOBILE: interleave rails after every 8; else: show a normal list */}
+                    {/* If MOBILE: interleave rails after every 8; else: normal list */}
                     {isMobile ? (
                       <div style={listStyle}>
                         {(infeed || []).map((block, idx) =>
@@ -716,14 +686,15 @@ const techMainBlocks = useMemo(() => {
                             <div key={(block.data._id || block.data.id || block.data.slug || idx) + '-a'}>
                               <ArticleRow a={block.data} />
 
-                              {/* fluid with layout-key after ~3rd article chunk on mobile */}
+                              {/* inset after on mobile single-column too */}
+                              {renderInsetAfter(idx + 1)}
+
                               {isWorldCategory && idx === 3 && (
                                 <div style={{ margin: '12px 0' }}>
                                   <AdSenseFluidKey />
                                 </div>
                               )}
 
-                              {/* second responsive auto later in feed */}
                               {isWorldCategory && idx === 8 && (
                                 <div style={{ margin: '12px 0', textAlign: 'center' }}>
                                   <AdSenseAuto slot={ADS_SLOT_SECOND} />
@@ -746,14 +717,15 @@ const techMainBlocks = useMemo(() => {
                           <div key={a._id || a.id || a.slug || idx}>
                             <ArticleRow a={a} />
 
-                            {/* desktop single-col: fluid w/ key after 3rd */}
+                            {/* inset after for desktop single column */}
+                            {renderInsetAfter(idx + 1)}
+
                             {isWorldCategory && idx === 2 && (
                               <div style={{ margin: '12px 0' }}>
                                 <AdSenseFluidKey />
                               </div>
                             )}
 
-                            {/* desktop single-col: second auto after 5th */}
                             {isWorldCategory && idx === 4 && (
                               <div style={{ margin: '12px 0', textAlign: 'center' }}>
                                 <AdSenseAuto slot={ADS_SLOT_SECOND} />

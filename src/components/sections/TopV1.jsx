@@ -18,14 +18,13 @@ function CardMini({ a, showDate = true }) {
   if (!a) return null;
   return (
     <div className="topv1-mini">
-      <Link to={`/news/${a.slug}`} className="topv1-mini-link">
-      {showDate && a.publishedAt && (
+      <Link to={`/article/${a.slug}`} className="topv1-mini-link">
+        {showDate && a.publishedAt && (
           <div className="topv1-mini-date">
             {new Date(a.publishedAt).toLocaleDateString()}
           </div>
         )}
         <div className="topv1-mini-title">{a.title}</div>
-        
       </Link>
     </div>
   );
@@ -40,7 +39,7 @@ function CardLead({ a, showSummary = true, showCategory = true }) {
   return (
     <article className="topv1-lead">
       {/* Title FIRST */}
-      <Link to={`/news/${a.slug}`} className="topv1-lead-title">
+      <Link to={`/article/${a.slug}`} className="topv1-lead-title">
         {a.title}
       </Link>
 
@@ -86,7 +85,7 @@ function CardTall({ a, showDate = true }) {
           className="topv1-tall-img"
         />
       )}
-      <Link to={`/news/${a.slug}`} className="topv1-tall-title">
+      <Link to={`/article/${a.slug}`} className="topv1-tall-title">
         {a.title}
       </Link>
       {showDate && a.publishedAt && (
@@ -117,7 +116,7 @@ function ListCompact({
           return (
             <Link
               key={a.id || a._id || a.slug}
-              to={`/news/${a.slug}`}
+              to={`/article/${a.slug}`}
               className={`topv1-list-item ${showThumb ? "with-thumb" : ""}`}
             >
               {showThumb && img ? (
