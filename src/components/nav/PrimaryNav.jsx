@@ -1,3 +1,4 @@
+// src/components/nav/PrimaryNav.jsx
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
@@ -23,10 +24,10 @@ const OUTER_STYLE = {
   maxWidth: 1120,
   margin: '0 auto',
   padding: '0 12px',
-  height: 48,
+  height: 40,
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'flex-start',
+  justifyContent: 'center',
   overflowX: 'hidden',
   overflowY: 'hidden',
 };
@@ -38,7 +39,7 @@ const SCROLLER_STYLE = {
   overflowY: 'hidden',
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'flex-start',
+  justifyContent: 'center',
   WebkitOverflowScrolling: 'touch',
   touchAction: 'pan-x',
 };
@@ -46,7 +47,7 @@ const SCROLLER_STYLE = {
 const UL_STYLE = {
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'flex-start',
+  justifyContent: 'center',
   gap: 0,
   listStyle: 'none',
   padding: 0,
@@ -56,12 +57,12 @@ const UL_STYLE = {
 };
 
 const LINK_BASE = {
-  color: '#fff',
+  color: '#ffffff',
   textDecoration: 'none',
-  fontWeight: 800,
+  fontWeight: 700,
   fontSize: 14,
   letterSpacing: '0.04em',
-  padding: '0 14px',
+  padding: '0 11px',
   lineHeight: '48px',
   display: 'inline-block',
   textTransform: 'uppercase',
@@ -70,8 +71,10 @@ const LINK_BASE = {
   scrollSnapAlign: 'start',
 };
 
+/* ✅ Active (selected) link = brand green */
 const ACTIVE_DECORATION = {
-  borderBottomColor: '#ffffff',
+  color: '#00c3ffff',
+  borderBottomColor: '#006effff',
   textShadow: '0 0 0 currentColor',
 };
 
@@ -104,12 +107,12 @@ export default function PrimaryNav() {
   const scrollerRef = useRef(null);
   const activeRef = useRef(null);
 
-  // Make Top News and India visible
-  const visibleLabels = ['Top News', 'India','World','Home','Finance'];
+  // Only show these in the row
+  const visibleLabels = ['Top News', 'India', 'World', 'Home', 'Finance'];
   const visibleIndexes = LINKS.map((l, i) => (visibleLabels.includes(l.label) ? i : -1)).filter(i => i >= 0);
   const lastVisibleIndex = visibleIndexes.length ? visibleIndexes[visibleIndexes.length - 1] : -1;
 
-  // On mobile: always start at first tab. Desktop: center active.
+  // On mobile: start at first tab. Desktop: center active (if any overflow).
   useEffect(() => {
     const scroller = scrollerRef.current;
     const activeEl = activeRef.current;
@@ -135,14 +138,32 @@ export default function PrimaryNav() {
         }
         .nav-scroller::-webkit-scrollbar { display: none; }
 
+        /* Hover/focus feedback */
+        .primary-link:hover { opacity: 0.95; }
+        .primary-link:focus-visible { outline: 2px solid #1D9A8E55; outline-offset: 2px; }
+
+        /* Mobile: left-align + horizontal scroll */
         @media (max-width: 768px) {
+          .primary-outer { justify-content: flex-start !important; }
+          .nav-scroller { justify-content: flex-start !important; overflow-x: auto !important; }
+          .primary-list { justify-content: flex-start !important; }
           .primary-link { line-height: 44px; padding: 0 12px; font-size: 13px; }
           .primary-sep { display: none; }
+        }
+
+        /* Desktop: center row and remove overflow clipping */
+        @media (min-width: 769px) {
+          .nav-scroller { overflow-x: visible !important; }
         }
       `}</style>
 
       <div className="primary-outer" style={OUTER_STYLE}>
-        <div ref={scrollerRef} className="nav-scroller primary-scroller" style={SCROLLER_STYLE} tabIndex={0}>
+        <div
+          ref={scrollerRef}
+          className="nav-scroller primary-scroller"
+          style={SCROLLER_STYLE}
+          tabIndex={0}
+        >
           <ul className="primary-list" style={UL_STYLE}>
             {LINKS.map((l, idx) => {
               const isVisible = visibleLabels.includes(l.label);

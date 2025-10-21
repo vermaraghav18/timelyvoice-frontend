@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { api } from '../App.jsx';
-import TickerBar from './nav/TickerBar.jsx';
+// Removed TickerBar import
 import PrimaryNav from './nav/PrimaryNav.jsx';
 import BreakingNewsBar from './nav/BreakingNewsBar.jsx';
 
@@ -119,7 +119,7 @@ export default function SiteNav() {
   const langSepStyle  = { margin: '0 6px', color: 'rgba(255,255,255,0.6)', fontSize: 12, userSelect: 'none' };
 
   const chip  = { width: 26, height: 26, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 999, background: 'rgba(255,255,255,0.16)', color: '#fff', textDecoration: 'none', fontWeight: 800, fontSize: 11 };
-  const ctaBtn= { fontSize: 11, fontWeight: 700, color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.18)', boxShadow: '0 1px 0 rgba(0,0,0,0.18)', whiteSpace: 'nowrap' };
+  // Removed ctaBtn (no longer used)
 
   // Regions list (kept for logic, but we won't render anything when HIDE_REGION_NAV = true)
   const regions = useMemo(() => {
@@ -212,10 +212,7 @@ export default function SiteNav() {
           </button>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <Link to="/#newsletter" onClick={() => setMobileMenuOpen(false)} style={{ ...ctaBtn, background: '#001936ff' }}>Daily Updates</Link>
-          <Link to="/admin" onClick={() => setMobileMenuOpen(false)} style={{ ...ctaBtn, background: '#008516ff' }}>Sign In</Link>
-        </div>
+        {/* Removed Daily Updates / Sign In buttons */}
 
         <div style={{ margin: '10px 0 14px' }}>
           <div style={{ opacity: 0.8, fontSize: 12, marginBottom: 6 }}>Languages</div>
@@ -288,7 +285,8 @@ export default function SiteNav() {
         fontWeight: 900,
         fontSize: condensed ? 26 : 'clamp(22px, 5vw, 40px)',
         letterSpacing: '0.02em',
-        textTransform: 'uppercase',
+        textTransform: 'capitalize',
+
         lineHeight: 1.1,
         transition: 'font-size 180ms ease',
       }
@@ -297,9 +295,9 @@ export default function SiteNav() {
         textDecoration: 'none',
         color: '#fff',
         fontWeight: 900,
-        fontSize: 20,
+        fontSize: 26,
         letterSpacing: '0.02em',
-        textTransform: 'uppercase',
+        textTransform: 'capitalize',
         lineHeight: 1.1,
       };
 
@@ -330,20 +328,31 @@ export default function SiteNav() {
                   <a key={t} href="#" style={chip} aria-label={t}>{t}</a>
                 ))}
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <Link to="/#newsletter" style={{ ...ctaBtn, background: '#001936ff' }}>GET THE DAILY UPDATES</Link>
-                <Link to="/admin" style={{ ...ctaBtn, background: '#008516ff' }}>SIGN IN</Link>
-              </div>
+              {/* Removed Daily Updates & Sign In buttons */}
             </div>
 
             {/* Logo */}
             <div style={{ textAlign: 'center', minWidth: 0 }}>
-              <Link to="/" aria-label="The Timely Voice — Home" style={logoStyle}>
-                The Timely Voice
-              </Link>
-            </div>
+            <Link
+              to="/"
+              aria-label="The Timely Voice — Home"
+              style={{
+                ...logoStyle,
+                background: '#00c462ff', // bright green like the Sports tag
+                color: '#ffffffff',          // black text for contrast
+                padding: '6px 14px',
+                borderRadius: '1px',
+                display: 'inline-block',
+                boxShadow: '8px 11px 0 #000', // sharp, no blur black shadow
+                
+              }}
+            >
+              The Timely Voice
+            </Link>
+          </div>
 
-            {/* Right: languages + ticker */}
+
+            {/* Right: languages (ticker removed) */}
             <nav aria-label="Language selection" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 {languages.map((l, i) => (
@@ -353,11 +362,7 @@ export default function SiteNav() {
                   </span>
                 ))}
               </div>
-              {!condensed && (
-                <div style={{ marginTop: 4, width: '100%', maxWidth: 360, transition: 'opacity 180ms ease' }}>
-                  <TickerBar />
-                </div>
-              )}
+              {/* Ticker removed */}
             </nav>
           </div>
         ) : (
@@ -378,14 +383,10 @@ export default function SiteNav() {
               </Link>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
-              <Link to="/admin" aria-label="Sign In" style={{ ...chip, width: 36, height: 36 }}>↪</Link>
-            </div>
+            {/* Right slot kept for spacing; no Sign In chip */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }} />
 
-            {/* Ticker under bar */}
-            <div style={{ gridColumn: '1 / -1', marginTop: 8 }}>
-              <TickerBar />
-            </div>
+            {/* Ticker under bar removed */}
           </div>
         )}
       </div>
@@ -424,7 +425,7 @@ export default function SiteNav() {
                       color: '#fff',
                       fontWeight: 800,
                       letterSpacing: '0.02em',
-                      textTransform: 'uppercase',
+                      textTransform: 'capitalize',
                       fontSize: 12,
                     }}
                   >
@@ -443,7 +444,7 @@ export default function SiteNav() {
                       <Link
                         key={r._id}
                         to={`/category/${encodeURIComponent(r.slug)}`}
-                        style={{ color: '#fff', textDecoration: 'none', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.02em' }}
+                        style={{ color: '#fff', textDecoration: 'none', textTransform: 'capitalize', fontWeight: 800, letterSpacing: '0.02em' }}
                       >
                         {r.name}
                       </Link>
