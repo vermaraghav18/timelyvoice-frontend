@@ -286,7 +286,6 @@ export default function SiteNav() {
         fontSize: condensed ? 26 : 'clamp(22px, 5vw, 40px)',
         letterSpacing: '0.02em',
         textTransform: 'capitalize',
-
         lineHeight: 1.1,
         transition: 'font-size 180ms ease',
       }
@@ -300,6 +299,20 @@ export default function SiteNav() {
         textTransform: 'capitalize',
         lineHeight: 1.1,
       };
+
+  const logoBadgeCommon = {
+    background: 'linear-gradient(130deg, #008080 0%, #00aaaaff 100%)',
+    color: '#fff',
+    border: '3px solid #000',
+    padding: '6px 14px',
+    borderRadius: '1px',
+    display: 'inline-block',
+    boxShadow: '8px 11px 0 #000',
+  };
+
+  // --- Google News overlay sizing & offset (bigger, front, hard-shadow, rounded) ---
+  const gSize = isMobile ? 44 : (condensed ? 50 : 62); // px
+  const gRight = isMobile ? -Math.round(gSize * 0.72) : -Math.round(gSize * 0.78);
 
   return (
     <header style={{ position: 'sticky', top: 0, zIndex: 50, boxShadow: '0 2px 12px rgba(0,0,0,0.18)' }}>
@@ -331,27 +344,44 @@ export default function SiteNav() {
               {/* Removed Daily Updates & Sign In buttons */}
             </div>
 
-            {/* Logo */}
-            <div style={{ textAlign: 'center', minWidth: 0 }}>
-            <Link
-              to="/"
-              aria-label="The Timely Voice — Home"
-              style={{
-                ...logoStyle,
-                 background: 'linear-gradient(130deg, #008080 0%, #00aaaaff 100%)',
-         
-                color: '#ffffffff',
-                 border: '3px solid #000', // ✅ added black border
-                padding: '6px 14px',
-                borderRadius: '1px',
-                display: 'inline-block',
-                boxShadow: '8px 11px 0 #000', // sharp, no blur black shadow
-                
-              }}
-            >
-              The Timely Voice
-            </Link>
-          </div>
+            {/* Logo with Google News overlay */}
+<div style={{ textAlign: 'center', minWidth: 0 }}>
+  <div style={{ position: 'relative', display: 'inline-block' }}>
+    <Link
+      to="/"
+      aria-label="The Timely Voice — Home"
+      style={{ ...logoStyle, ...logoBadgeCommon, position: 'relative', zIndex: 2 }}
+    >
+      The Timely Voice
+    </Link>
+    <div
+      style={{
+        position: 'absolute',
+        right: '-48px',       // moved further right
+        top: '70%',
+        transform: 'translateY(-50%) rotate(3deg)',
+        background: '#ffffff', // ✅ solid white background
+        borderRadius: '10px',  // ✅ rounded edges
+        border: '3px solid #000',
+        boxShadow: '6px 8px 0 #000', // ✅ hard no-blur shadow
+        padding: '4px',              // ✅ slight inner padding for white edge
+        zIndex: 3,
+      }}
+    >
+      <img
+        src="/images/google-news.png"
+        alt="Google News"
+        style={{
+          display: 'block',
+          width: '45px', // ✅ slightly bigger logo
+          height: 'auto',
+          pointerEvents: 'none',
+          userSelect: 'none',
+        }}
+      />
+    </div>
+  </div>
+</div>
 
 
             {/* Right: languages (ticker removed) */}
@@ -380,9 +410,33 @@ export default function SiteNav() {
             </button>
 
             <div style={{ textAlign: 'center', minWidth: 0 }}>
-              <Link to="/" aria-label="The Timely Voice — Home" style={logoStyle}>
-                The Timely Voice
-              </Link>
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <Link
+                  to="/"
+                  aria-label="The Timely Voice — Home"
+                  style={{ ...logoStyle, ...logoBadgeCommon, position: 'relative', zIndex: 2 }}
+                >
+                  The Timely Voice
+                </Link>
+                <img
+                  src="/images/google-news.png"
+                  alt="Google News"
+                  style={{
+                    position: 'absolute',
+                    right: gRight,
+                    top: '50%',
+                    transform: 'translateY(-50%) rotate(3deg)',
+                    width: gSize,
+                    height: 'auto',
+                    zIndex: 3,
+                    borderRadius: 8,
+                    border: '3px solid #000',
+                    boxShadow: '6px 8px 0 #000',
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                  }}
+                />
+              </div>
             </div>
 
             {/* Right slot kept for spacing; no Sign In chip */}
