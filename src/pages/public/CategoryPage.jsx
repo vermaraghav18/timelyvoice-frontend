@@ -290,6 +290,22 @@ function interleaveAfterEveryN(items, inserts, n) {
   return out;
 }
 
+/* ===================== Sticky rail helpers (NEW) ===================== */
+// How far beneath the top nav/breaking bars the rail should stick
+const STICKY_OFFSET = 72; // adjust if your nav+breaking bars are taller/shorter
+const STICKY_GAP = 12;    // bottom breathing room to avoid touching footer while stuck
+const stickyRailWrap = {
+  position: 'sticky',
+  top: STICKY_OFFSET,
+  alignSelf: 'start',
+  maxHeight: `calc(100vh - ${STICKY_OFFSET}px - ${STICKY_GAP}px)`,
+  overflowY: 'auto',
+  overflowX: 'hidden',
+  WebkitOverflowScrolling: 'touch',
+  paddingRight: 4, // avoids scrollbar overlay on Windows
+};
+/* ===================================================================== */
+
 /* ---------- Category Page ---------- */
 export default function CategoryPage() {
   const { slug } = useParams();
@@ -539,13 +555,15 @@ export default function CategoryPage() {
             <aside style={railCol}>
               {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
               {!railsLoading && railsError && <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>}
-              {!railsLoading && !railsError &&
-                leftRails.map((sec, i) => (
-                  <div key={sec._id || sec.id || sec.slug || i} style={{ marginTop: i === 0 ? LEFT_FIRST_PULLUP : 12 }}>
-                    <SectionRenderer section={sec} />
-                  </div>
-                ))
-              }
+              {!railsLoading && !railsError && (
+                <div style={stickyRailWrap}>
+                  {leftRails.map((sec, i) => (
+                    <div key={sec._id || sec.id || sec.slug || i} style={{ marginTop: i === 0 ? LEFT_FIRST_PULLUP : 12 }}>
+                      <SectionRenderer section={sec} />
+                    </div>
+                  ))}
+                </div>
+              )}
             </aside>
 
             {/* MAIN COLUMN */}
@@ -628,13 +646,15 @@ export default function CategoryPage() {
             <aside style={railCol}>
               {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
               {!railsLoading && railsError && <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>}
-              {!railsLoading && !railsError &&
-                rightRails.map((sec, i) => (
-                  <div key={sec._id || sec.id || sec.slug || i} style={{ marginTop: i === 0 ? RIGHT_FIRST_PULLUP : 12 }}>
-                    <SectionRenderer section={sec} />
-                  </div>
-                ))
-              }
+              {!railsLoading && !railsError && (
+                <div style={stickyRailWrap}>
+                  {rightRails.map((sec, i) => (
+                    <div key={sec._id || sec.id || sec.slug || i} style={{ marginTop: i === 0 ? RIGHT_FIRST_PULLUP : 12 }}>
+                      <SectionRenderer section={sec} />
+                    </div>
+                  ))}
+                </div>
+              )}
             </aside>
           </div>
         ) : (
