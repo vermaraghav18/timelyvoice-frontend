@@ -9,7 +9,7 @@ const CAT_COLORS = {
   World: "linear-gradient(135deg, #3B82F6 0%, #0073ff 100%)",
   Politics: "linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)",
   Business: "linear-gradient(135deg, #10B981 0%, #34D399 100%)",
-  Entertainment: "linear-gradient(135deg, #A855F7 0%, #C084FC 100%)",
+  Entertainment: "linear-gradient(135deg, #A855F7 0%, rgb(119, 0, 255); )",
   General: "linear-gradient(135deg, #6B7280 0%, #9CA3AF 100%)",
   Health: "linear-gradient(135deg, #EF4444 0%, #F87171 100%)",
   Science: "linear-gradient(135deg, #22D3EE 0%, #67E8F9 100%)",
