@@ -6,7 +6,13 @@ import SectionForm from "./SectionForm.jsx";
 export default function SectionsPage() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Create modal
   const [showCreate, setShowCreate] = useState(false);
+
+  // Edit modal
+  const [showEdit, setShowEdit] = useState(false);
+  const [editRow, setEditRow] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -22,43 +28,68 @@ export default function SectionsPage() {
     load();
   }, []);
 
-  // CREATE
-  async function handleCreate(data) {
-    // Build an explicit payload so custom/side never get dropped
-    const payload = {
+  /* -----------------------------
+   * Helpers
+   * --------------------------- */
+  function buildPayload(data) {
+    // Build an explicit payload so custom/side/target are preserved
+    return {
       title: data.title || "",
       slug: data.slug || "",
       template: data.template || "",
       capacity: Number(data.capacity ?? 0),
 
-      // 🔑 keep these — backend needs them even if empty
-      side: data.side ?? "",               // e.g., "left" | "right" for rails; "" otherwise
-      custom: data.custom ?? {},           // e.g., { afterNth: 3, ... }
-
-      target: data.target || { type: "", value: "" },
+      // 🔑 KEEP THESE KEYS
+      side: data.side ?? "",                            // "left" | "right" | ""
+      custom: data.custom ?? {},                        // e.g., { afterNth: 3, ... }
+      target: data.target || { type: "", value: "" },   // e.g., { type: "category", value: "sports" }
       feed: data.feed || { mode: "auto" },
       pins: Array.isArray(data.pins) ? data.pins : [],
       moreLink: data.moreLink || "",
       placementIndex: Number(data.placementIndex ?? 0),
       enabled: Boolean(data.enabled),
     };
+  }
 
-    // optional debug
-    // console.log("create payload:", payload);
-
+  /* -----------------------------
+   * CREATE
+   * --------------------------- */
+  async function handleCreate(data) {
+    const payload = buildPayload(data);
     await createSection(payload);
     setShowCreate(false);
     await load();
   }
 
-  // ENABLE / DISABLE
+  /* -----------------------------
+   * EDIT
+   * --------------------------- */
+  function openEdit(row) {
+    setEditRow(row || null);
+    setShowEdit(true);
+  }
+
+  async function handleEditSubmit(data) {
+    if (!editRow?._id) return;
+    const payload = buildPayload(data);
+    await updateSection(editRow._id, payload);
+    setShowEdit(false);
+    setEditRow(null);
+    await load();
+  }
+
+  /* -----------------------------
+   * ENABLE / DISABLE
+   * --------------------------- */
   async function toggleEnabled(row) {
     if (!row?._id) return;
     await updateSection(row._id, { enabled: !row.enabled });
     await load();
   }
 
-  // ORDER UP/DOWN
+  /* -----------------------------
+   * ORDER UP/DOWN
+   * --------------------------- */
   async function move(row, dir) {
     const sorted = [...rows].sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
     const idx = sorted.findIndex((r) => r._id === row._id);
@@ -73,7 +104,9 @@ export default function SectionsPage() {
     await load();
   }
 
-  // DELETE
+  /* -----------------------------
+   * DELETE
+   * --------------------------- */
   async function removeRow(row) {
     if (!row?._id) return;
     if (!confirm(`Delete section "${row.title || row.slug}"?`)) return;
@@ -81,14 +114,14 @@ export default function SectionsPage() {
     await load();
   }
 
-  // TABLE BODY
+  /* -----------------------------
+   * TABLE
+   * --------------------------- */
   const body = useMemo(() => {
     if (loading) return <p>Loading…</p>;
     if (!rows.length) return <p>No sections yet.</p>;
 
-    const sorted = [...rows].sort(
-      (a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0)
-    );
+    const sorted = [...rows].sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
 
     return (
       <table className="w-full border text-sm">
@@ -142,13 +175,9 @@ export default function SectionsPage() {
                 {r.target?.type} → {r.target?.value}
               </td>
 
-              <td className="p-2 border">
-                {r.side || "—"}
-              </td>
+              <td className="p-2 border">{r.side || "—"}</td>
 
-              <td className="p-2 border">
-                {r.custom?.afterNth ?? "—"}
-              </td>
+              <td className="p-2 border">{r.custom?.afterNth ?? "—"}</td>
 
               <td className="p-2 border">{r.moreLink || "—"}</td>
 
@@ -164,9 +193,19 @@ export default function SectionsPage() {
               </td>
 
               <td className="p-2 border">
+                {/* 🔵 NEW: Edit button */}
+                <button
+                  className="px-2 py-1 border rounded mr-2"
+                  onClick={() => openEdit(r)}
+                  title="Edit section"
+                >
+                  Edit
+                </button>
+
                 <button
                   className="px-2 py-1 border rounded"
                   onClick={() => removeRow(r)}
+                  title="Delete section"
                 >
                   Delete
                 </button>
@@ -178,6 +217,9 @@ export default function SectionsPage() {
     );
   }, [rows, loading]);
 
+  /* -----------------------------
+   * RENDER
+   * --------------------------- */
   return (
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -192,20 +234,62 @@ export default function SectionsPage() {
 
       {body}
 
+      {/* CREATE MODAL */}
       {showCreate && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-4 w-[640px] max-w-[95vw]">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-medium">Create Section</h2>
-              <button onClick={() => setShowCreate(false)} className="px-2 py-1">
+              <button onClick={() => setShowCreate(false)} className="px-2 py-1">✕</button>
+            </div>
+
+            <SectionForm
+              key="create"
+              onSubmit={handleCreate}
+              onCancel={() => setShowCreate(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* EDIT MODAL */}
+      {showEdit && editRow && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-4 w-[640px] max-w-[95vw]">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-medium">Edit Section</h2>
+              <button
+                onClick={() => {
+                  setShowEdit(false);
+                  setEditRow(null);
+                }}
+                className="px-2 py-1"
+              >
                 ✕
               </button>
             </div>
 
-            {/* SectionForm is where you expose the input for custom.afterNth, side, etc. */}
             <SectionForm
-              onSubmit={handleCreate}
-              onCancel={() => setShowCreate(false)}
+              key={editRow._id || editRow.slug || "edit"}
+              initialValues={{
+                title: editRow.title || "",
+                slug: editRow.slug || "",
+                template: editRow.template || "",
+                capacity: editRow.capacity ?? 0,
+                side: editRow.side ?? "",
+                custom: editRow.custom ?? {},
+                target: editRow.target || { type: "", value: "" },
+                feed: editRow.feed || { mode: "auto" },
+                pins: Array.isArray(editRow.pins) ? editRow.pins : [],
+                moreLink: editRow.moreLink || "",
+                placementIndex: editRow.placementIndex ?? 0,
+                enabled: !(editRow.enabled === false),
+              }}
+              onSubmit={handleEditSubmit}
+              onCancel={() => {
+                setShowEdit(false);
+                setEditRow(null);
+              }}
             />
           </div>
         </div>

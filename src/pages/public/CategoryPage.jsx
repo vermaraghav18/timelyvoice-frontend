@@ -160,7 +160,7 @@ const rowLayout = (hasThumb) => ({
   alignItems: 'center',
 });
 
-const titleStyle = { margin: 0, fontSize: 17, fontWeight: 500, lineHeight: 1.3, color: '#ffffffff' ,fontFamily: "'Oxygen', sans-serif",};
+const titleStyle = { margin: 0, fontSize: 18, fontWeight: 500, lineHeight: 1.3, color: '#ffffffff' ,fontFamily: "'Merriweather Sans', sans-serif",};
 const metaRow = {
   marginTop: 14,
   fontSize: 12,

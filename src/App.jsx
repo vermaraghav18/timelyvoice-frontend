@@ -1,6 +1,6 @@
 // src/App.jsx
 import { useEffect, lazy, Suspense } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, useParams } from 'react-router-dom';
 import axios from 'axios';
 
 // Import global CSS helpers
@@ -17,6 +17,7 @@ const CategoryPage = lazy(() => import('./pages/public/CategoryPage.jsx'));
 const TagPage = lazy(() => import('./pages/public/TagPage.jsx'));
 const ReaderArticle = lazy(() => import('./pages/public/Article.jsx'));
 const TopNews = lazy(() => import('./pages/public/TopNews.jsx'));
+const FinanceCategoryPage = lazy(() => import('./pages/public/FinanceCategoryPage.jsx'));
 
 // Admin pages (lazy)
 const AdminShell = lazy(() => import('./layouts/AdminShell.jsx'));
@@ -96,7 +97,7 @@ export const styles = {
   input: { width: '100%', padding: 10, borderRadius: 10, border: '1px solid #e5e7eb', outline: 'none', marginBottom: 8 }
 };
 
-export const CATEGORIES = ['All','General','Politics','Business','Tech','Sports','Entertainment','World'];
+export const CATEGORIES = ['All','General','Politics','Business','Finance','Tech','Sports','Entertainment','World'];
 
 /* ============ Cloudinary upload helper ============ */
 export async function uploadImageViaCloudinary(file) {
@@ -200,6 +201,24 @@ export function emitBreadcrumbs(trail = []) {
   });
 }
 
+/* ============ Category route wrapper (Finance/Business special layout) ============ */
+function AnyCategoryRoute() {
+  const { slug } = useParams();
+  const raw = String(slug || '');           // keep original casing for API
+  const s = raw.toLowerCase();              // for routing decisions
+
+  if (s === 'finance' || s === 'business') {
+    return (
+      <FinanceCategoryPage
+        categorySlug={raw}                                   // ← pass original slug ("Business" or "finance")
+        displayName={s === 'business' ? 'Business' : 'Finance'}
+      />
+    );
+  }
+  return <CategoryPage />;
+}
+
+
 /* ============ Router ============ */
 export default function App() {
   const loc = useLocation();
@@ -241,7 +260,10 @@ export default function App() {
           {/* Public */}
           <Route path="/" element={<PublicHome />} />
           <Route path="/top-news" element={<TopNews />} />
-          <Route path="/category/:slug" element={<CategoryPage />} />
+
+          {/* Route ALL categories through a wrapper so Finance layout applies to /finance and /Business */}
+          <Route path="/category/:slug" element={<AnyCategoryRoute />} />
+
           <Route path="/tag/:slug" element={<TagPage />} />
           <Route path="/article/:slug" element={<ReaderArticle />} />
           <Route path="/search" element={<SearchPage />} />

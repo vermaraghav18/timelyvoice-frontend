@@ -105,7 +105,7 @@ export default function PrimaryNav() {
   const activeRef = useRef(null);
 
   // Make Top News and India visible
-  const visibleLabels = ['Top News', 'India','World','Home'];
+  const visibleLabels = ['Top News', 'India','World','Home','Finance'];
   const visibleIndexes = LINKS.map((l, i) => (visibleLabels.includes(l.label) ? i : -1)).filter(i => i >= 0);
   const lastVisibleIndex = visibleIndexes.length ? visibleIndexes[visibleIndexes.length - 1] : -1;
 
