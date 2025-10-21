@@ -10,7 +10,6 @@ const LINKS = [
   { label: 'FilmyBazaar', slug: 'Entertainment' },
   { label: 'Health', slug: 'Health' },
   { label: 'Sports & Tech', slug: 'Sports' },
-
 ];
 
 const WRAP_STYLE = {
@@ -105,6 +104,10 @@ export default function PrimaryNav() {
   const scrollerRef = useRef(null);
   const activeRef = useRef(null);
 
+  // Which links remain visible? Only "Top News".
+  const visibleIndexes = LINKS.map((l, i) => (l.label === 'Top News' ? i : -1)).filter(i => i >= 0);
+  const lastVisibleIndex = visibleIndexes.length ? visibleIndexes[visibleIndexes.length - 1] : -1;
+
   // On mobile: always start at the first tab. Desktop: center active.
   useEffect(() => {
     const scroller = scrollerRef.current;
@@ -141,23 +144,38 @@ export default function PrimaryNav() {
         <div ref={scrollerRef} className="nav-scroller primary-scroller" style={SCROLLER_STYLE} tabIndex={0}>
           <ul className="primary-list" style={UL_STYLE}>
             {LINKS.map((l, idx) => {
+              const isTop = l.label === 'Top News'; // only this one is shown
               const href = hrefFor(l);
               const key = l.slug || l.path || l.label;
               const active = isActive(l, pathname);
               const style = active ? { ...LINK_BASE, ...ACTIVE_DECORATION } : LINK_BASE;
 
               return (
-                <li key={key} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                <li
+                  key={key}
+                  style={{
+                    display: isTop ? 'inline-flex' : 'none', // hide all others
+                    alignItems: 'center',
+                  }}
+                >
                   <Link
-                    to={href}
-                    style={style}
+                    to={isTop ? href : '#'}
+                    style={isTop ? style : { ...LINK_BASE, pointerEvents: 'none', cursor: 'default' }}
                     className="primary-link"
-                    aria-current={active ? 'page' : undefined}
-                    ref={active ? activeRef : null}
+                    aria-current={active && isTop ? 'page' : undefined}
+                    aria-hidden={isTop ? undefined : true}
+                    tabIndex={isTop ? 0 : -1}
+                    ref={active && isTop ? activeRef : null}
                   >
-                    {l.label}
+                    {isTop ? l.label : ''}
                   </Link>
-                  {idx < LINKS.length - 1 && <span aria-hidden="true" className="primary-sep" style={SEP_STYLE}>|</span>}
+
+                  {/* separator only if this visible item isn't the last visible */}
+                  {isTop && idx !== lastVisibleIndex && (
+                    <span aria-hidden="true" className="primary-sep" style={SEP_STYLE}>
+                      |
+                    </span>
+                  )}
                 </li>
               );
             })}

@@ -397,19 +397,18 @@ export default function ReaderArticle() {
   const timeText = { color: '#ffffffff', fontSize: isMobile ? 14 : 15, fontWeight: 500 };
 
 const summaryBox = {
-  background: 'linear-gradient(135deg,  #8400ffff 0%, #6300e6ff 100%)',
+  background: '#003a7cff',
   border: '0',
-  color: '#ffffffff',
+  color: '#ffffff',
   borderRadius: 0,                 // optional: remove rounding for crisper edge
   padding: isMobile ? 12 : 16,
   fontSize: isMobile ? 17 : 18,
   lineHeight: 1.75,
   margin: '0 0 16px',
-  fontWeight:600,
   // solid, hard-edged shadow (no blur):
   // 1) a solid bottom bar, and
   // 2) a thin outline so it doesn't melt into the background
-  boxShadow: '6px 6px 0px rgba(0,0,0,1)',
+  boxShadow: '0 8px 20pxpx 0 #000, 0 0 0 1px rgba(255,255,255,0.06)',
 };
 
 
@@ -468,7 +467,7 @@ const summaryBox = {
     return (
       <>
         {/* divider + pill heading "Next up" */}
-    
+        <div style={{ width: '100%', height: 1, background: 'rgba(255,255,255,0.25)', margin: '20px 0' }} />
         <div
           style={{
             margin: '8px 0 16px',
@@ -540,32 +539,23 @@ const summaryBox = {
           </div>
 
           {/* continue link */}
-        {/* continue link */}
-<div
-  style={{
-    marginTop: 12,
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-  }}
->
-  <a
-    href={`/article/${doc.slug}`}
-    style={{
-      display: 'inline-block',
-      textDecoration: 'none',
-      background: '#2e6bff',
-      color: '#fff',
-      padding: '10px 14px',
-      border: '1px solid rgba(255,255,255,.14)',
-      boxShadow: '0 8px 24px rgba(0,0,0,.25)',
-      fontWeight: 700,
-    }}
-  >
-    Continue to full article →
-  </a>
-</div>
-
+          <div style={{ marginTop: 12 }}>
+            <a
+              href={`/article/${doc.slug}`}
+              style={{
+                display: 'inline-block',
+                textDecoration: 'none',
+                background: '#2e6bff',
+                color: '#fff',
+                padding: '10px 14px',
+                border: '1px solid rgba(255,255,255,.14)',
+                boxShadow: '0 8px 24px rgba(0,0,0,.25)',
+                fontWeight: 700,
+              }}
+            >
+              Continue to full article →
+            </a>
+          </div>
         </article>
       </>
     );
@@ -885,7 +875,14 @@ const summaryBox = {
               </section>
             )}
             {/* thin divider after Keep Reading */}
-            
+            <div
+              style={{
+                width: '100%',
+                height: '1px',
+                background: 'rgba(255, 255, 255, 0.25)',
+                margin: '20px 0',
+              }}
+            ></div>
 
             <section style={{ marginTop: 24 }}>
               <CommentForm slug={article.slug} onSubmitted={() => loadComments(article.slug)} />

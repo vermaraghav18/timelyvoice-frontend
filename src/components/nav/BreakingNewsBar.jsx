@@ -1,7 +1,13 @@
+// src/components/nav/BreakingNewsBar.jsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+// Toggle: keep logic, hide UI
+const HIDE_BREAKING_NEWS = true;
+
 export default function BreakingNewsBar({ items = [] }) {
+  if (HIDE_BREAKING_NEWS) return null; // ← hidden entirely
+
   const source = Array.isArray(items)
     ? items
         .map(b => ({ text: b.headline || b.text || '', url: b.url || '' }))
@@ -71,7 +77,7 @@ export default function BreakingNewsBar({ items = [] }) {
           overflow: 'hidden',
           width: '100%',
           lineHeight: 1.1,
-          padding: '6px 0', // compact
+          padding: '6px 0',
         }}
       >
         <div

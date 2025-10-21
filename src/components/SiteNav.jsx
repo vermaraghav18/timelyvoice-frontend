@@ -1,3 +1,4 @@
+// src/components/SiteNav.jsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { api } from '../App.jsx';
@@ -29,7 +30,6 @@ function useCondensedHeader(threshold = 64) {
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY || window.pageYOffset || 0;
-      // small hysteresis to avoid flicker
       setCondensed((prev) => (prev ? y > threshold - 8 : y > threshold + 8));
     };
     onScroll();
@@ -39,10 +39,13 @@ function useCondensedHeader(threshold = 64) {
   return condensed;
 }
 
+// --- toggle to hide ALL region/city UI while keeping the logic/fetching intact ---
+const HIDE_REGION_NAV = true;
+
 export default function SiteNav() {
   const loc = useLocation();
   const isMobile = useIsMobile(768);
-  const condensed = useCondensedHeader(70); // tweak threshold to taste
+  const condensed = useCondensedHeader(70);
 
   const [dateStr, setDateStr] = useState('');
   const [breaking, setBreaking] = useState([]);
@@ -118,6 +121,7 @@ export default function SiteNav() {
   const chip  = { width: 26, height: 26, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 999, background: 'rgba(255,255,255,0.16)', color: '#fff', textDecoration: 'none', fontWeight: 800, fontSize: 11 };
   const ctaBtn= { fontSize: 11, fontWeight: 700, color: '#fff', textDecoration: 'none', padding: '6px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.18)', boxShadow: '0 1px 0 rgba(0,0,0,0.18)', whiteSpace: 'nowrap' };
 
+  // Regions list (kept for logic, but we won't render anything when HIDE_REGION_NAV = true)
   const regions = useMemo(() => {
     const list = (allCats || []).filter((c) => c?.type === 'state' || c?.type === 'city');
     return list.sort(
@@ -128,6 +132,7 @@ export default function SiteNav() {
   const visible  = regions.slice(0, visibleCount);
   const overflow = regions.slice(visibleCount);
 
+  // width-measuring logic remains (no visual output when hidden)
   useEffect(() => {
     if (isMobile) { setVisibleCount(regions.length || 0); return; }
     const GAP = 24;
@@ -173,7 +178,7 @@ export default function SiteNav() {
     return () => { window.removeEventListener('resize', onWin); if (ro) ro.disconnect(); };
   }, [regions, isMobile]);
 
-  // Full-screen mobile menu (with equal side padding & safe areas)
+  // --- Mobile full-screen sheet (regions section is hidden when HIDE_REGION_NAV) ---
   const MobileSheet = () => (
     <div
       role="dialog"
@@ -224,22 +229,25 @@ export default function SiteNav() {
           </div>
         </div>
 
-        <div style={{ marginTop: 8 }}>
-          <div style={{ opacity: 0.8, fontSize: 12, marginBottom: 8 }}>Regions</div>
-          {regions.length === 0 ? (
-            <div style={{ opacity: 0.75, fontSize: 13 }}>No regions yet</div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {regions.map((r) => (
-                <Link key={r._id} to={`/category/${encodeURIComponent(r.slug)}`} onClick={() => setMobileMenuOpen(false)}
-                  style={{ padding: '12px 12px', borderRadius: 12, background: '#0d254f', textDecoration: 'none', color: '#fff' }}>
-                  <div style={{ fontWeight: 800, letterSpacing: '0.02em' }}>{r.name}</div>
-                  <div style={{ fontSize: 11, textTransform: 'uppercase', opacity: 0.65, marginTop: 2 }}>{r.type}</div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Regions list hidden */}
+        {!HIDE_REGION_NAV && (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ opacity: 0.8, fontSize: 12, marginBottom: 8 }}>Regions</div>
+            {regions.length === 0 ? (
+              <div style={{ opacity: 0.75, fontSize: 13 }}>No regions yet</div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {regions.map((r) => (
+                  <Link key={r._id} to={`/category/${encodeURIComponent(r.slug)}`} onClick={() => setMobileMenuOpen(false)}
+                    style={{ padding: '12px 12px', borderRadius: 12, background: '#0d254f', textDecoration: 'none', color: '#fff' }}>
+                    <div style={{ fontWeight: 800, letterSpacing: '0.02em' }}>{r.name}</div>
+                    <div style={{ fontSize: 11, textTransform: 'uppercase', opacity: 0.65, marginTop: 2 }}>{r.type}</div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div style={{ opacity: 0.6, fontSize: 11, marginTop: 16 }}>{dateStr}</div>
       </div>
@@ -250,11 +258,9 @@ export default function SiteNav() {
     background: 'linear-gradient(90deg, #001431ff 0%, #002c79ff 100%)',
     color: '#fff',
     borderBottom: '1px solid rgba(255,255,255,0.12)',
-    // smooth height/padding transitions when condensing
     transition: 'padding 180ms ease, transform 180ms ease',
   };
 
-  // Large vs condensed paddings & logo sizes (desktop only)
   const topGridStyle = !isMobile
     ? {
         ...container,
@@ -299,7 +305,7 @@ export default function SiteNav() {
 
   return (
     <header style={{ position: 'sticky', top: 0, zIndex: 50, boxShadow: '0 2px 12px rgba(0,0,0,0.18)' }}>
-      {/* hide scrollbars for the regions scroller (and keep swipe) */}
+      {/* hide scrollbars for any scroller */}
       <style>{`
         .tv-scrollfade {
           -webkit-overflow-scrolling: touch;
@@ -317,7 +323,7 @@ export default function SiteNav() {
         {/* Desktop layout with condense-on-scroll */}
         {!isMobile ? (
           <div style={topGridStyle}>
-            {/* Left block (social + CTAs) — becomes less prominent in condensed mode but still visible */}
+            {/* Left block */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-start' }}>
               <div style={{ display: 'flex', gap: 8, opacity: condensed ? 0.9 : 1, transition: 'opacity 180ms ease' }}>
                 {['X', 'IG', 'TG', 'YT'].map((t) => (
@@ -335,11 +341,9 @@ export default function SiteNav() {
               <Link to="/" aria-label="The Timely Voice — Home" style={logoStyle}>
                 The Timely Voice
               </Link>
-              {/* Optional small badge example if you want (commented) */}
-              {/* {condensed && <span style={{ marginLeft: 8, background:'#e11', padding:'4px 6px', borderRadius:4, fontWeight:800, fontSize:10 }}>LIVE</span>} */}
             </div>
 
-            {/* Right: languages + ticker — ticker hides when condensed */}
+            {/* Right: languages + ticker */}
             <nav aria-label="Language selection" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 {languages.map((l, i) => (
@@ -357,7 +361,7 @@ export default function SiteNav() {
             </nav>
           </div>
         ) : (
-          // Mobile layout: compact (already condensed design)
+          // Mobile layout
           <div style={topGridStyle}>
             <button
               type="button"
@@ -378,7 +382,7 @@ export default function SiteNav() {
               <Link to="/admin" aria-label="Sign In" style={{ ...chip, width: 36, height: 36 }}>↪</Link>
             </div>
 
-            {/* Ticker under bar (mobile is already compact; keep it) */}
+            {/* Ticker under bar */}
             <div style={{ gridColumn: '1 / -1', marginTop: 8 }}>
               <TickerBar />
             </div>
@@ -386,106 +390,108 @@ export default function SiteNav() {
         )}
       </div>
 
-      {/* main categories */}
+      {/* main categories (your PrimaryNav already shows only Top News) */}
       <PrimaryNav />
 
-      {/* regions row */}
-      <div style={{ width: '100%', background: ' #001431ff ', color: '#fff', fontSize: 14, userSelect: 'none', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-        <div style={{ ...container, padding: isMobile ? '8px 8px' : '0 12px' }}>
-          {isMobile ? (
-            <div
-              className="tv-scrollfade"
-              style={{
-                display: 'flex',
-                gap: 10,
-                overflowX: 'auto',
-                WebkitOverflowScrolling: 'touch',
-                scrollSnapType: 'x proximity',
-                padding: '2px 2px 8px',
-                maskImage: 'linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 16px), transparent)',
-              }}
-            >
-              {(regions.length ? regions : []).map((r) => (
-                <Link
-                  key={r._id}
-                  to={`/category/${encodeURIComponent(r.slug)}`}
-                  style={{
-                    scrollSnapAlign: 'start',
-                    padding: '8px 12px',
-                    borderRadius: 999,
-                    border: '1px solid rgba(255,255,255,0.35)',
-                    whiteSpace: 'nowrap',
-                    textDecoration: 'none',
-                    color: '#fff',
-                    fontWeight: 800,
-                    letterSpacing: '0.02em',
-                    textTransform: 'uppercase',
-                    fontSize: 12,
-                  }}
-                >
-                  {r.name}
-                </Link>
-              ))}
-              {regions.length === 0 && <span style={{ opacity: 0.85 }}>No regions yet</span>}
-            </div>
-          ) : (
-            <div ref={wrapperRef} style={{ position: 'relative', height: 36, display: 'flex', alignItems: 'center', gap: 24 }}>
-              <div style={{ display: 'flex', gap: 24, overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                {visible.length === 0 ? (
-                  <span style={{ opacity: 0.85 }}>No regions yet</span>
-                ) : (
-                  visible.map((r) => (
-                    <Link
-                      key={r._id}
-                      to={`/category/${encodeURIComponent(r.slug)}`}
-                      style={{ color: '#fff', textDecoration: 'none', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.02em' }}
-                    >
-                      {r.name}
-                    </Link>
-                  ))
-                )}
-              </div>
-
-              {overflow.length > 0 && (
-                <div
-                  ref={moreRef}
-                  style={{ marginLeft: 'auto', position: 'relative' }}
-                  onMouseEnter={() => setRegionsOpen(true)}
-                  onMouseLeave={() => setRegionsOpen(false)}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setRegionsOpen((v) => !v)}
-                    aria-expanded={regionsOpen ? 'true' : 'false'}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.35)', borderRadius: 6, cursor: 'pointer' }}
+      {/* regions row — completely hidden */}
+      { !HIDE_REGION_NAV ? (
+        <div style={{ width: '100%', background: ' #001431ff ', color: '#fff', fontSize: 14, userSelect: 'none', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+          <div style={{ ...container, padding: isMobile ? '8px 8px' : '0 12px' }}>
+            {isMobile ? (
+              <div
+                className="tv-scrollfade"
+                style={{
+                  display: 'flex',
+                  gap: 10,
+                  overflowX: 'auto',
+                  WebkitOverflowScrolling: 'touch',
+                  scrollSnapType: 'x proximity',
+                  padding: '2px 2px 8px',
+                  maskImage: 'linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 16px), transparent)',
+                }}
+              >
+                {(regions.length ? regions : []).map((r) => (
+                  <Link
+                    key={r._id}
+                    to={`/category/${encodeURIComponent(r.slug)}`}
+                    style={{
+                      scrollSnapAlign: 'start',
+                      padding: '8px 12px',
+                      borderRadius: 999,
+                      border: '1px solid rgba(255,255,255,0.35)',
+                      whiteSpace: 'nowrap',
+                      textDecoration: 'none',
+                      color: '#fff',
+                      fontWeight: 800,
+                      letterSpacing: '0.02em',
+                      textTransform: 'uppercase',
+                      fontSize: 12,
+                    }}
                   >
-                    More
-                    <span style={{ display: 'inline-block', transform: regionsOpen ? 'rotate(90deg)' : 'none', transition: 'transform 120ms ease' }}>▸</span>
-                  </button>
-
-                  {regionsOpen && (
-                    <div
-                      style={{ position: 'absolute', right: 0, top: '100%', marginTop: 6, minWidth: 220, maxHeight: 320, overflowY: 'auto', background: '#fff', color: '#111827', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 10px 30px rgba(0,0,0,0.18)', borderRadius: 8, padding: '6px 0', zIndex: 90 }}
-                    >
-                      {overflow.map((r) => (
-                        <Link
-                          key={r._id}
-                          to={`/category/${encodeURIComponent(r.slug)}`}
-                          onClick={() => setRegionsOpen(false)}
-                          style={{ display: 'block', padding: '8px 12px', textDecoration: 'none', color: '#111827' }}
-                        >
-                          {r.name}
-                          <span style={{ marginLeft: 8, fontSize: 11, textTransform: 'uppercase', color: '#6b7280' }}>{r.type}</span>
-                        </Link>
-                      ))}
-                    </div>
+                    {r.name}
+                  </Link>
+                ))}
+                {regions.length === 0 && <span style={{ opacity: 0.85 }}>No regions yet</span>}
+              </div>
+            ) : (
+              <div ref={wrapperRef} style={{ position: 'relative', height: 36, display: 'flex', alignItems: 'center', gap: 24 }}>
+                <div style={{ display: 'flex', gap: 24, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                  {visible.length === 0 ? (
+                    <span style={{ opacity: 0.85 }}>No regions yet</span>
+                  ) : (
+                    visible.map((r) => (
+                      <Link
+                        key={r._id}
+                        to={`/category/${encodeURIComponent(r.slug)}`}
+                        style={{ color: '#fff', textDecoration: 'none', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.02em' }}
+                      >
+                        {r.name}
+                      </Link>
+                    ))
                   )}
                 </div>
-              )}
-            </div>
-          )}
+
+                {overflow.length > 0 && (
+                  <div
+                    ref={moreRef}
+                    style={{ marginLeft: 'auto', position: 'relative' }}
+                    onMouseEnter={() => setRegionsOpen(true)}
+                    onMouseLeave={() => setRegionsOpen(false)}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setRegionsOpen((v) => !v)}
+                      aria-expanded={regionsOpen ? 'true' : 'false'}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.35)', borderRadius: 6, cursor: 'pointer' }}
+                    >
+                      More
+                      <span style={{ display: 'inline-block', transform: regionsOpen ? 'rotate(90deg)' : 'none', transition: 'transform 120ms ease' }}>▸</span>
+                    </button>
+
+                    {regionsOpen && (
+                      <div
+                        style={{ position: 'absolute', right: 0, top: '100%', marginTop: 6, minWidth: 220, maxHeight: 320, overflowY: 'auto', background: '#fff', color: '#111827', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 10px 30px rgba(0,0,0,0.18)', borderRadius: 8, padding: '6px 0', zIndex: 90 }}
+                      >
+                        {overflow.map((r) => (
+                          <Link
+                            key={r._id}
+                            to={`/category/${encodeURIComponent(r.slug)}`}
+                            onClick={() => setRegionsOpen(false)}
+                            style={{ display: 'block', padding: '8px 12px', textDecoration: 'none', color: '#111827' }}
+                          >
+                            {r.name}
+                            <span style={{ marginLeft: 8, fontSize: 11, textTransform: 'uppercase', color: '#6b7280' }}>{r.type}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      ) : null }
 
       {/* edge-to-edge breaking bar */}
       <BreakingNewsBar items={breaking} />
