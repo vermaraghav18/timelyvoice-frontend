@@ -339,7 +339,8 @@ export default function SiteNav() {
               style={{
                 ...logoStyle,
                 background: '#00c462ff', // bright green like the Sports tag
-                color: '#ffffffff',          // black text for contrast
+                color: '#ffffffff',
+                 border: '3px solid #000', // ✅ added black border
                 padding: '6px 14px',
                 borderRadius: '1px',
                 display: 'inline-block',
