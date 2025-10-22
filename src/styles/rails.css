@@ -1,22 +1,20 @@
 /* ===== Container (overall width/spacing) ===== */
 @import url('https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600;700;800&display=swap');
-
 @import url('https://fonts.googleapis.com/css2?family=Merriweather+Sans:wght@400;500;600;700&display=swap');
-
 
 /* ----- Rails layout wrapper (same page width as other modules) ----- */
 .home-rails{
   max-width: 980px;
   margin: 1px auto;
-  padding: 0; 
-  font-family: 'Newsreader', serif;               /* no inner gutter */
+  padding: 0;
+  font-family: 'Newsreader', serif; /* no inner gutter */
 }
 
 /* ----- Two columns: MAIN + RAIL ----- */
 .home-grid{
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;  /* left flexible, right fixed */
-  column-gap: 0;              /* 👈 make them touch */
+  column-gap: 0;   /* make them touch */
   row-gap: 6px;
 }
 
@@ -28,21 +26,21 @@
 }
 
 /* the left sections shouldn’t add horizontal margins either */
-.sec-wrap{ margin-left: 0; margin-right: 0; border-right: 0;}
+.sec-wrap{ margin-left: 0; margin-right: 0; border-right: 0; }
 
 /* ----- Right rail column ----- */
 .rail-wrap{
-  position: static;
+  position: static;              /* JS pins child as needed; column stays normal */
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-left: 0;             /* no extra offset */
+  margin-left: 0;                /* no extra offset */
 }
 
 /* Rail blocks */
 .rail-block{
   border: 1px solid #eee;
-  border-left: 0;             /* 👈 removes the vertical line between columns */
+  border-left: 0;                /* removes the vertical line between columns */
   border-radius: 1px;
   background: #fff;
   padding: 10px;
@@ -65,12 +63,15 @@
   margin-top: 0px;   /* your desired spacing */
 }
 
-
 .rail-title{ margin: 0; font-size: 16px; font-weight: 800; letter-spacing: .2px; }
 .rail-more{ color:#1b4965; text-decoration:none; font-weight:600; font-size:12px; }
 
-/* Only the list area scrolls */
-.rail-scroll{ overflow: auto; -webkit-overflow-scrolling: touch; }
+/* Only the list area should NOT scroll independently (one unified page scroll) */
+.rail-scroll{
+  overflow: visible;            /* was: overflow:auto; */
+}
+
+/* List layout inside a rail block */
 .rail-list{ display: flex; flex-direction: column; }
 
 .rail-item{
@@ -97,17 +98,16 @@
 @media (max-width:1024px){
   .home-grid{
     grid-template-columns: minmax(0, 1fr) 280px;
-    column-gap: 0;            /* keep touching on tablets */
+    column-gap: 0;  /* keep touching on tablets */
   }
 }
 @media (max-width:820px){
   .home-grid{
-    grid-template-columns: 1fr; /* stack on mobile */
+    grid-template-columns: 1fr;  /* stack on mobile */
     column-gap: 0;
     row-gap: 16px;
   }
 }
-
 
 /* Ensure all rail columns start at the same Y position */
 .rail-wrap {
@@ -118,7 +118,7 @@
 
 /* Kill any top margin that individual rail components add */
 .rail-wrap > * {
-  margin-top: 100 !important;
+  margin-top: 0 !important;  /* was: 100 (invalid) */
 }
 
 /* Some rail components wrap their content once more; zero that too */
@@ -182,10 +182,10 @@
 .live-list::before {
   content: "";
   position: absolute;
-  left: 10px; /* centers with dots */
-  top: 12px; /* starts from top of first dot */
-  bottom: 12px; /* stops cleanly at last dot */
-  width: 1.2px; /* thinner vertical line */
+  left: 10px;             /* centers with dots */
+  top: 12px;              /* starts from top of first dot */
+  bottom: 12px;           /* stops cleanly at last dot */
+  width: 1.2px;           /* thinner vertical line */
   background: #e60000;
   opacity: 1;
 }
@@ -201,9 +201,7 @@
   color: inherit;
   border-bottom: 1px solid #eee;
 }
-.live-item:last-child {
-  border-bottom: 0;
-}
+.live-item:last-child { border-bottom: 0; }
 
 /* The red dot node */
 .live-dot {
@@ -217,18 +215,8 @@
   z-index: 1;
 }
 
-.live-title {
-  font-weight: 700;
-  line-height: 1.35;
-  font-size: 14px;
-}
-.live-time {
-  margin-top: 4px;
-  font-size: 12px;
-  color: #777;
-}
+.live-title { font-weight: 700; line-height: 1.35; font-size: 14px; }
+.live-time  { margin-top: 4px; font-size: 12px; color: #777; }
 
 /* Optional hover */
-.live-item:hover .live-title {
-  text-decoration: underline;
-}
+.live-item:hover .live-title { text-decoration: underline; }
