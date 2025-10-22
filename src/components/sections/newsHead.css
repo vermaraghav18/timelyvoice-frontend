@@ -1,18 +1,23 @@
-/* ===== Container (overall width/spacing) ===== */
+/* ===== Fonts ===== */
 @import url('https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600;700;800&display=swap');
 
+/* ==========================================================================
+   WRAP / CONTAINER
+   ========================================================================== */
 .nh-wrap {
   border: 1px solid #eee;
   border-radius: 2px;
   padding: 15px;
   background: #fff;
   max-width: 780px;
-  margin: 0 0 30px 0;  /* 👈 adds vertical gap between sections */
+  margin: 0 0 30px 0; /* vertical gap between sections */
   font-family: 'Newsreader', serif;
   min-height: 0;
 }
 
-/* ===== Header ===== */
+/* ==========================================================================
+   HEADER
+   ========================================================================== */
 .nh-header {
   display: flex;
   align-items: center;
@@ -23,7 +28,7 @@
 }
 
 .nh-title {
-  font-weight: 700;                    /* per request: bold 700 */
+  font-weight: 700;                    /* bold 700 */
   font-size: 1.9rem;
   background: linear-gradient(90deg, #1B4965, #1d349a); /* navbar-like blue gradient */
   -webkit-background-clip: text;
@@ -39,32 +44,33 @@
   font-weight: 700;
 }
 
-/* ===== Two columns (decoupled) ===== */
+/* ==========================================================================
+   LAYOUT: TWO COLUMNS
+   ========================================================================== */
 .nh-grid {
   display: flex;
   align-items: flex-start;
+  gap: 16px;
   min-height: 0;
   position: relative;
 }
 
-/* Add a vertical separator line between left and right */
+/* Vertical separator line between columns (desktop only) */
 .nh-grid::after {
   content: "";
   position: absolute;
   top: 0;
   bottom: 0;
-  left: calc(55.5% - 4px);      /* adjust depending on column width ratio */
+  left: calc(56% - 8px); /* adjust depending on column width ratio */
   width: 1px;
-   background-color: #949494;
+  background-color: #949494;
   border-radius: 1px;
+  pointer-events: none;
 }
 
-
-/* Left column: own mini-grid (lead + minis) */
-/* Left column: slightly smaller */
 /* Left column (lead + minis) */
 .nh-left {
-  flex: 1.4 1 0;   /* make the lead block take more space */
+  flex: 1.45 1 0;   /* give the lead a little more space */
   display: grid;
   grid-template-rows: auto auto;
   gap: 10px;
@@ -72,9 +78,9 @@
   min-height: 0;
 }
 
-/* Right column (side headlines) */
+/* Right column (stacked headlines) */
 .nh-right {
-  flex: 1.2 1 0;     /* slightly smaller than before */
+  flex: 1.15 1 0;   /* slightly smaller than left */
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -85,9 +91,7 @@
   min-height: 0;
 }
 
-
-
-/* Solid line separator between right-column news cards */
+/* Subtle separators for right-column items */
 .nh-right .nh-card-small {
   border-bottom: 1px solid #949494;
   padding-bottom: 8px;
@@ -99,7 +103,9 @@
   padding-bottom: 0;
 }
 
-/* ===== Lead (hero) ===== */
+/* ==========================================================================
+   LEAD (HERO)
+   ========================================================================== */
 .nh-lead {
   display: block;
   text-decoration: none;
@@ -108,54 +114,46 @@
   border-radius: 1px;
   overflow: hidden;
   background: rgba(243, 243, 243, 0.459);
-  align-self: start;  
-  padding-bottom: 10px;                 /* breathing room below summary/meta */
+  align-self: start;
+  padding-bottom: 10px; /* breathing room below summary/meta */
 }
 
-/* headline spacing and readability */
 .nh-lead-headline {
   font-size: 20px;
   font-weight: 800;
   line-height: 1.3;
-  padding: 12px 14px 6px;               /* top/right/bottom */
+  padding: 12px 14px 6px; /* top/right/bottom */
   margin: 0;
   display: -webkit-box;
-  -webkit-line-clamp: 4;                /* allow a bit more title text */
+  -webkit-line-clamp: 4;  /* allow a bit more title text */
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-/* ===== Lead headline text color fix ===== */
+/* Headline link color */
 .nh-lead-headline a {
-  color: #000000;                /* solid black */
+  color: #000000;
   text-decoration: none;
 }
-
 .nh-lead-headline a:hover {
-  color: #1B4965;                /* optional: subtle blue tint on hover */
+  color: #1B4965; /* subtle blue on hover */
 }
 
-/* ===== Remove underlines from all article links ===== */
+/* Remove underlines from all article links */
 .nh-lead-headline a,
-.nh-card-small a,
-.nh-card-mini a {
-  text-decoration: none !important;  /* remove underline */
+.nh-card-small,
+.nh-card-mini {
+  text-decoration: none !important;
 }
 
-.nh-lead-headline a:hover,
-.nh-card-small a:hover,
-.nh-card-mini a:hover {
-  text-decoration: none !important;  /* keep clean on hover too */
-}
-
-/* image spacing */
+/* Lead image */
 .nh-lead-media {
   display: block;
-  aspect-ratio: 16 / 9;                 /* 4/3 on tablets below */
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   background: #ffffff;
   border-radius: 1px;
-  margin: 8px 14px;                     /* clear space around image */
+  margin: 8px 14px; /* spacing around image */
 }
 .nh-lead-media img {
   width: 100%;
@@ -165,7 +163,7 @@
   border-radius: 2px;
 }
 
-/* summary spacing and color */
+/* Lead summary */
 .nh-lead-summary {
   font-size: 14px;
   color: #000000;
@@ -178,7 +176,7 @@
   overflow: hidden;
 }
 
-/* meta (time/author/category) spacing */
+/* Lead meta (time/author/category) */
 .nh-lead-meta {
   color: #666;
   font-size: 12px;
@@ -186,13 +184,14 @@
   padding: 0 14px;
 }
 
-/* ===== Right column item ===== */
+/* ==========================================================================
+   RIGHT-COLUMN ITEM (CARD SMALL)
+   ========================================================================== */
 .nh-card-small {
   display: grid;
   grid-template-columns: 100px auto;
   gap: 10px;
   align-items: center;
-  text-decoration: none;
   color: inherit;
   background: none;
   border: none;
@@ -201,7 +200,7 @@
 
 .nh-thumb {
   width: 100px;
-  height: 66px;                         /* 3:2 */
+  height: 66px; /* 3:2 */
   border-radius: 1px;
   overflow: hidden;
   flex-shrink: 0;
@@ -213,18 +212,17 @@
   display: block;
 }
 .nh-small-title {
-  font-weight: 700;               /* make it bold */
-  line-height: 1.3;               /* a bit more breathing room */
-  font-size: 15px;                /* slightly larger */
-  color: #111;                    /* strong black */
+  font-weight: 700;
+  line-height: 1.3;
+  font-size: 15px;
+  color: #111;
   display: -webkit-box;
-  -webkit-line-clamp: 3;          /* 3 lines max looks cleaner */
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
 .nh-card-small:hover .nh-small-title {
-  color: #1B4965;                 /* subtle blue on hover, matches gradient theme */
+  color: #1B4965; /* theme hover */
 }
 
 .nh-meta {
@@ -233,21 +231,24 @@
   margin-top: 2px;
 }
 
-/* ===== Bottom minis ===== */
+/* ==========================================================================
+   BOTTOM MINIS
+   ========================================================================== */
 .nh-bottom-left {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2px;
 }
+
 .nh-card-mini {
   display: block;
-  text-decoration: none;
   color: inherit;
   border: 1px solid #eee;
   border-radius: 8px;
   padding: 6px;
   background: #fff;
 }
+
 .nh-mini-badge {
   display: inline-block;
   background: #dbeafe;
@@ -257,6 +258,7 @@
   padding: 3px 6px;
   border-radius: 999px;
 }
+
 .nh-mini-title {
   margin-top: 6px;
   font-weight: 700;
@@ -268,6 +270,7 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
 .nh-mini-time {
   color: #666;
   font-size: 10px;
@@ -275,7 +278,9 @@
   font-family: 'Newsreader', serif;
 }
 
-/* ===== Skeleton ===== */
+/* ==========================================================================
+   SKELETON
+   ========================================================================== */
 .nh-skel {
   background: repeating-linear-gradient(
     90deg,
@@ -286,15 +291,79 @@
   );
 }
 
-/* ===== Responsive ===== */
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+
+/* --- Large tablets --- */
 @media (max-width: 1024px) {
   .nh-lead-media { aspect-ratio: 4 / 3; }
   .nh-right { max-height: 560px; }
+  .nh-title { font-size: 1.7rem; }
 }
 
+/* --- Tablets / small laptops --- */
 @media (max-width: 900px) {
   .nh-wrap { max-width: 100%; margin: 12px 0; }
-  .nh-grid { flex-direction: column; }
+  .nh-grid { flex-direction: column; gap: 12px; }
+  .nh-grid::after { display: none; }                /* hide vertical divider */
   .nh-left, .nh-right { flex: none; width: 100%; }
   .nh-right { max-height: none; overflow: visible; }
 }
+
+/* --- Mobile (stack + horizontal scroll on right column) --- */
+@media (max-width: 768px) {
+  .nh-title { font-size: 1.5rem; }
+
+  .nh-lead-headline { font-size: 18px; -webkit-line-clamp: 5; }
+  .nh-lead-media { margin: 8px 0; border-radius: 4px; }
+  .nh-lead-media img { border-radius: 4px; }
+  .nh-lead-summary { font-size: 13.5px; }
+
+  /* Turn the right column into a horizontal strip */
+  .nh-right {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 78%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 10px;
+    padding: 2px 2px 8px;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+  }
+  .nh-card-small {
+    grid-template-columns: 1fr;  /* thumb above text */
+    gap: 8px;
+    min-width: 0;
+    scroll-snap-align: start;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 8px;
+  }
+  .nh-thumb {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: 6px;
+  }
+  .nh-small-title { font-size: 14px; }
+
+  /* Bottom minis: switch to single column to avoid cramping */
+  .nh-bottom-left { grid-template-columns: 1fr; gap: 6px; }
+}
+
+/* --- Small mobile --- */
+@media (max-width: 480px) {
+  .nh-title { font-size: 1.35rem; }
+  .nh-lead-headline { font-size: 17px; }
+  .nh-lead-summary { font-size: 13px; }
+  .nh-mini-title { font-size: 12.5px; }
+  .nh-small-title { font-size: 13px; }
+}
+
+/* --- Optional: nicer scrollbars on WebKit (keeps neutral look) --- */
+.nh-right::-webkit-scrollbar { height: 6px; width: 6px; }
+.nh-right::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 8px; }
+.nh-right::-webkit-scrollbar-track { background: transparent; }
