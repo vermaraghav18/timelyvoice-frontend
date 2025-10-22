@@ -35,6 +35,12 @@ export default function SectionForm({ initial = {}, onSubmit, onCancel }) {
         aspect: "16/9",
         // Leave blank to render at the top; set 3 to place after 3rd news card, etc.
         afterNth: "",
+
+        // Main v1 tuning
+        startAfter: 0,          // 👈 skip first N items from this feed
+        containerMax: 1140,     // optional: pass to MainV1
+        heroImgHeight: 280,     // optional: pass to MainV1
+        tileMinHeight: 72,      // optional: pass to MainV1
       },
 
   });
@@ -85,6 +91,20 @@ const [pinLoading, setPinLoading] = useState(false);
         ...(form.custom?.afterNth === "" || form.custom?.afterNth == null
           ? {}                                // omit when blank
           : { afterNth: Number(form.custom.afterNth) }), // store as number
+
+           // NEW: normalize Main v1 custom knobs (only if present)
+        ...(form.custom?.startAfter != null
+          ? { startAfter: Number(form.custom.startAfter) }
+          : {}),
+        ...(form.custom?.containerMax != null
+          ? { containerMax: Number(form.custom.containerMax) }
+          : {}),
+        ...(form.custom?.heroImgHeight != null
+          ? { heroImgHeight: Number(form.custom.heroImgHeight) }
+          : {}),
+        ...(form.custom?.tileMinHeight != null
+          ? { tileMinHeight: Number(form.custom.tileMinHeight) }
+          : {}),
       },
     };
 
@@ -214,27 +234,84 @@ const [pinLoading, setPinLoading] = useState(false);
       )}
 
             {/* After Nth Card (main column insertion point) */}
-      <div>
-        <label className="block text-sm font-medium">After Nth Card (main column)</label>
+    {form.template === "main_v1" && (
+  <fieldset className="border rounded p-3 space-y-3">
+    <legend className="px-1 text-sm font-medium">Main v1 options</legend>
+
+    <div className="grid grid-cols-4 gap-3">
+      <label className="text-sm">
+        Skip first N items
         <input
           type="number"
           min={0}
           className="border rounded p-2 w-full"
-          placeholder="blank = top"
-          value={form.custom?.afterNth ?? ""}
+          value={form.custom?.startAfter ?? 0}
           onChange={(e) =>
             setForm((f) => ({
               ...f,
-              custom: { ...(f.custom || {}), afterNth: e.target.value },
+              custom: { ...(f.custom || {}), startAfter: e.target.value },
+            }))
+          }
+          placeholder="e.g. 8"
+          title="Show stories starting from N+1 (e.g., 8 → show 9th onwards)"
+        />
+      </label>
+
+      <label className="text-sm">
+        Container max (px)
+        <input
+          type="number"
+          min={600}
+          className="border rounded p-2 w-full"
+          value={form.custom?.containerMax ?? 1140}
+          onChange={(e) =>
+            setForm((f) => ({
+              ...f,
+              custom: { ...(f.custom || {}), containerMax: e.target.value },
             }))
           }
         />
-        <p className="text-xs text-gray-500 mt-1">
-          Leave blank to render at the top. Set to <b>3</b> to place this section
-          <b> after the 3rd news card</b> on category pages. Ignored for
-          <code> rail_*</code> and <code> head_*</code> templates.
-        </p>
-      </div>
+      </label>
+
+      <label className="text-sm">
+        Hero img height (px)
+        <input
+          type="number"
+          min={160}
+          className="border rounded p-2 w-full"
+          value={form.custom?.heroImgHeight ?? 280}
+          onChange={(e) =>
+            setForm((f) => ({
+              ...f,
+              custom: { ...(f.custom || {}), heroImgHeight: e.target.value },
+            }))
+          }
+        />
+      </label>
+
+      <label className="text-sm">
+        Tile min height (px)
+        <input
+          type="number"
+          min={48}
+          className="border rounded p-2 w-full"
+          value={form.custom?.tileMinHeight ?? 72}
+          onChange={(e) =>
+            setForm((f) => ({
+              ...f,
+              custom: { ...(f.custom || {}), tileMinHeight: e.target.value },
+            }))
+          }
+        />
+      </label>
+    </div>
+
+    <p className="text-xs text-gray-500">
+      Set <b>Skip first N items</b> to <code>8</code> when you want Main v1 to start at the 9th
+      Politics story (because the top 8 are shown by another container).
+    </p>
+  </fieldset>
+)}
 
 
       <div className="grid grid-cols-2 gap-3">

@@ -32,7 +32,8 @@ export default function SectionsPage() {
    * Helpers
    * --------------------------- */
   function buildPayload(data) {
-    // Build an explicit payload so custom/side/target are preserved
+    // Defensive normalization so custom/side/target are preserved and numbers are coerced
+    const custom = data.custom ?? {};
     return {
       title: data.title || "",
       slug: data.slug || "",
@@ -40,9 +41,16 @@ export default function SectionsPage() {
       capacity: Number(data.capacity ?? 0),
 
       // 🔑 KEEP THESE KEYS
-      side: data.side ?? "",                            // "left" | "right" | ""
-      custom: data.custom ?? {},                        // e.g., { afterNth: 3, ... }
-      target: data.target || { type: "", value: "" },   // e.g., { type: "category", value: "sports" }
+      side: data.side ?? "", // "left" | "right" | ""
+      custom: {
+        ...custom,
+        ...(custom.afterNth !== "" && custom.afterNth != null ? { afterNth: Number(custom.afterNth) } : {}),
+        ...(custom.startAfter != null ? { startAfter: Number(custom.startAfter) } : {}),
+        ...(custom.containerMax != null ? { containerMax: Number(custom.containerMax) } : {}),
+        ...(custom.heroImgHeight != null ? { heroImgHeight: Number(custom.heroImgHeight) } : {}),
+        ...(custom.tileMinHeight != null ? { tileMinHeight: Number(custom.tileMinHeight) } : {}),
+      },
+      target: data.target || { type: "", value: "" }, // e.g., { type: "category", value: "sports" }
       feed: data.feed || { mode: "auto" },
       pins: Array.isArray(data.pins) ? data.pins : [],
       moreLink: data.moreLink || "",
@@ -134,6 +142,8 @@ export default function SectionsPage() {
             <th className="text-left p-2 border">Target</th>
             <th className="text-left p-2 border">Side</th>
             <th className="text-left p-2 border">After&nbsp;Nth</th>
+            <th className="text-left p-2 border">Skip&nbsp;N</th>
+            <th className="text-left p-2 border">Hero&nbsp;H / Tile&nbsp;H / Max&nbsp;W</th>
             <th className="text-left p-2 border">More</th>
             <th className="text-left p-2 border">Enabled</th>
             <th className="text-left p-2 border">Actions</th>
@@ -179,6 +189,20 @@ export default function SectionsPage() {
 
               <td className="p-2 border">{r.custom?.afterNth ?? "—"}</td>
 
+              <td className="p-2 border">
+                {typeof r.custom?.startAfter === "number" ? r.custom.startAfter : "—"}
+              </td>
+
+              <td className="p-2 border text-xs">
+                {[
+                  r.custom?.heroImgHeight ? `H:${r.custom.heroImgHeight}` : null,
+                  r.custom?.tileMinHeight ? `tH:${r.custom.tileMinHeight}` : null,
+                  r.custom?.containerMax ? `W:${r.custom.containerMax}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" ") || "—"}
+              </td>
+
               <td className="p-2 border">{r.moreLink || "—"}</td>
 
               <td className="p-2 border">
@@ -193,7 +217,7 @@ export default function SectionsPage() {
               </td>
 
               <td className="p-2 border">
-                {/* 🔵 NEW: Edit button */}
+                {/* 🔵 Edit button */}
                 <button
                   className="px-2 py-1 border rounded mr-2"
                   onClick={() => openEdit(r)}
@@ -240,14 +264,12 @@ export default function SectionsPage() {
           <div className="bg-white rounded-xl p-4 w-[640px] max-w-[95vw]">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-medium">Create Section</h2>
-              <button onClick={() => setShowCreate(false)} className="px-2 py-1">✕</button>
+              <button onClick={() => setShowCreate(false)} className="px-2 py-1">
+                ✕
+              </button>
             </div>
 
-            <SectionForm
-              key="create"
-              onSubmit={handleCreate}
-              onCancel={() => setShowCreate(false)}
-            />
+            <SectionForm key="create" onSubmit={handleCreate} onCancel={() => setShowCreate(false)} />
           </div>
         </div>
       )}
@@ -271,7 +293,7 @@ export default function SectionsPage() {
 
             <SectionForm
               key={editRow._id || editRow.slug || "edit"}
-              initialValues={{
+              initial={{
                 title: editRow.title || "",
                 slug: editRow.slug || "",
                 template: editRow.template || "",

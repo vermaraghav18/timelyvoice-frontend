@@ -71,6 +71,12 @@ function getMaxItems(section = {}, fallback = 6) {
   return section.maxItems ?? section.data?.maxItems ?? fallback;
 }
 
+// safe non-negative number coercion
+function nn(v, d = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : d;
+}
+
 const TEMPLATES = {
   head_v1: NewsHeadSection,
   head_v2: HeadV2,
@@ -119,7 +125,6 @@ export default function SectionRenderer({ section }) {
   const Cmp = TEMPLATES[key];
   if (!Cmp) {
     if (import.meta?.env?.MODE !== "production") {
-      // Helpful in dev to see why a section didn't render
       console.debug("Unknown section template:", section.template, section);
     }
     return null;
@@ -127,11 +132,28 @@ export default function SectionRenderer({ section }) {
 
   // Extract consistent props
   const title = getTitle(section);
-  const items = getItems(section);
+  const rawItems = getItems(section);
   const moreLink = getMoreLink(section);
   const custom = getCustom(section);
   const side = getSide(section);
   const maxItems = getMaxItems(section, 6);
+
+  // Extra props for specific components
+  const extraProps = {};
+
+  // Apply Main/TechMain tuning: skip-N + sizing knobs
+  if (key === "main_v1" || key === "tech_main_v1") {
+    extraProps.startAfter = nn(custom?.startAfter, 0);
+    if (custom?.containerMax != null) extraProps.containerMax = nn(custom.containerMax, 1140);
+    if (custom?.heroImgHeight != null) extraProps.heroImgHeight = nn(custom.heroImgHeight, 280);
+    if (custom?.tileMinHeight != null) extraProps.tileMinHeight = nn(custom.tileMinHeight, 72);
+  }
+
+  // Renderer-level guard so skip-N works even if a component forgets to slice
+  const items =
+    key === "main_v1" || key === "tech_main_v1"
+      ? rawItems.slice(extraProps.startAfter || 0)
+      : rawItems;
 
   return (
     <Cmp
@@ -142,6 +164,7 @@ export default function SectionRenderer({ section }) {
       custom={custom}
       side={side}
       maxItems={maxItems}
+      {...extraProps}
     />
   );
 }

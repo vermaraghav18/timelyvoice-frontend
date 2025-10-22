@@ -345,7 +345,7 @@ export default function CategoryPage() {
 
     Promise.all([
       api.get(`/api/categories/slug/${encodeURIComponent(slug)}`, { validateStatus: () => true }),
-      api.get(`/api/articles`, { params: { category: String(slug || '').toLowerCase(), limit: 50 }, validateStatus: () => true }),
+      api.get(`/api/articles`, { params: { category: slug, limit: 50 }, validateStatus: () => true }),
     ])
       .then(([cRes, aRes]) => {
         if (!alive) return;
@@ -454,7 +454,7 @@ export default function CategoryPage() {
       try {
         setRailsLoading(true); setRailsError('');
         const res = await api.get('/api/sections/plan', {
-          params: { sectionType: 'category', sectionValue: String(slug || '').toLowerCase() },
+          params: { targetType: 'category', targetValue: String(slug || '').toLowerCase() },
         });
         const rows = Array.isArray(res.data) ? res.data : [];
         if (!cancel) setPlanSections(rows);
