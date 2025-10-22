@@ -16,6 +16,7 @@ export default function SectionForm({ initial = {}, onSubmit, onCancel }) {
         categories: [],
         tags: [],
         timeWindowHours: 0,
+         sliceFrom: 1,
       },
     pins: initial.pins || [],  
     
@@ -175,7 +176,8 @@ const [pinLoading, setPinLoading] = useState(false);
             <option value="main_v5">Main (v5)</option>
             <option value="main_v6">Main (v6)</option>
             <option value="main_v7">Main (v7)</option>
-
+            <option value="main_v8">Main (v8) — Lead + List</option>
+            <option value="main_v9">Main (v9)</option>
             <option value="rail_v3">Rail (v3)</option>
             <option value="rail_v4">Rail (v4)</option>
             <option value="rail_v5">Rail (v5) – News Feed</option>
@@ -190,6 +192,7 @@ const [pinLoading, setPinLoading] = useState(false);
               <option value="sports_v2">Sports (v2) — Full-Width Hero</option>     
               <option value="sports_v3">Sports (v3) — Horizontal Cards</option>
               <option value="tech_main_v1">Tech (main v1) — Feature + Stacked + Headlines</option>
+              
 
           </select>
         </div>
@@ -387,6 +390,47 @@ const [pinLoading, setPinLoading] = useState(false);
               })
             }
           />
+        </div>
+      </div>
+
+
+      {/* Slice range (1-based) */}
+      <div className="grid grid-cols-3 gap-3 mt-3">
+        <div>
+          <label className="block text-sm font-medium">Start from #</label>
+          <input
+            type="number"
+            min={1}
+            className="border rounded p-2 w-full"
+            value={form.feed?.sliceFrom ?? 1}
+            onChange={(e) =>
+              update("feed", {
+                ...(form.feed || {}),
+                sliceFrom: Math.max(1, Number(e.target.value || 1)),
+              })
+            }
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium">End at # (optional)</label>
+          <input
+            type="number"
+            min={1}
+            className="border rounded p-2 w-full"
+            value={form.feed?.sliceTo ?? ""}
+            onChange={(e) =>
+              update("feed", {
+                ...(form.feed || {}),
+                sliceTo: e.target.value ? Math.max(1, Number(e.target.value)) : undefined,
+              })
+            }
+          />
+        </div>
+
+        <div className="self-end text-xs text-gray-500">
+          Capacity still caps the total shown.
+          Effective auto count is <code>min(capacity, sliceTo ? sliceTo - sliceFrom + 1 : capacity)</code>.
         </div>
       </div>
 

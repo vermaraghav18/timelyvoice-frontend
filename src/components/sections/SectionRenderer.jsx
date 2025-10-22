@@ -22,17 +22,19 @@ import RailV4 from "../rails/RailV4.jsx";
 import RailV5 from "../rails/RailV5.jsx";
 import RailV6 from "../rails/RailV6.jsx";
 import RailV7 from "../rails/RailV7.jsx";
-import RailV8 from "../rails/RailV8";
+import RailV8 from "../rails/RailV8.jsx";
 import TopV1 from "./TopV1.jsx";
 import TopV2 from "./TopV2.jsx";
 import FilmyBazaarRailV1 from "./FilmyBazaarRailV1.jsx";
-import FilmyBazaarRailV2 from "./FilmyBazaarRailV2";
-import FilmyBazaarRailV3 from "./FilmyBazaarRailV3";
-import FilmyBazaarRailV4 from "./FilmyBazaarRailV4";
+import FilmyBazaarRailV2 from "./FilmyBazaarRailV2.jsx";
+import FilmyBazaarRailV3 from "./FilmyBazaarRailV3.jsx";
+import FilmyBazaarRailV4 from "./FilmyBazaarRailV4.jsx";
 import SportsRailV1 from "../rails/SportsRailV1.jsx";
 import SportsV2 from "./SportsV2.jsx";
 import SportsV3 from "./SportsV3.jsx";
 import TechMainV1 from "./TechMainV1.jsx";
+import MainV8 from "./MainV8.jsx";
+import MainV9 from "./MainV9.jsx";
 
 // --- helper getters (robust to different payload shapes) ---
 function normTemplate(t) {
@@ -91,6 +93,7 @@ const TEMPLATES = {
   mega_v1: MegaV1,
   breaking_v1: BreakingV1,
   dark_v1: DarkV1,
+
   main_v1: MainV1,
   main_v2: MainV2,
   main_v3: MainV3,
@@ -98,6 +101,8 @@ const TEMPLATES = {
   main_v5: MainV5,
   main_v6: MainV6,
   main_v7: MainV7,
+  main_v8: MainV8,
+  main_v9: MainV9, // ✅ new section added cleanly
 
   rail_v3: RailV3,
   rail_v4: RailV4,
@@ -120,9 +125,10 @@ const TEMPLATES = {
 export default function SectionRenderer({ section }) {
   if (!section || !section.template) return null;
 
-  // Normalize template to match keys like rail_v6 even if backend sends "rail-V6" etc.
+  // Normalize template (handles dashes, case, etc.)
   const key = normTemplate(section.template);
   const Cmp = TEMPLATES[key];
+
   if (!Cmp) {
     if (import.meta?.env?.MODE !== "production") {
       console.debug("Unknown section template:", section.template, section);
@@ -144,9 +150,12 @@ export default function SectionRenderer({ section }) {
   // Apply Main/TechMain tuning: skip-N + sizing knobs
   if (key === "main_v1" || key === "tech_main_v1") {
     extraProps.startAfter = nn(custom?.startAfter, 0);
-    if (custom?.containerMax != null) extraProps.containerMax = nn(custom.containerMax, 1140);
-    if (custom?.heroImgHeight != null) extraProps.heroImgHeight = nn(custom.heroImgHeight, 280);
-    if (custom?.tileMinHeight != null) extraProps.tileMinHeight = nn(custom.tileMinHeight, 72);
+    if (custom?.containerMax != null)
+      extraProps.containerMax = nn(custom.containerMax, 1140);
+    if (custom?.heroImgHeight != null)
+      extraProps.heroImgHeight = nn(custom.heroImgHeight, 280);
+    if (custom?.tileMinHeight != null)
+      extraProps.tileMinHeight = nn(custom.tileMinHeight, 72);
   }
 
   // Renderer-level guard so skip-N works even if a component forgets to slice

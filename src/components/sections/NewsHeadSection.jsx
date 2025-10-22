@@ -25,10 +25,11 @@ export default function NewsHeadSection({
   title,
   items = [],
   moreLink = "",
-  containerScale = 1, // width scaler: 1=620px, 0.75 ~ 465px
+  // NOTE: containerScale no longer used to cap width (it caused clipping on small screens)
+  containerScale = 1,
 }) {
   const lead = items[0] || null;
-  const rightItems = items.slice(1, 10);   // up to 9 on the right
+  const rightItems = items.slice(1, 10); // up to 9 on the right
   const bottomItems = items.slice(10, 12); // up to 2 below the lead
 
   const Thumb = ({ a, className = "nh-thumb" }) => {
@@ -38,16 +39,22 @@ export default function NewsHeadSection({
       (typeof a.cover === "string" ? a.cover : a.cover?.url) ||
       a.thumbnailUrl ||
       a.image?.url ||
-      null;
+      "";
     const alt =
       a.imageAlt ||
       (typeof a.cover === "object" ? a.cover?.alt : "") ||
       a.title ||
-      "";
+      "image";
     return (
       <div className={className}>
         {src ? (
-          <img src={src} alt={alt} loading="lazy" />
+          <img
+            src={src}
+            alt={alt}
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+          />
         ) : (
           <div className={`${className}-ph`} aria-hidden="true" />
         )}
@@ -74,12 +81,9 @@ export default function NewsHeadSection({
       </Link>
     ) : null;
 
-  // Scale width by adjusting the container's maxWidth (no transform),
-  // so layout height matches visuals and no bottom gap appears.
-  const scaledMaxWidth = Math.round(620 * (containerScale || 1));
-
   return (
-    <section className="nh-wrap" style={{ maxWidth: `${scaledMaxWidth}px` }}>
+    // IMPORTANT: make the container fluid; no fixed maxWidth here.
+    <section className="nh-wrap">
       <div className="nh-header">
         <h2 className="nh-title">{title}</h2>
         {moreLink ? (
@@ -89,49 +93,54 @@ export default function NewsHeadSection({
         ) : null}
       </div>
 
-      {/* Columns container */}
+      {/* Layout */}
       <div className="nh-grid">
-        {/* LEFT COLUMN: lead + minis */}
+        {/* Lead + minis */}
         <div className="nh-left">
           {lead ? (
             <article className="nh-lead">
-  <h3 className="nh-lead-headline">
-    <Link to={`/article/${lead.slug}`}>{lead.title}</Link>
-  </h3>
+              <h3 className="nh-lead-headline">
+                <Link to={`/article/${lead.slug}`}>{lead.title}</Link>
+              </h3>
 
-  <Link to={`/article/${lead.slug}`} className="nh-lead-media">
-    {lead.imageUrl || lead.cover || lead.thumbnailUrl || lead.image ? (
-      <img
-        src={
-          lead.imageUrl ||
-          (typeof lead.cover === "string" ? lead.cover : lead.cover?.url) ||
-          lead.thumbnailUrl ||
-          lead.image?.url
-        }
-        alt={
-          lead.imageAlt ||
-          (typeof lead.cover === "object" ? lead.cover?.alt : "") ||
-          lead.title ||
-          ""
-        }
-        loading="lazy"
-      />
-    ) : (
-      <div className="nh-lead-ph" aria-hidden="true" />
-    )}
-  </Link>
+              <Link
+                to={`/article/${lead.slug}`}
+                className="nh-lead-media"
+                aria-label={lead.title || "lead"}
+              >
+                {lead.imageUrl || lead.cover || lead.thumbnailUrl || lead.image ? (
+                  <img
+                    src={
+                      lead.imageUrl ||
+                      (typeof lead.cover === "string" ? lead.cover : lead.cover?.url) ||
+                      lead.thumbnailUrl ||
+                      lead.image?.url
+                    }
+                    alt={
+                      lead.imageAlt ||
+                      (typeof lead.cover === "object" ? lead.cover?.alt : "") ||
+                      lead.title ||
+                      "lead image"
+                    }
+                    loading="lazy"
+                    decoding="async"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="nh-lead-ph" aria-hidden="true" />
+                )}
+              </Link>
 
-  {lead.summary ? (
-    <p className="nh-lead-summary">{excerpt(lead.summary, 180)}</p>
-  ) : null}
+              {lead.summary ? (
+                <p className="nh-lead-summary">{excerpt(lead.summary, 180)}</p>
+              ) : null}
 
-  <div className="nh-lead-meta">
-    {formatTime(lead.publishedAt)}
-    {lead.author ? <> • {lead.author}</> : null}
-    {readCategory(lead.category) ? <> • {readCategory(lead.category)}</> : null}
-  </div>
-</article>
-
+              <div className="nh-lead-meta">
+                {formatTime(lead.publishedAt)}
+                {lead.author ? <> • {lead.author}</> : null}
+                {readCategory(lead.category) ? <> • {readCategory(lead.category)}</> : null}
+              </div>
+            </article>
           ) : (
             <div className="nh-lead nh-skel" />
           )}
@@ -143,7 +152,7 @@ export default function NewsHeadSection({
           </div>
         </div>
 
-        {/* RIGHT COLUMN: stacked headlines */}
+        {/* Right column → rendered as grid by CSS */}
         <div className="nh-right">
           {rightItems.map((a, idx) => (
             <CardSmall a={a} key={a?.id || a?._id || a?.slug || idx} />

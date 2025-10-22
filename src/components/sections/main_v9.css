@@ -1,0 +1,206 @@
+/* Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Merriweather+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --mv9-ink: #ffffff;
+  --mv9-card-grad: linear-gradient(135deg, #001236 0%, rgb(0, 43, 104) 100%);
+  --mv9-left-solid: linear-gradient(135deg, #00b6b0 0%,#005f5c 100%);
+  --mv9-right-solid: linear-gradient(135deg, #5a0000 0%, rgb(173, 0, 0) 100%);
+
+  /* Badge (title container) tokens */
+  --mv9-badge-grad: linear-gradient(130deg,#B60006 0%,#B60006 100%);
+  --mv9-badge-border: #000;
+  --mv9-badge-shadow: 8px 11px 0 #000;
+  --mv9-badge-radius: 1px;
+}
+
+/* ======= MAIN WRAPPER ======= */
+.mv9 {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 30px; /* bottom gap so it doesn’t stick to next section */
+  font-family: 'Merriweather Sans', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+/* If a TopV1 block follows immediately after MainV9, neutralize its global pull-up */
+.mv9 + .fullwidth-section .topv1 {
+  margin-top: 0 !important;
+}
+
+/* ======= TOP ROW (3 small) ======= */
+.mv9-top,
+.mv9-bot {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.mv9-small {
+  display: grid;
+  grid-template-columns: 1fr 110px; /* text left, image right */
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 1px;
+  background: var(--mv9-card-grad);
+  color: var(--mv9-ink);
+  min-height: 70px;
+}
+
+.mv9-small__title {
+  color: var(--mv9-ink);
+  text-decoration: none;
+  font-weight: 300;
+  font-size: 15px;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mv9-small__thumb {
+  display: block;
+  width: 110px;
+  height: 72px;
+  overflow: hidden;
+  border-radius: 1px;
+}
+
+.mv9-small__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ======= MID ROW (two features) ======= */
+.mv9-mid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* shared feature styles */
+.mv9-feature {
+  display: flex;
+  flex-direction: column;
+  color: var(--mv9-ink);
+  border-radius: 1px;
+  padding: 14px;
+  min-height: 380px;   /* big panels */
+}
+
+/* LEFT – title → source → summary → BIG image (≈60%) */
+.mv9-feature--left {
+  background: var(--mv9-left-solid);
+}
+
+.mv9-feature__head {
+  margin-bottom: 6px;
+}
+
+.mv9-feature__h {
+  margin: 0;
+}
+
+/* Title text sizing; the badge styles are applied on top */
+.mv9-feature__title {
+  color: var(--mv9-ink);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: clamp(22px, 2.2vw, 24px);
+  line-height: 1.2;
+  display: inline-block; /* so the badge box wraps exactly */
+}
+
+/* The badge container behind titles (hard shadow, border, gradient) */
+.mv9-badge {
+  background: var(--mv9-badge-grad);
+  border: 3px solid var(--mv9-badge-border);
+  border-radius: var(--mv9-badge-radius);
+  padding: 0.35em 0.6em;          /* scales with font-size */
+  box-shadow: var(--mv9-badge-shadow);
+  color: #fff;                    /* keep text readable regardless of panel */
+  text-decoration: none;
+  position: relative;
+  z-index: 1;
+  outline: none;
+}
+
+/* Keyboard focus ring (visible + outside the thick border) */
+.mv9-badge:focus-visible {
+  box-shadow:
+    var(--mv9-badge-shadow),
+    0 0 0 3px #fff,
+    0 0 0 6px #111;
+}
+
+/* Optional: slightly tighter letter spacing for dense headlines */
+.mv9-feature__title { letter-spacing: 0.01em; }
+
+.mv9-feature__source {
+  margin-top: 6px;
+  opacity: .9;
+  font-weight: 600;
+}
+
+.mv9-feature__summary {
+  margin: 8px 0 10px;
+  line-height: 1.55;
+  opacity: .96;
+  font-weight: 100;        /* reduced weight for smoother body text */
+  font-size: 17px;         /* optional: slightly smaller text size */
+}
+
+.mv9-feature__media {
+  margin-top: auto;       /* push image to bottom */
+  display: block;
+  height: 60%;            /* ≈60% of feature height */
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.mv9-feature__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* RIGHT – title → image → summary (vertical) */
+.mv9-feature--right {
+  background: var(--mv9-right-solid);
+}
+
+.mv9-feature__title--top {
+  margin-bottom: 10px;
+}
+
+.mv9-feature__media--tight {
+  height: 52%; /* a little less than left */
+}
+
+.mv9-feature--right .mv9-feature__summary {
+  margin-top: 10px;
+}
+
+/* ======= RESPONSIVE ======= */
+@media (max-width: 1024px) {
+  .mv9-small { grid-template-columns: 1fr 96px; }
+  .mv9-small__thumb { width: 96px; height: 66px; }
+  .mv9-feature { min-height: 340px; }
+}
+
+@media (max-width: 860px) {
+  .mv9-top, .mv9-bot { grid-template-columns: 1fr; }
+  .mv9-mid { grid-template-columns: 1fr; }
+
+  .mv9-feature__media,
+  .mv9-feature__media--tight { height: 48vw; } /* scale by viewport */
+
+  /* Slightly smaller title on mobile; badge still scales via em padding */
+  .mv9-feature__title {
+    font-size: clamp(20px, 4.8vw, 22px);
+  }
+}

@@ -1,7 +1,6 @@
 // src/pages/public/PublicHome.jsx
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { api, styles, CATEGORIES, upsertTag } from "../../App.jsx";
+import { api, styles, upsertTag } from "../../App.jsx";
 import SiteNav from "../../components/SiteNav.jsx";
 import SiteFooter from "../../components/SiteFooter.jsx";
 
@@ -52,25 +51,37 @@ export default function PublicHome() {
   }, []);
 
   // Partition sections:
-  // - full-width mains: include main_v1, top_v1, and **top_v2** (NEW)
+  // - full-width mains: main_v1, top_v1, top_v2, main_v8, main_m3, main_v9
   // - rails = any template starting with "rail_"
   // - others = everything else (left column)
   const mains = sections.filter(
-    (s) => s.template === "main_v1" || s.template === "top_v1" || s.template === "top_v2" // <-- added top_v2
+    (s) =>
+      s.template === "main_v1" ||
+      s.template === "top_v1" ||
+      s.template === "top_v2" ||
+      s.template === "main_v8" ||
+      s.template === "main_m3" ||
+      s.template === "main_v9"
   );
 
-  // Always place top_v2 first (if present), then sort remaining by placementIndex
-  const mainsSorted = [...mains].sort((a, b) => {
-    if (a.template === "top_v2" && b.template !== "top_v2") return -1;
-    if (b.template === "top_v2" && a.template !== "top_v2") return 1;
-    return (a.placementIndex ?? 0) - (b.placementIndex ?? 0);
-  });
+  // Respect placementIndex strictly (no template priority)
+  const mainsSorted = [...mains].sort(
+    (a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0)
+  );
 
   const rails = sections.filter((s) => s.template?.startsWith("rail_"));
+  const railsSorted = [...rails].sort(
+    (a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0)
+  );
+
   const others = sections.filter(
     (s) =>
-      !["main_v1", "top_v1", "top_v2"].includes(s.template) && // <-- exclude top_v2 from others
-      !s.template?.startsWith("rail_")
+      !["main_v1", "top_v1", "top_v2", "main_v8", "main_m3", "main_v9"].includes(
+        s.template
+      ) && !s.template?.startsWith("rail_")
+  );
+  const othersSorted = [...others].sort(
+    (a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0)
   );
 
   return (
@@ -85,7 +96,7 @@ export default function PublicHome() {
           </div>
         </div>
 
-        {/* ===== FULL-WIDTH main blocks (main_v1 + top_v1 + top_v2) ===== */}
+        {/* ===== FULL-WIDTH main blocks (main_v1 + top_v1 + top_v2 + main_v8 + main_m3 + main_v9) ===== */}
         {sectionsLoading && !sections.length ? (
           <div style={{ padding: 12 }}>Loading sections…</div>
         ) : sectionsError ? (
@@ -105,7 +116,7 @@ export default function PublicHome() {
             {/* ===== TWO-COLUMN LAYOUT (others + right rail) ===== */}
             <div className="home-grid home-rails">
               <main>
-                {others.map((sec) => (
+                {othersSorted.map((sec) => (
                   <SectionRenderer
                     key={sec.id || sec._id || sec.slug}
                     section={sec}
@@ -114,10 +125,10 @@ export default function PublicHome() {
               </main>
 
               <aside className="rail-wrap">
-                {rails.length === 0 ? (
+                {railsSorted.length === 0 ? (
                   <div style={{ padding: 8, color: "#666" }}>No rails</div>
                 ) : (
-                  rails.map((sec) => (
+                  railsSorted.map((sec) => (
                     <SectionRenderer
                       key={sec.id || sec._id || sec.slug}
                       section={sec}

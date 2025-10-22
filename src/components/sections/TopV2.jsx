@@ -44,7 +44,11 @@ export default function TopV2({ section }) {
 
   return (
     <section className="topv2">
-      {section?.title ? <h2 className="topv2-title">{section.title}</h2> : null}
+      {section?.title ? (
+        <h2 className="topv2-title">
+          <span className="topv2-title-badge">{section.title}</span>
+        </h2>
+      ) : null}
 
       {hero ? (
         <div className="topv2-hero">
