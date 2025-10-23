@@ -61,7 +61,9 @@ export default function PublicHome() {
       s.template === "top_v2" ||
       s.template === "main_v8" ||
       s.template === "main_m3" ||
-      s.template === "main_v9"
+      s.template === "main_v9"||
+      s.template === "m10" ||
+      s.template === "main_m10"
   );
 
   // Respect placementIndex strictly (no template priority)
@@ -76,7 +78,7 @@ export default function PublicHome() {
 
   const others = sections.filter(
     (s) =>
-      !["main_v1", "top_v1", "top_v2", "main_v8", "main_m3", "main_v9"].includes(
+      !["main_v1", "top_v1", "top_v2", "main_v8", "main_m3", "main_v9","m10", "main_m10"].includes(
         s.template
       ) && !s.template?.startsWith("rail_")
   );

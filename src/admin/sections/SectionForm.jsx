@@ -61,6 +61,7 @@ const [pinLoading, setPinLoading] = useState(false);
       form.template === "feature_v1" ||
       form.template === "rail_v7" ||
       form.template === "rail_v8",
+      
     [form.template]
   );
 
@@ -153,6 +154,12 @@ const [pinLoading, setPinLoading] = useState(false);
               ) {
                 update("capacity", 1);
               }
+
+              // m10 shows exactly two articles by design
+              if (t === "m10") {
+                update("capacity", 2);
+              }
+
             }}
           >
             <option value="head_v1">Head (v1)</option>
@@ -178,6 +185,8 @@ const [pinLoading, setPinLoading] = useState(false);
             <option value="main_v7">Main (v7)</option>
             <option value="main_v8">Main (v8) — Lead + List</option>
             <option value="main_v9">Main (v9)</option>
+            <option value="m10">Main (m10) — Two Articles</option>
+
             <option value="rail_v3">Rail (v3)</option>
             <option value="rail_v4">Rail (v4)</option>
             <option value="rail_v5">Rail (v5) – News Feed</option>

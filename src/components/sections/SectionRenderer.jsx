@@ -36,6 +36,9 @@ import TechMainV1 from "./TechMainV1.jsx";
 import MainV8 from "./MainV8.jsx";
 import MainV9 from "./MainV9.jsx";
 
+/* ====== ADDED: M10 two-article section ====== */
+import M10 from "./M10.jsx";
+
 // --- helper getters (robust to different payload shapes) ---
 function normTemplate(t) {
   return String(t || "").toLowerCase().replace(/-/g, "_");
@@ -120,6 +123,10 @@ const TEMPLATES = {
   sports_v2: SportsV2,
   sports_v3: SportsV3,
   tech_main_v1: TechMainV1,
+
+  /* ====== ADDED MAPPINGS so the plan can render it ====== */
+  m10: M10,
+  main_m10: M10, // in case backend sends "main_m10"
 };
 
 export default function SectionRenderer({ section }) {
@@ -158,11 +165,36 @@ export default function SectionRenderer({ section }) {
       extraProps.tileMinHeight = nn(custom.tileMinHeight, 72);
   }
 
-  // Renderer-level guard so skip-N works even if a component forgets to slice
+   // Renderer-level guard so skip-N works even if a component forgets to slice
   const items =
     key === "main_v1" || key === "tech_main_v1"
       ? rawItems.slice(extraProps.startAfter || 0)
       : rawItems;
+
+  // Adapter: m10 expects {a1, a2}; plan gives `items`. Map top 2 items.
+  if (key === "m10") {
+    const [i1, i2] = (items || []);
+    const map = (a) =>
+      a
+        ? {
+            title: a.title,
+            summary: a.summary,
+            href: a.slug ? `/${a.slug}` : undefined,
+            imageSrc: a.imageUrl,
+            imageAlt: a.imageAlt || a.title || "",
+          }
+        : undefined;
+
+    return (
+      <M10
+        section={section}
+        title={title}
+        custom={custom}
+        a1={map(i1)}
+        a2={map(i2)}
+      />
+    );
+  }
 
   return (
     <Cmp
