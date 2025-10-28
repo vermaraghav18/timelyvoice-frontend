@@ -31,6 +31,7 @@ export default function ArticlesPage() {
   const firstLoadRef = useRef(true);
   const autosaveTimerRef = useRef(null);
 
+
   // Admin gate: if no JWT token, restrict publish/unpublish.
   const isAdmin = !!(typeof window !== "undefined" && localStorage.getItem("token"));
 
@@ -71,6 +72,11 @@ export default function ArticlesPage() {
   const [previewEnabled, setPreviewEnabled] = useState(false);
   const [previewCountry, setPreviewCountry] = useState("");
 
+  // NEW: quick Image URL editor state per row
+  // imgEdits: { [id]: { value, saving: 'idle'|'saving'|'saved'|'error', syncOg: boolean } }
+  const [imgEdits, setImgEdits] = useState({});
+  const imgTimersRef = useRef({}); // debounce timers per row
+
   // Restore preview prefs
   useEffect(() => {
     try {
@@ -107,6 +113,12 @@ export default function ArticlesPage() {
     })();
   }, []);
 
+  useEffect(() => {
+  return () => {
+    Object.values(imgTimersRef.current || {}).forEach(t => clearTimeout(t));
+  };
+}, []);
+
   // Helper: compose headers for geo preview
   function geoHeaders() {
     if (!previewEnabled) return undefined;
@@ -131,13 +143,27 @@ export default function ArticlesPage() {
         headers: geoHeaders(),
       });
       const payload = res.data || {};
+      const items = payload.items || payload.data || [];
       setData({
-        items: payload.items || payload.data || [],
+        items,
         total: payload.total || 0,
         page: payload.page || page,
         limit: payload.limit || limit,
       });
       setSelectedIds(new Set());
+
+      // seed quick image editors with fresh list
+      const seeded = {};
+      for (const a of items) {
+        const id = a._id;
+        seeded[id] = {
+          value: a.imageUrl || "",
+          saving: "idle",
+          // default: keep ogImage synced to this imageUrl
+          syncOg: true,
+        };
+      }
+      setImgEdits(seeded);
     } catch (e) {
       toast.push({ type: "error", title: "Load failed", message: String(e?.response?.data?.message || e.message) });
     } finally {
@@ -207,6 +233,8 @@ export default function ArticlesPage() {
       fetchArticles();
     }
   }
+
+
 
   // -------- Bulk actions (role-gated publish) --------
   async function bulkAction(action) {
@@ -449,6 +477,36 @@ export default function ArticlesPage() {
     return isAllowedForGeo(form.geoMode, list, test);
   }, [form.geoMode, form.geoAreasText, testCountry, testRegion, testCity]);
 
+  // ---------- Quick Image URL (inline) helpers ----------
+  function setImgState(id, patch) {
+    setImgEdits(prev => ({ ...prev, [id]: { ...(prev[id] || { value: "", saving: "idle", syncOg: true }), ...patch } }));
+  }
+
+  function scheduleSaveImage(id, value) {
+    // debounce per row
+    if (imgTimersRef.current[id]) clearTimeout(imgTimersRef.current[id]);
+    setImgState(id, { saving: "saving" });
+    imgTimersRef.current[id] = setTimeout(async () => {
+      try {
+        const syncOg = !!(imgEdits[id]?.syncOg ?? true);
+        const payload = syncOg ? { imageUrl: value, ogImage: value } : { imageUrl: value };
+        await api.patch(`/api/articles/${id}`, payload);
+        // reflect on list (so preview updates)
+        updateItemsLocal(a => (a._id === id ? { ...a, imageUrl: value, ...(syncOg ? { ogImage: value } : {}) } : a));
+        setImgState(id, { saving: "saved" });
+        setTimeout(() => setImgState(id, { saving: "idle" }), 900);
+      } catch (e) {
+        console.warn("image quick-save failed", e?.response?.data || e);
+        setImgState(id, { saving: "error" });
+      }
+    }, 800);
+  }
+
+  function onChangeQuickImage(id, value) {
+    setImgState(id, { value });
+    scheduleSaveImage(id, value);
+  }
+
   return (
     <div className="space-y-4" style={{ display: "grid", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
@@ -530,20 +588,32 @@ export default function ArticlesPage() {
               <th style={th}>Category</th>
               <th style={th}>Publish At</th>
               <th style={th}>Updated</th>
+              <th style={th}>Preview</th>{/* NEW */}
               <th style={th}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td style={td} colSpan={7}>Loading…</td></tr>}
-            {!loading && data.items.length === 0 && <tr><td style={td} colSpan={7}>No articles found.</td></tr>}
-            {!loading && data.items.map(a => (
+            {loading && <tr><td style={td} colSpan={8}>Loading…</td></tr>}
+            {!loading && data.items.length === 0 && <tr><td style={td} colSpan={8}>No articles found.</td></tr>}
+            {!loading && data.items.map(a => {
+              const imgState = imgEdits[a._id] || { value: a.imageUrl || "", saving: "idle", syncOg: true };
+              const dotColor =
+                imgState.saving === "saving" ? "#f59e0b" :
+                imgState.saving === "saved"  ? "#10b981" :
+                imgState.saving === "error"  ? "#ef4444" : "#d1d5db";
+              const previewUrl = imgState.value || a.imageUrl || "";
+              return (
               <tr key={a._id} style={{ borderTop: "1px solid #f0f0f0" }}>
                 <td style={td}><input type="checkbox" checked={selectedIds.has(a._id)} onChange={()=>toggleSelect(a._id)} /></td>
                 <td style={td}>
                   <div style={{ fontWeight: 600 }}>{a.title}</div>
                   <div style={{ color: "#666", fontSize: 12 }}>{a.slug}</div>
 
-                  {/* tiny tags preview */}
+                  {/* QUICK image URL (autosaves + mirrors to OG) */}
+                 
+
+
+                  {/* tags preview */}
                   {Array.isArray(a.tags) && a.tags.length > 0 && (
                     <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
                       {a.tags.map(t => (
@@ -564,6 +634,46 @@ export default function ArticlesPage() {
                       ))}
                     </div>
                   )}
+
+                  {/* NEW: Quick Image URL editor */}
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: "#555", fontWeight: 600 }}>Image URL (quick)</span>
+                      <span title={imgState.saving} style={{ width: 8, height: 8, borderRadius: 8, background: dotColor, display: "inline-block" }} />
+                    </div>
+                    <input
+                      value={imgState.value}
+                      onChange={(e)=>onChangeQuickImage(a._id, e.target.value)}
+                      placeholder="https://…"
+                      style={inp}
+                    />
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
+                      <label style={{ display: "inline-flex", gap: 6, alignItems: "center", fontSize: 12 }}>
+                        <input
+                          type="checkbox"
+                          checked={!!imgState.syncOg}
+                          onChange={(e)=>setImgState(a._id, { syncOg: e.target.checked })}
+                        />
+                        Also set <code>OG Image URL</code>
+                      </label>
+                      {imgState.value ? (
+                        <>
+                          <a href={imgState.value} target="_blank" rel="noreferrer" style={{ textDecoration: "none", color: "#1B4965", fontSize: 12 }}>
+                            open image ↗
+                          </a>
+                          <span style={{ color: "#999", fontSize: 12 }}>|</span>
+                        </>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={()=>window.open(`/article/${encodeURIComponent(a.slug)}`, '_blank', 'noopener,noreferrer')}
+                        style={{ ...btnSmallGhost, padding: "4px 8px", fontSize: 12 }}
+                        title="Open public article page"
+                      >
+                        open article ↗
+                      </button>
+                    </div>
+                  </div>
                 </td>
                 <td style={td}>
                   <span style={{ ...badge, ...(a.status==='published'?badgeGreen:a.status==='scheduled'?badgeYellow:badgeGray) }}>
@@ -573,6 +683,28 @@ export default function ArticlesPage() {
                 <td style={td}>{a.category?.name || a.category || "—"}</td>
                 <td style={td}>{fmt(a.publishAt) || "—"}</td>
                 <td style={td}>{fmt(a.updatedAt)}</td>
+
+                {/* NEW: Preview column (thumb + category pill) */}
+                <td style={{ ...td, width: 230 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start" }}>
+                    <span style={badge}>{a.category?.name || a.category || "General"}</span>
+                    {previewUrl ? (
+                      <img
+                        src={previewUrl}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        style={{ width: 200, height: 120, objectFit: "cover", borderRadius: 10, border: "1px solid #eee", background: "#f8fafc" }}
+                        onError={(e)=>{ e.currentTarget.style.display='none'; }}
+                      />
+                    ) : (
+                      <div style={{ width: 200, height: 120, display: "grid", placeItems: "center", borderRadius: 10, border: "1px solid #eee", background: "#f8fafc", color: "#999", fontSize: 12 }}>
+                        No image
+                      </div>
+                    )}
+                  </div>
+                </td>
+
                 <td style={td}>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button onClick={()=>openEdit(a._id)} style={btnSmallGhost}>Edit</button>
@@ -596,7 +728,7 @@ export default function ArticlesPage() {
                   </div>
                 </td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>
@@ -651,8 +783,6 @@ export default function ArticlesPage() {
             body: d.body ?? f.body,
           }));
           setTagsInput((d.tags || []).join(", "));
-          // Optional: reset GEO preview helpers
-          // setTestCountry(""); setTestRegion(""); setTestCity("");
         }}
       />
 

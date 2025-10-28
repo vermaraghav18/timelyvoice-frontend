@@ -453,9 +453,14 @@ export default function CategoryPage() {
     (async () => {
       try {
         setRailsLoading(true); setRailsError('');
-        const res = await api.get('/api/sections/plan', {
-          params: { targetType: 'category', targetValue: String(slug || '').toLowerCase() },
-        });
+       const res = await api.get('/api/sections/plan', {
+  params: {
+    sectionType: 'category',
+    sectionValue: String(slug || '').toLowerCase(), // keep lowercase for consistency
+    // mode: 'public', // <— include if your backend uses mode; otherwise omit
+  },
+});
+
         const rows = Array.isArray(res.data) ? res.data : [];
         if (!cancel) setPlanSections(rows);
       } catch (e) {

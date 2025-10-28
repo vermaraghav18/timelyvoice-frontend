@@ -60,7 +60,8 @@ const [pinLoading, setPinLoading] = useState(false);
       form.template === "hero_v1" ||
       form.template === "feature_v1" ||
       form.template === "rail_v7" ||
-      form.template === "rail_v8",
+      form.template === "rail_v8"||
+      form.template === "m11",
       
     [form.template]
   );
@@ -110,6 +111,32 @@ const [pinLoading, setPinLoading] = useState(false);
       },
     };
 
+    // M11: parse optional JSON overrides (markets / categories)
+if (form.template === "m11") {
+  const c = payload.custom || {};
+  if (typeof c.marketsJson === "string" && c.marketsJson.trim()) {
+    try {
+      c.markets = JSON.parse(c.marketsJson);
+    } catch (_err) {
+      alert("Invalid Markets JSON for M11. Please paste a valid JSON array.");
+      return;
+    }
+  }
+  if (typeof c.categoriesJson === "string" && c.categoriesJson.trim()) {
+    try {
+      c.categories = JSON.parse(c.categoriesJson);
+    } catch (_err) {
+      alert("Invalid Category Pills JSON for M11. Please paste a valid JSON array.");
+      return;
+    }
+  }
+  // Clean helper fields
+  delete c.marketsJson;
+  delete c.categoriesJson;
+  payload.custom = c;
+}
+
+
     await onSubmit(payload);
   }
 
@@ -150,7 +177,8 @@ const [pinLoading, setPinLoading] = useState(false);
                 t === "hero_v1" ||
                 t === "feature_v1" ||
                 t === "rail_v7" ||
-                t === "rail_v8"
+                t === "rail_v8"||
+              t === "m11"
               ) {
                 update("capacity", 1);
               }
@@ -186,6 +214,7 @@ const [pinLoading, setPinLoading] = useState(false);
             <option value="main_v8">Main (v8) — Lead + List</option>
             <option value="main_v9">Main (v9)</option>
             <option value="m10">Main (m10) — Two Articles</option>
+             <option value="m11">Main (m11) — Finance Composite</option>
 
             <option value="rail_v3">Rail (v3)</option>
             <option value="rail_v4">Rail (v4)</option>
@@ -783,6 +812,67 @@ const [pinLoading, setPinLoading] = useState(false);
         </label>
       </div>
     </fieldset>
+
+    {/* ================================
+     M11 – Finance Composite options
+     ================================ */}
+{form.template === "m11" && (
+  <fieldset className="border rounded p-3 space-y-3">
+    <legend className="px-1 text-sm font-medium">M11 options (optional)</legend>
+
+    <p className="text-xs text-gray-500">
+      If left blank, defaults will be used. You can paste JSON to override{" "}
+      <code>markets</code> (6 tiles) and <code>categories</code> (pills).
+    </p>
+
+    <div className="grid grid-cols-2 gap-3">
+      <label className="text-sm">
+        Markets JSON (array)
+        <textarea
+          rows={6}
+          className="border rounded p-2 w-full font-mono text-xs"
+          placeholder={`[
+  {"id":"nifty50","label":"NIFTY 50","value":"19,048.20","delta":{"value":"+1.2%","direction":"up"}},
+  {"id":"sensex","label":"Sensex","value":"64,100.25","delta":{"value":"-0.4%","direction":"down"}}
+]`}
+          value={form.custom?.marketsJson ?? ""}
+          onChange={(e) =>
+            setForm((f) => ({
+              ...f,
+              custom: { ...(f.custom || {}), marketsJson: e.target.value },
+            }))
+          }
+        />
+        <span className="block text-xs text-gray-500 mt-1">
+          Keys: <code>id,label,value</code>, <code>delta.value</code>, <code>delta.direction</code> ("up" | "down" | "flat"), optional <code>href</code>.
+        </span>
+      </label>
+
+      <label className="text-sm">
+        Category pills JSON (array)
+        <textarea
+          rows={6}
+          className="border rounded p-2 w-full font-mono text-xs"
+          placeholder={`[
+  {"key":"financ","label":"FINANC","active":true},
+  {"key":"energy","label":"ENERGY"}
+]`}
+          value={form.custom?.categoriesJson ?? ""}
+          onChange={(e) =>
+            setForm((f) => ({
+              ...f,
+              custom: { ...(f.custom || {}), categoriesJson: e.target.value },
+            }))
+          }
+        />
+        <span className="block text-xs text-gray-500 mt-1">
+          Keys: <code>key</code>, <code>label</code>, optional <code>active</code>, <code>href</code>.
+        </span>
+      </label>
+    </div>
+  </fieldset>
+)}
+
 
     {/* ===== SIDE STACK (3) ===== */}
     <fieldset className="border rounded p-2">

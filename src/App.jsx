@@ -32,6 +32,7 @@ const BreakingNewsAdmin = lazy(() => import('./pages/admin/BreakingNewsAdmin.jsx
 const TickerAdmin = lazy(() => import('./pages/admin/TickerAdmin.jsx'));
 const SectionsPage = lazy(() => import('./admin/sections/SectionsPage.jsx'));
 const SectionsV2Page = lazy(() => import('./admin/sectionsV2/SectionsV2Page.jsx'));
+
 // Autmotion (lazy)
 const AutmotionFeedsPage = lazy(() => import('./pages/admin/autmotion/FeedsPage.jsx'));
 const AutmotionQueuePage = lazy(() => import('./pages/admin/autmotion/QueuePage.jsx'));
@@ -39,15 +40,24 @@ const AutmotionDraftsPage = lazy(() => import('./pages/admin/autmotion/DraftsPag
 const AutmotionXSourcesPage = lazy(() => import('./pages/admin/autmotion/XSourcesPage.jsx'));
 const AutmotionXQueuePage = lazy(() => import('./pages/admin/autmotion/XQueuePage.jsx'));
 
+// NEW: Bulk import page (non-lazy)
+import ArticlesBulkImport from './admin/ArticlesBulkImport.jsx';
+
+// Admin Drafts (review/publish UI)
+import AdminDrafts from './admin/articles/AdminDrafts.jsx';
+
 // Analytics
 import { initAnalytics, notifyRouteChange, track } from './lib/analytics';
 
 // Error boundary
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
+
+import AdsPage from "./admin/AdsPage";
+
 /* ============ API base ============ */
-const isLocalHost = ['localhost', '127.0.0.1'].includes(location.hostname);
-const API_BASE =
+const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+export const API_BASE =
   import.meta.env.VITE_API_BASE || (isLocalHost ? 'http://localhost:4000' : '');
 
 export const api = axios.create({ baseURL: API_BASE });
@@ -94,7 +104,7 @@ export const styles = {
   p: { margin: '8px 0 0' },
   muted: { color: '#666' },
   hr: { border: 0, height: 1, background: '#f0f0f0', margin: '12px 0' },
-  input: { width: '100%', padding: 10, borderRadius: 10, border: '1px solid #e5e7eb', outline: 'none', marginBottom: 8 }
+  input: { width: '100%', padding: 10, borderRadius: 10, border: '1px solid #e5e7eb', outline: 'none', marginBottom: 8 },
 };
 
 export const CATEGORIES = ['All','General','Politics','Business','Finance','Tech','Sports','Entertainment','World'];
@@ -204,20 +214,19 @@ export function emitBreadcrumbs(trail = []) {
 /* ============ Category route wrapper (Finance/Business special layout) ============ */
 function AnyCategoryRoute() {
   const { slug } = useParams();
-  const raw = String(slug || '');           // keep original casing for API
-  const s = raw.toLowerCase();              // for routing decisions
+  const raw = String(slug || ''); // keep original casing for API
+  const s = raw.toLowerCase();    // for routing decisions
 
   if (s === 'finance' || s === 'business') {
     return (
       <FinanceCategoryPage
-        categorySlug={raw}                                   // ← pass original slug ("Business" or "finance")
+        categorySlug={raw} // pass original slug ("Business" or "finance")
         displayName={s === 'business' ? 'Business' : 'Finance'}
       />
     );
   }
   return <CategoryPage />;
 }
-
 
 /* ============ Router ============ */
 export default function App() {
@@ -260,6 +269,8 @@ export default function App() {
           {/* Public */}
           <Route path="/" element={<PublicHome />} />
           <Route path="/top-news" element={<TopNews />} />
+          <Route path="/admin/ads" element={<AdminShell><AdsPage /></AdminShell>} />
+
 
           {/* Route ALL categories through a wrapper so Finance layout applies to /finance and /Business */}
           <Route path="/category/:slug" element={<AnyCategoryRoute />} />
@@ -272,6 +283,8 @@ export default function App() {
           {/* Admin */}
           <Route path="/admin" element={<AdminShell><AdminDashboard /></AdminShell>} />
           <Route path="/admin/articles" element={<AdminShell><ArticlesPage /></AdminShell>} />
+          {/* NEW: Bulk import route */}
+          <Route path="/admin/articles/bulk" element={<AdminShell><ArticlesBulkImport /></AdminShell>} />
           <Route path="/admin/media" element={<AdminShell><AdminMedia /></AdminShell>} />
           <Route path="/admin/categories" element={<AdminShell><CategoriesPage /></AdminShell>} />
           <Route path="/admin/tags" element={<AdminShell><TagsPage /></AdminShell>} />
@@ -281,12 +294,16 @@ export default function App() {
           <Route path="/admin/ticker" element={<AdminShell><TickerAdmin /></AdminShell>} />
           <Route path="/admin/sections" element={<AdminShell><SectionsPage /></AdminShell>} />
           <Route path="/admin/sections-v2" element={<AdminShell><SectionsV2Page /></AdminShell>} />
+
           {/* Autmotion */}
           <Route path="/admin/autmotion/feeds" element={<AdminShell><AutmotionFeedsPage /></AdminShell>} />
           <Route path="/admin/autmotion/queue" element={<AdminShell><AutmotionQueuePage /></AdminShell>} />
           <Route path="/admin/autmotion/drafts" element={<AdminShell><AutmotionDraftsPage /></AdminShell>} />
           <Route path="/admin/autmotion/x-sources" element={<AdminShell><AutmotionXSourcesPage /></AdminShell>} />
           <Route path="/admin/autmotion/x-queue" element={<AdminShell><AutmotionXQueuePage /></AdminShell>} />
+
+          {/* Admin review of AI drafts (manual publish) */}
+          <Route path="/admin/drafts" element={<AdminShell><AdminDrafts /></AdminShell>} />
         </Routes>
       </Suspense>
     </ErrorBoundary>

@@ -35,7 +35,7 @@ import SportsV3 from "./SportsV3.jsx";
 import TechMainV1 from "./TechMainV1.jsx";
 import MainV8 from "./MainV8.jsx";
 import MainV9 from "./MainV9.jsx";
-
+import M11 from "./M11.jsx";
 /* ====== ADDED: M10 two-article section ====== */
 import M10 from "./M10.jsx";
 
@@ -127,6 +127,9 @@ const TEMPLATES = {
   /* ====== ADDED MAPPINGS so the plan can render it ====== */
   m10: M10,
   main_m10: M10, // in case backend sends "main_m10"
+
+   m11: M11,      // NEW
+  main_m11: M11, // optional alias safeguard
 };
 
 export default function SectionRenderer({ section }) {
@@ -134,6 +137,32 @@ export default function SectionRenderer({ section }) {
 
   // Normalize template (handles dashes, case, etc.)
   const key = normTemplate(section.template);
+  // --- SPECIAL: built-in ad block (no component needed)
+  if (key === "ad") {
+    const custom = getCustom(section);
+    const img = custom?.imageUrl;
+    const href = custom?.link;
+    if (!img) return null;
+    return (
+      <div className="my-4 flex justify-center">
+        <a href={href || "#"} target="_blank" rel="nofollow sponsored noopener">
+          <img src={img} alt="Sponsored" loading="lazy" className="max-w-full h-auto rounded-lg" />
+        </a>
+        <div
+          style={{
+            fontSize: 11,
+            color: "#94a3b8",
+            textTransform: "uppercase",
+            letterSpacing: ".06em",
+            marginTop: 4,
+          }}
+        >
+          Sponsored
+        </div>
+     </div>
+    );
+  }
+
   const Cmp = TEMPLATES[key];
 
   if (!Cmp) {
@@ -195,6 +224,28 @@ export default function SectionRenderer({ section }) {
       />
     );
   }
+
+    // Adapter: m11 is composite; FE should read from section.custom (not items)
+  if (key === "m11" || key === "main_m11") {
+    return <M11 data={custom} />;
+  }
+
+    // === AD: render an image that links out; any ratio, no fixed size ===
+  if (key === "ad") {
+    const img = custom?.imageUrl;
+    const href = custom?.link;
+
+    if (!img) return null; // nothing to render if the admin forgot image
+
+    return (
+      <div className="my-4 flex justify-center">
+        <a href={href || "#"} target="_blank" rel="noopener noreferrer">
+          <img src={img} alt="Sponsored" className="max-w-full h-auto" />
+        </a>
+      </div>
+    );
+  }
+
 
   return (
     <Cmp

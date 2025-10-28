@@ -1,5 +1,5 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://news-site-frontend-sigma.vercel.app/sitemap.xml
-Sitemap: https://news-site-frontend-sigma.vercel.app/news-sitemap.xml
+Sitemap: https://timelyvoice.com/sitemap.xml
+Sitemap: https://timelyvoice.com/news-sitemap.xml
