@@ -99,8 +99,8 @@ export default function ReaderArticle() {
   const navigate = useNavigate();
   const isMobile = useIsMobile(768); // <— rails hidden below 768px
 
-  const [article, setArticle] = useState(null);
-  const [error, setError] = useState('');
+const [article, setArticle] = useState(null);
+const [status, setStatus] = useState('loading'); // 'loading' | 'ok' | 'notfound' | 'error'
   const [related, setRelated] = useState([]);
   const [reading, setReading] = useState({ minutes: 0, words: 0 });
   const [comments, setComments] = useState([]);
@@ -128,13 +128,22 @@ export default function ReaderArticle() {
 
   const canonical = useMemo(() => `${window.location.origin}/article/${slug}`, [slug]);
 
+  // Ensure the initial HTML never says "Article not found" (prevents Soft 404)
+useEffect(() => {
+  removeManagedHeadTags();
+  upsertTag('title', {}, { textContent: 'Loading… — The Timely Voice' });
+  upsertTag('meta', { name: 'robots', content: 'index,follow' });
+}, [slug]);
+
+
   /* ---------- fetch article ---------- */
   useEffect(() => {
     let alive = true;
 
     (async () => {
       try {
-        setError('');
+        setStatus('loading');
+
 
         const res = await api.get(`/api/articles/slug/${encodeURIComponent(slug)}`, {
           validateStatus: (s) => (s >= 200 && s < 300) || s === 308,
@@ -149,6 +158,7 @@ export default function ReaderArticle() {
 
         const doc = res.data;
         setArticle(doc);
+        setStatus('ok');
 
         const bodyHtml = doc.bodyHtml || doc.body || '';
         const rt = estimateReadingTime(bodyHtml || doc.summary || '');
@@ -262,6 +272,8 @@ export default function ReaderArticle() {
       } catch {
         if (!alive) return;
         setError('Article not found');
+        setStatus('notfound');
+
       }
     })();
 
@@ -562,17 +574,21 @@ const summaryBox = {
   }
 
   // Early returns AFTER all hooks are declared
-  if (error) {
-    return (
-      <>
-        <SiteNav />
-        <main id="content" className="container">
-          <div style={{ color: 'crimson' }}>{error}</div>
-        </main>
-        <SiteFooter />
-      </>
-    );
-  }
+ if (status === 'notfound') {
+  return (
+    <>
+      <SiteNav />
+      <main id="content" className="container">
+        <div style={{ padding: 24 }}>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>This story isn’t available right now.</div>
+          <div>Explore the latest headlines below.</div>
+        </div>
+      </main>
+      <SiteFooter />
+    </>
+  );
+}
+
 
   if (!article) {
     return (
