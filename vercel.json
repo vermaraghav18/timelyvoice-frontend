@@ -1,15 +1,15 @@
 {
-  "version": 2,
-  "routes": [
-    { "src": "^/article/(.*)$", "dest": "/api/edge-ssr/article/$1" }
-  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "https://timelyvoice-backend.onrender.com/api/$1" },
     { "source": "/uploads/(.*)", "destination": "https://timelyvoice-backend.onrender.com/uploads/$1" },
+
     { "source": "/sitemap.xml", "destination": "https://timelyvoice-backend.onrender.com/sitemap.xml" },
     { "source": "/news-sitemap.xml", "destination": "https://timelyvoice-backend.onrender.com/news-sitemap.xml" },
+
     { "source": "/robots.txt", "destination": "https://timelyvoice-backend.onrender.com/robots.txt" },
     { "source": "/rss.xml", "destination": "https://timelyvoice-backend.onrender.com/rss.xml" },
-    { "source": "/rss/(.*)", "destination": "https://timelyvoice-backend.onrender.com/rss/$1" }
+    { "source": "/rss/(.*)", "destination": "https://timelyvoice-backend.onrender.com/rss/$1" },
+
+    { "source": "/(.*)", "destination": "/" }
   ]
 }

@@ -1,41 +1,33 @@
+// api/edge-ssr/article/[slug].ts
 export const config = { runtime: 'edge' };
 
-const UPSTREAM = 'https://timelyvoice-backend.onrender.com';
+const BACKEND = 'https://timelyvoice-backend.onrender.com';
 
 export default async function handler(req: Request) {
-  const url = new URL(req.url);
-  const slug = decodeURIComponent(url.pathname.replace(/^\/api\/edge-ssr\/article\//, ''));
-  if (!slug) return new Response('Not found', { status: 404 });
+  try {
+    const url = new URL(req.url);
+    const slug = url.pathname.split('/').pop() || '';
+    // Only let bots/crawlers use SSR HTML; humans get SPA
+    const ua = (req.headers.get('user-agent') || '').toLowerCase();
+    const isBot = /googlebot|adsbot|bingbot|duckduckbot|facebookexternalhit|twitterbot|linkedinbot|slackbot|discordbot/.test(ua);
 
-  const fwd: Record<string,string> = {};
-  for (const h of [
-    'user-agent',
-    'cf-ipcountry',
-    'x-vercel-ip-country',
-    'x-vercel-ip-country-region',
-    'x-vercel-ip-city'
-  ]) {
-    const v = req.headers.get(h); if (v) fwd[h] = v;
-  }
+    const target = isBot
+      ? `${BACKEND}/ssr/article/${encodeURIComponent(slug)}`
+      : `${BACKEND}/article/${encodeURIComponent(slug)}`; // fallback or you can just 302 to your SPA
 
-  const upstream = `${UPSTREAM}/ssr/article/${encodeURIComponent(slug)}`;
-  const r = await fetch(upstream, { headers: fwd, redirect: 'manual' });
-
-  if (r.status >= 300 && r.status < 400) {
-    const loc = r.headers.get('location') || `/article/${slug}`;
-    return Response.redirect(loc, r.status);
-  }
-  if (!r.ok) {
-    return new Response(await r.text().catch(()=>'SSR failed'), {
-      status: r.status,
-      headers: { 'content-type':'text/plain; charset=utf-8','cache-control':'no-store' }
+    const r = await fetch(target, {
+      headers: {
+        'x-forwarded-host': url.host,
+        'x-forwarded-proto': url.protocol.replace(':', ''),
+      }
     });
+
+    // Pass through HTML or JSON as-is
+    return new Response(await r.body, {
+      status: r.status,
+      headers: r.headers
+    });
+  } catch (e: any) {
+    return new Response('Edge SSR proxy failed', { status: 502 });
   }
-
-  const headers = new Headers(r.headers);
-  headers.set('content-type', 'text/html; charset=utf-8');
-  headers.set('cache-control','public, max-age=60, s-maxage=300, stale-while-revalidate=600');
-  headers.set('vary','CF-IPCountry, X-Vercel-IP-Country, X-Vercel-IP-Country-Region, X-Vercel-IP-City, User-Agent');
-
-  return new Response(r.body, { status: 200, headers });
 }
