@@ -1,5 +1,17 @@
 {
   "rewrites": [
+    {
+      "source": "/article/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i)(googlebot|adsbot|bingbot|duckduckbot|facebookexternalhit|twitterbot|linkedinbot|slackbot|discordbot)"
+        }
+      ],
+      "destination": "/api/edge-ssr/article/:slug"
+    },
+
     { "source": "/api/(.*)", "destination": "https://timelyvoice-backend.onrender.com/api/$1" },
     { "source": "/uploads/(.*)", "destination": "https://timelyvoice-backend.onrender.com/uploads/$1" },
 
