@@ -131,14 +131,14 @@ export default function ArticlesPage() {
   const fetchArticles = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/api/articles", {
+      const res = await api.get("/api/admin/articles", {
         params: {
           status: status || undefined,
           category: category || undefined,
           q: debouncedQ || undefined,
           page,
           limit,
-          all: "1", // ensure admin sees drafts/scheduled when needed
+
         },
         headers: geoHeaders(),
       });
@@ -214,7 +214,7 @@ export default function ArticlesPage() {
       updateItemsLocal(a => (a._id === id ? { ...a, status: newStatus } : a));
     }
     try {
-      await api.patch(`/api/articles/${id}`, patch);
+      const res = await api.patch(`/api/admin/articles/${id}`, patch);
       toast.push({ type: "success", title: "Saved" });
     } catch (e) {
       toast.push({ type: "error", title: "Failed", message: String(e?.response?.data?.message || e.message) });
@@ -225,7 +225,7 @@ export default function ArticlesPage() {
   async function deleteOne(id) {
     removeItemsLocal([id]);
     try {
-      await api.delete(`/api/articles/${id}`);
+      await api.delete(`/api/admin/articles/${id}`);
       toast.push({ type: "success", title: "Deleted" });
       if (data.items.length === 1 && page > 1) setPage(p => p - 1);
     } catch (e) {
@@ -267,7 +267,7 @@ export default function ArticlesPage() {
     const newStatus = action === "publish" ? "published" : "draft";
     updateItemsLocal(a => (selectedIds.has(a._id) ? { ...a, status: newStatus } : a));
     const results = await Promise.allSettled(
-      ids.map(id => api.patch(`/api/articles/${id}`, { status: newStatus }))
+      ids.map(id => api.patch(`/api/admin/articles/${id}`, { status: newStatus }))
     );
     const failed = results.filter(r => r.status === "rejected").length;
     setSelectedIds(new Set());
@@ -310,7 +310,7 @@ export default function ArticlesPage() {
 
   async function openEdit(id) {
     try {
-      const res = await api.get(`/api/articles/${id}`, { headers: geoHeaders() });
+      const res = await api.get(`/api/admin/articles/${id}`, { headers: geoHeaders() });
       const a = res.data;
 
       // Turn array of geoAreas -> comma text for editor
@@ -393,7 +393,7 @@ export default function ArticlesPage() {
         // Enforce soft limits on meta fields before saving
         if (payload.metaTitle) payload.metaTitle = String(payload.metaTitle).slice(0, META_TITLE_MAX);
         if (payload.metaDesc)  payload.metaDesc  = String(payload.metaDesc).slice(0, META_DESC_MAX);
-        await api.patch(`/api/articles/${editingId}`, payload);
+        await api.patch(`/api/admin/articles/${editingId}`, payload);
         setAutoSavedAt(new Date());
       } catch (e) {
         // Non-blocking toast to avoid noise on every keystroke
@@ -424,10 +424,10 @@ export default function ArticlesPage() {
       if (payload.metaDesc)  payload.metaDesc  = String(payload.metaDesc).slice(0, META_DESC_MAX);
 
       if (editingId) {
-        await api.patch(`/api/articles/${editingId}`, payload);
+        await api.patch(`/api/admin/articles/${editingId}`, payload);
         toast.push({ type: "success", title: "Updated" });
       } else {
-        await api.post(`/api/articles`, payload);
+       await api.post(`/api/admin/articles`, payload);
         toast.push({ type: "success", title: "Created" });
       }
 
@@ -490,10 +490,16 @@ export default function ArticlesPage() {
       try {
         const syncOg = !!(imgEdits[id]?.syncOg ?? true);
         const payload = syncOg ? { imageUrl: value, ogImage: value } : { imageUrl: value };
-        await api.patch(`/api/articles/${id}`, payload);
-        // reflect on list (so preview updates)
-        updateItemsLocal(a => (a._id === id ? { ...a, imageUrl: value, ...(syncOg ? { ogImage: value } : {}) } : a));
-        setImgState(id, { saving: "saved" });
+       const res = await api.patch(`/api/admin/articles/${id}`, payload);
+       const updated = res?.data || {};
+       // Use server-trimmed values (may differ from what user typed)
+       const nextImage = updated.imageUrl ?? value ?? "";
+       const nextOg    = updated.ogImage ?? (syncOg ? nextImage : (updated.ogImage || ""));
+       updateItemsLocal(a =>
+         a._id === id ? { ...a, imageUrl: nextImage, ogImage: nextOg } : a
+       );
+       // Keep the input box in sync with the persisted URL
+       setImgState(id, { value: nextImage, saving: "saved" });
         setTimeout(() => setImgState(id, { saving: "idle" }), 900);
       } catch (e) {
         console.warn("image quick-save failed", e?.response?.data || e);
@@ -601,7 +607,7 @@ export default function ArticlesPage() {
                 imgState.saving === "saving" ? "#f59e0b" :
                 imgState.saving === "saved"  ? "#10b981" :
                 imgState.saving === "error"  ? "#ef4444" : "#d1d5db";
-              const previewUrl = imgState.value || a.imageUrl || "";
+              const previewUrl = a.ogImage || a.imageUrl || imgState.value || "";
               return (
               <tr key={a._id} style={{ borderTop: "1px solid #f0f0f0" }}>
                 <td style={td}><input type="checkbox" checked={selectedIds.has(a._id)} onChange={()=>toggleSelect(a._id)} /></td>
@@ -695,7 +701,10 @@ export default function ArticlesPage() {
                         loading="lazy"
                         decoding="async"
                         style={{ width: 200, height: 120, objectFit: "cover", borderRadius: 10, border: "1px solid #eee", background: "#f8fafc" }}
-                        onError={(e)=>{ e.currentTarget.style.display='none'; }}
+                        onError={(e)=>{ e.currentTarget.replaceWith(Object.assign(document.createElement('div'), {
+                        style: "width:200px;height:120px;display:grid;place-items:center;border:1px solid #eee;border-radius:10px;background:#f8fafc;color:#999;font-size:12px",
+                        innerText: "Image failed",
+                      })); }}
                       />
                     ) : (
                       <div style={{ width: 200, height: 120, display: "grid", placeItems: "center", borderRadius: 10, border: "1px solid #eee", background: "#f8fafc", color: "#999", fontSize: 12 }}>

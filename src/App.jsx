@@ -52,8 +52,17 @@ import { initAnalytics, notifyRouteChange, track } from './lib/analytics';
 // Error boundary
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
-
 import AdsPage from "./admin/AdsPage";
+
+/* ========= NEW: E-E-A-T static pages (lazy) ========= */
+const AboutPage = lazy(() => import('./pages/static/About.jsx'));
+const ContactPage = lazy(() => import('./pages/static/Contact.jsx'));
+const EditorialPolicyPage = lazy(() => import('./pages/static/EditorialPolicy.jsx'));
+const CorrectionsPage = lazy(() => import('./pages/static/Corrections.jsx'));
+const PrivacyPolicyPage = lazy(() => import('./pages/static/PrivacyPolicy.jsx'));
+const TermsPage = lazy(() => import('./pages/static/Terms.jsx'));
+const AdvertisingPage = lazy(() => import('./pages/static/Advertising.jsx'));
+const AuthorPage = lazy(() => import('./pages/static/Author.jsx'));
 
 /* ============ API base ============ */
 const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
@@ -271,13 +280,23 @@ export default function App() {
           <Route path="/top-news" element={<TopNews />} />
           <Route path="/admin/ads" element={<AdminShell><AdsPage /></AdminShell>} />
 
-
           {/* Route ALL categories through a wrapper so Finance layout applies to /finance and /Business */}
           <Route path="/category/:slug" element={<AnyCategoryRoute />} />
 
           <Route path="/tag/:slug" element={<TagPage />} />
           <Route path="/article/:slug" element={<ReaderArticle />} />
           <Route path="/search" element={<SearchPage />} />
+
+          {/* ===== NEW: E-E-A-T static routes ===== */}
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/editorial-policy" element={<EditorialPolicyPage />} />
+          <Route path="/corrections" element={<CorrectionsPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/advertising" element={<AdvertisingPage />} />
+          <Route path="/author/:slug" element={<AuthorPage />} />
+
           <Route path="*" element={<NotFound />} />
 
           {/* Admin */}

@@ -1,7 +1,8 @@
 // src/pages/public/CategoryPage.jsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
-import { api, removeManagedHeadTags, upsertTag } from '../../App.jsx';
+import { api, removeManagedHeadTags, upsertTag, setJsonLd } from '../../App.jsx';
+
 import SiteNav from '../../components/SiteNav.jsx';
 import SiteFooter from '../../components/SiteFooter.jsx';
 import SectionRenderer from '../../components/sections/SectionRenderer.jsx';
@@ -219,13 +220,9 @@ function interleaveAfterEveryN(items, inserts, n) {
 }
 
 /* ===================== JS bottom-pin helper ===================== */
-/**
- * Keep childRef scrolling normally. When its bottom hits viewport bottom (minus offset),
- * switch to fixed-bottom. When the container's bottom is reached, switch to absolute-bottom.
- */
 function useBottomPin(containerRef, childRef, offset = 16) {
-  const styleState = useRef({}); // cache to avoid layout thrash
-  const [style, setStyle] = useState({}); // applied to child
+  const styleState = useRef({});
+  const [style, setStyle] = useState({});
 
   useEffect(() => {
     function update() {
@@ -234,7 +231,6 @@ function useBottomPin(containerRef, childRef, offset = 16) {
       if (!container || !el) return;
 
       const cRect = container.getBoundingClientRect();
-      const eRect = el.getBoundingClientRect();
 
       // convert to document coordinates
       const scrollY = window.scrollY || window.pageYOffset;
@@ -252,12 +248,9 @@ function useBottomPin(containerRef, childRef, offset = 16) {
 
       let nextStyle;
 
-      // Phase 1: before rail bottom reaches viewport bottom → normal (static)
       if (viewportBottom <= elBottomNatural) {
         nextStyle = { position: 'static', left: 'auto', width: 'auto' };
-      }
-      // Phase 2: rail bottom would go past viewport bottom but container hasn't ended → fix to bottom
-      else if (viewportBottom > elBottomNatural && viewportBottom < cBottom) {
+      } else if (viewportBottom > elBottomNatural && viewportBottom < cBottom) {
         nextStyle = {
           position: 'fixed',
           left: `${cLeft}px`,
@@ -265,10 +258,7 @@ function useBottomPin(containerRef, childRef, offset = 16) {
           width: `${cWidth}px`,
           zIndex: 1,
         };
-      }
-      // Phase 3: container end reached → lock at container bottom
-      else {
-        // absolute within container
+      } else {
         nextStyle = {
           position: 'absolute',
           left: 0,
@@ -278,7 +268,6 @@ function useBottomPin(containerRef, childRef, offset = 16) {
       }
 
       const prev = styleState.current;
-      // shallow compare
       const changed = Object.keys(nextStyle).length !== Object.keys(prev || {}).length ||
         Object.keys(nextStyle).some(k => String(nextStyle[k]) !== String(prev[k]));
       if (changed) {
@@ -388,7 +377,35 @@ export default function CategoryPage() {
         href: `${window.location.origin}/rss/${encodeURIComponent(slug)}.xml`,
       });
     }
-  }, [category, canonical, slug]);
+
+    // JSON-LD: CollectionPage + Breadcrumb
+    try {
+      const coll = {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: category ? `${category.name} — NewsSite` : 'Category — NewsSite',
+        description: (category?.description || `Latest ${category?.name || ''} stories on NewsSite`).trim(),
+        url: canonical
+      };
+      const breadcrumb = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: `${window.location.origin}/` },
+          { '@type': 'ListItem', position: 2, name: category?.name || slug, item: canonical }
+        ]
+      };
+      setJsonLd({ '@context': 'https://schema.org', '@graph': [coll, breadcrumb] });
+    } catch {}
+
+    // Noindex empty categories (avoid thin content indexing)
+    const isEmpty = Array.isArray(articles) && articles.length === 0;
+    if (isEmpty) {
+      upsertTag('meta', { name: 'robots', content: 'noindex,follow', 'data-managed': 'robots' });
+    } else {
+      upsertTag('meta', { name: 'robots', 'data-managed': 'robots' }, { remove: true });
+    }
+  }, [category, canonical, slug, articles]);
 
   /* fetch sections for THIS page path (head_*) */
   useEffect(() => {
@@ -453,13 +470,12 @@ export default function CategoryPage() {
     (async () => {
       try {
         setRailsLoading(true); setRailsError('');
-       const res = await api.get('/api/sections/plan', {
-  params: {
-    sectionType: 'category',
-    sectionValue: String(slug || '').toLowerCase(), // keep lowercase for consistency
-    // mode: 'public', // <— include if your backend uses mode; otherwise omit
-  },
-});
+        const res = await api.get('/api/sections/plan', {
+          params: {
+            sectionType: 'category',
+            sectionValue: String(slug || '').toLowerCase(),
+          },
+        });
 
         const rows = Array.isArray(res.data) ? res.data : [];
         if (!cancel) setPlanSections(rows);
@@ -486,6 +502,13 @@ export default function CategoryPage() {
 
   const isWorldCategory = String(slug || '').toLowerCase() === 'world';
 
+  // Intro length threshold
+  const MIN_INTRO_LEN = 80;
+
+  // Ad positions (1-based)
+  const AD_POSITIONS_DESKTOP = [6, 9, 13, 17];
+  const AD_POSITIONS_MOBILE  = [7, 11, 15, 19];
+
   const renderInsetAfter = (idx) => {
     const blocks = insetBlocks.filter((b) => b.__after === idx);
     if (!blocks.length) return null;
@@ -503,7 +526,7 @@ export default function CategoryPage() {
   const leftRailRef = useRef(null);
   const rightRailRef = useRef(null);
 
-  const BOTTOM_OFFSET = 16; // gap from viewport bottom
+  const BOTTOM_OFFSET = 16;
   const leftRailStyle = useBottomPin(leftAsideRef, leftRailRef, BOTTOM_OFFSET);
   const rightRailStyle = useBottomPin(rightAsideRef, rightRailRef, BOTTOM_OFFSET);
 
@@ -556,41 +579,58 @@ export default function CategoryPage() {
                     </div>
                   ))}
 
+                  {/* Category heading + intro (desktop) */}
+                  <h1 style={{ margin: '4px 0 8px', fontSize: 22, lineHeight: 1.3 }}>
+                    {category?.name || (slug || 'Category')}
+                  </h1>
+                  {category?.description && category.description.trim().length >= MIN_INTRO_LEN && (
+                    <p style={{ margin: '6px 0 14px', fontSize: 15, lineHeight: 1.6, color: '#6b7280' }}>
+                      {category.description.trim()}
+                    </p>
+                  )}
+
                   {(!articles || articles.length === 0) ? (
                     <p style={{ textAlign: 'center' }}>No articles yet.</p>
                   ) : (
                     <>
                       <LeadCard a={lead} />
 
-                      {isWorldCategory && (
-                        <>
-                          <div style={{ margin: '12px 0', textAlign: 'center' }}>
-                            <AdSenseAuto slot={ADS_SLOT_MAIN} />
-                          </div>
-                          <div style={{ margin: '12px 0' }}>
-                            <AdSenseInArticle />
-                          </div>
-                        </>
-                      )}
-
                       <div style={listStyle}>
-                        {rest.map((a, idx) => (
-                          <div key={a._id || a.id || a.slug || idx}>
-                            <ArticleRow a={a} />
-                            {renderInsetAfter(idx + 1)}
+                        {rest.map((a, idx) => {
+                          const pos = idx + 1; // 1-based
+                          return (
+                            <div key={a._id || a.id || a.slug || idx}>
+                              <ArticleRow a={a} />
+                              {renderInsetAfter(pos)}
 
-                            {isWorldCategory && idx === 2 && (
-                              <div style={{ margin: '12px 0' }}>
-                                <AdSenseFluidKey />
-                              </div>
-                            )}
-                            {isWorldCategory && idx === 4 && (
-                              <div style={{ margin: '12px 0', textAlign: 'center' }}>
-                                <AdSenseAuto slot={ADS_SLOT_SECOND} />
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                              {/* Delay ads until after useful content */}
+                              {isWorldCategory && AD_POSITIONS_DESKTOP.includes(pos) && (
+                                <>
+                                  {pos === AD_POSITIONS_DESKTOP[0] && (
+                                    <div style={{ margin: '12px 0', textAlign: 'center' }}>
+                                      <AdSenseAuto slot={ADS_SLOT_MAIN} />
+                                    </div>
+                                  )}
+                                  {pos === AD_POSITIONS_DESKTOP[1] && (
+                                    <div style={{ margin: '12px 0' }}>
+                                      <AdSenseInArticle />
+                                    </div>
+                                  )}
+                                  {pos === AD_POSITIONS_DESKTOP[2] && (
+                                    <div style={{ margin: '12px 0' }}>
+                                      <AdSenseFluidKey />
+                                    </div>
+                                  )}
+                                  {pos === AD_POSITIONS_DESKTOP[3] && (
+                                    <div style={{ margin: '12px 0', textAlign: 'center' }}>
+                                      <AdSenseAuto slot={ADS_SLOT_SECOND} />
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
 
                       {isWorldCategory && (
@@ -639,22 +679,18 @@ export default function CategoryPage() {
                   </div>
                 ))}
 
+                {/* Category intro (mobile) */}
+                {category?.description && category.description.trim().length >= MIN_INTRO_LEN && (
+                  <p style={{ margin: '8px 0 12px', fontSize: 15, lineHeight: 1.6, color: '#6b7280' }}>
+                    {category.description.trim()}
+                  </p>
+                )}
+
                 {(!articles || articles.length === 0) ? (
                   <p style={{ textAlign: 'center' }}>No articles yet.</p>
                 ) : (
                   <>
                     <LeadCard a={lead} />
-
-                    {isWorldCategory && (
-                      <>
-                        <div style={{ margin: '12px 0', textAlign: 'center' }}>
-                          <AdSenseAuto slot={ADS_SLOT_MAIN} />
-                        </div>
-                        <div style={{ margin: '12px 0' }}>
-                          <AdSenseInArticle />
-                        </div>
-                      </>
-                    )}
 
                     {isMobile ? (
                       <div style={listStyle}>
@@ -664,15 +700,29 @@ export default function CategoryPage() {
                               <ArticleRow a={block.data} />
                               {renderInsetAfter(idx + 1)}
 
-                              {isWorldCategory && idx === 3 && (
-                                <div style={{ margin: '12px 0' }}>
-                                  <AdSenseFluidKey />
-                                </div>
-                              )}
-                              {isWorldCategory && idx === 8 && (
-                                <div style={{ margin: '12px 0', textAlign: 'center' }}>
-                                  <AdSenseAuto slot={ADS_SLOT_SECOND} />
-                                </div>
+                              {isWorldCategory && AD_POSITIONS_MOBILE.includes(idx + 1) && (
+                                <>
+                                  {idx + 1 === AD_POSITIONS_MOBILE[0] && (
+                                    <div style={{ margin: '12px 0', textAlign: 'center' }}>
+                                      <AdSenseAuto slot={ADS_SLOT_MAIN} />
+                                    </div>
+                                  )}
+                                  {idx + 1 === AD_POSITIONS_MOBILE[1] && (
+                                    <div style={{ margin: '12px 0' }}>
+                                      <AdSenseInArticle />
+                                    </div>
+                                  )}
+                                  {idx + 1 === AD_POSITIONS_MOBILE[2] && (
+                                    <div style={{ margin: '12px 0' }}>
+                                      <AdSenseFluidKey />
+                                    </div>
+                                  )}
+                                  {idx + 1 === AD_POSITIONS_MOBILE[3] && (
+                                    <div style={{ margin: '12px 0', textAlign: 'center' }}>
+                                      <AdSenseAuto slot={ADS_SLOT_SECOND} />
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           ) : (
@@ -687,23 +737,40 @@ export default function CategoryPage() {
                       </div>
                     ) : (
                       <div style={listStyle}>
-                        {rest.map((a, idx) => (
-                          <div key={a._id || a.id || a.slug || idx}>
-                            <ArticleRow a={a} />
-                            {renderInsetAfter(idx + 1)}
+                        {rest.map((a, idx) => {
+                          const pos = idx + 1;
+                          return (
+                            <div key={a._id || a.id || a.slug || idx}>
+                              <ArticleRow a={a} />
+                              {renderInsetAfter(pos)}
 
-                            {isWorldCategory && idx === 2 && (
-                              <div style={{ margin: '12px 0' }}>
-                                <AdSenseFluidKey />
-                              </div>
-                            )}
-                            {isWorldCategory && idx === 4 && (
-                              <div style={{ margin: '12px 0', textAlign: 'center' }}>
-                                <AdSenseAuto slot={ADS_SLOT_SECOND} />
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                              {isWorldCategory && AD_POSITIONS_DESKTOP.includes(pos) && (
+                                <>
+                                  {pos === AD_POSITIONS_DESKTOP[0] && (
+                                    <div style={{ margin: '12px 0', textAlign: 'center' }}>
+                                      <AdSenseAuto slot={ADS_SLOT_MAIN} />
+                                    </div>
+                                  )}
+                                  {pos === AD_POSITIONS_DESKTOP[1] && (
+                                    <div style={{ margin: '12px 0' }}>
+                                      <AdSenseInArticle />
+                                    </div>
+                                  )}
+                                  {pos === AD_POSITIONS_DESKTOP[2] && (
+                                    <div style={{ margin: '12px 0' }}>
+                                      <AdSenseFluidKey />
+                                    </div>
+                                  )}
+                                  {pos === AD_POSITIONS_DESKTOP[3] && (
+                                    <div style={{ margin: '12px 0', textAlign: 'center' }}>
+                                      <AdSenseAuto slot={ADS_SLOT_SECOND} />
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
 
