@@ -1,90 +1,68 @@
-export const config = { runtime: "edge" };
+export const config = { runtime: 'edge' };
 
-const BOT_UA =
-  /Googlebot|AdsBot|bingbot|DuckDuckBot|facebookexternalhit|Twitterbot|LinkedInBot|Slackbot|Discordbot/i;
+const UPSTREAM = 'https://timelyvoice-backend.onrender.com';
 
-// set this in Vercel → Project → Settings → Environment Variables
-const BACKEND_ORIGIN =
-  process.env.BACKEND_ORIGIN || "http://localhost:4000";
-
-/**
- * For /article/:slug requests:
- *  - Bots → proxy to backend SSR  ( /ssr/article/:slug )
- *  - Humans → serve the SPA (index.html), letting React handle routing
- */
-export default async function handler(req: Request, ctx: any) {
+export default async function handler(req: Request) {
+  // Extract slug from the request URL
   const url = new URL(req.url);
+  // path: /api/edge-ssr/article/<slug> (maybe slug has extra / ?)
+  const slug = decodeURIComponent(url.pathname.replace(/^\/api\/edge-ssr\/article\//, ''));
 
-  // Force canonical host (optional but recommended)
-  if (url.hostname === "timelyvoice.com") {
-    url.hostname = "www.timelyvoice.com";
-    return Response.redirect(url.toString(), 308);
-  }
-
-  // Resolve slug from pathname: /article/<slug>
-  const slug = url.pathname.replace(/^\/article\//, "");
+  // If slug disappears, return 404 quickly
   if (!slug) {
-    // no slug → send SPA
-    return serveSPA(req, url);
+    return new Response('Not found', { status: 404 });
   }
 
-  const ua = String(req.headers.get("user-agent") || "");
-  const isBot = BOT_UA.test(ua);
+  // Forward bot/country hints to backend (helps your geo/bot logic)
+  const fwdHeaders: Record<string, string> = {};
+  const copy = (name: string) => {
+    const v = req.headers.get(name);
+    if (v) fwdHeaders[name] = v;
+  };
+  [
+    'user-agent',
+    'cf-ipcountry',
+    'x-vercel-ip-country',
+    'x-vercel-ip-country-region',
+    'x-vercel-ip-city',
+  ].forEach(copy);
 
-  if (!isBot) {
-    // Human → serve SPA so the client app hydrates /article/:slug
-    return serveSPA(req, url);
-  }
+  // Ask backend SSR endpoint for HTML
+  const upstreamUrl = `${UPSTREAM}/ssr/article/${encodeURIComponent(slug)}`;
 
-  // Bot → fetch server-rendered HTML from backend
-  const ssrUrl = `${BACKEND_ORIGIN}/ssr/article/${encodeURIComponent(slug)}`;
-
-  // pass geo & useful headers through to backend
-  const passthroughHeaders = new Headers();
-  for (const h of [
-    "cf-ipcountry",
-    "x-vercel-ip-country",
-    "x-vercel-ip-country-region",
-    "x-vercel-ip-city",
-    "accept-language",
-    "user-agent",
-  ]) {
-    const v = req.headers.get(h);
-    if (v) passthroughHeaders.set(h, v);
-  }
-
-  const resp = await fetch(ssrUrl, {
-    headers: passthroughHeaders,
-    // Edge fetch defaults to GET; keep it simple
+  // Don’t auto-follow redirects; we want to forward them
+  const r = await fetch(upstreamUrl, {
+    method: 'GET',
+    redirect: 'manual',
+    headers: fwdHeaders,
   });
 
-  // Forward status/body, but ensure good caching for bots
-  const outHeaders = new Headers(resp.headers);
-  outHeaders.set(
-    "Cache-Control",
-    // cache briefly at browser & longer at CDN; tweak as you like
-    "public, max-age=60, s-maxage=300, stale-while-revalidate=600"
+  // If backend asked to redirect (e.g. slug changed), mirror it
+  if (r.status >= 300 && r.status < 400) {
+    const loc = r.headers.get('location') || `/article/${slug}`;
+    return Response.redirect(loc, r.status);
+  }
+
+  // If backend failed, bubble status
+  if (!r.ok) {
+    const text = await r.text().catch(() => 'SSR failed');
+    return new Response(text, {
+      status: r.status,
+      headers: {
+        'content-type': 'text/plain; charset=utf-8',
+        'cache-control': 'no-store',
+      },
+    });
+  }
+
+  // Stream HTML back to the crawler/browser
+  const headers = new Headers(r.headers);
+  headers.set('content-type', 'text/html; charset=utf-8');
+  headers.set('cache-control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+  headers.set(
+    'vary',
+    'CF-IPCountry, X-Vercel-IP-Country, X-Vercel-IP-Country-Region, X-Vercel-IP-City, User-Agent'
   );
-  outHeaders.set(
-    "Vary",
-    "CF-IPCountry, X-Vercel-IP-Country, X-Vercel-IP-Country-Region, X-Vercel-IP-City, Authorization"
-  );
-  outHeaders.set("X-Edge-SSR", "1");
 
-  return new Response(resp.body, {
-    status: resp.status,
-    headers: outHeaders,
-  });
-}
-
-function serveSPA(req: Request, url: URL) {
-  // Let Vercel serve the built index.html and assets
-  const assetUrl = new URL("/", url);
-  // Important: we want the actual built index.html, not a redirect
-  return fetch(assetUrl.toString(), {
-    headers: {
-      // Helps with correct content negotiation
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    },
-  });
+  return new Response(r.body, { status: 200, headers });
 }
