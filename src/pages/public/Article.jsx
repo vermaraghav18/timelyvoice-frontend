@@ -229,13 +229,13 @@ export default function ReaderArticle() {
         // upsertTag('meta', { name: 'twitter:site', content: '@YourHandle' });
 
         upsertTag('meta', { property: 'og:type', content: 'article' });
-        upsertTag('meta', { property: 'og:title', content: ogTitle });
+        upsertTag('meta', { property: 'og:title', content: title });
         upsertTag('meta', { property: 'og:description', content: String(desc).slice(0, 200) });
         upsertTag('meta', { property: 'og:url', content: canonical });
         if (ogImage) upsertTag('meta', { property: 'og:image', content: ogImage });
 
         upsertTag('meta', { name: 'twitter:card', content: ogImage ? 'summary_large_image' : 'summary' });
-        upsertTag('meta', { name: 'twitter:title', content: ogTitle });
+        upsertTag('meta', { name: 'twitter:title', content: title });
         upsertTag('meta', { name: 'twitter:description', content: String(desc).slice(0, 200) });
         if (ogImage) upsertTag('meta', { name: 'twitter:image', content: ogImage });
 
