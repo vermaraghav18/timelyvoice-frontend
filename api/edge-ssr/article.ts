@@ -1,63 +1,72 @@
+// frontend/api/edge-ssr/article.ts
 export const config = { runtime: "edge" };
 
-const BACKEND = process.env.BACKEND_ORIGIN ?? "https://timelyvoice-backend.onrender.com";
+const BACKEND =
+  process.env.BACKEND_ORIGIN ?? "https://timelyvoice-backend.onrender.com";
 
+/**
+ * Proxies the backend SSR HTML for bots (and for manual checks).
+ * - Always hits /ssr/article/:slug on the backend (returns full HTML <body>).
+ * - Forces a trusted bot UA when the incoming request doesn't provide one.
+ * - Normalizes headers so Vercel/CDNs can cache briefly.
+ */
 export default async function handler(req: Request) {
-  const url = new URL(req.url);
-  const slug = url.searchParams.get("slug");
-  if (!slug) return new Response("Missing slug", { status: 400 });
-
   try {
-    // Fetch JSON instead of HTML
-    const r = await fetch(`${BACKEND}/api/articles/${slug}`);
-    if (!r.ok) return new Response("Not found", { status: 404 });
-    const article = await r.json();
+    const url = new URL(req.url);
+    const slug = url.searchParams.get("slug") || "";
+    if (!slug) {
+      return new Response("Missing slug", { status: 400 });
+    }
 
-    const html = `
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>${article.title} – The Timely Voice</title>
-  <meta name="description" content="${article.description}" />
-  <link rel="canonical" href="https://timelyvoice.com/article/${slug}" />
-  <meta property="og:title" content="${article.title}" />
-  <meta property="og:image" content="${article.image}" />
-  <meta property="og:description" content="${article.description}" />
-  <meta property="og:url" content="https://timelyvoice.com/article/${slug}" />
-  <script type="application/ld+json">
-  ${JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "NewsArticle",
-    headline: article.title,
-    description: article.description,
-    image: [article.image],
-    datePublished: article.createdAt,
-    dateModified: article.updatedAt,
-    author: [{ "@type": "Person", name: article.author || "Desk" }],
-    publisher: {
-      "@type": "Organization",
-      name: "The Timely Voice",
-      logo: { "@type": "ImageObject", url: "https://timelyvoice.com/logo.png" }
-    },
-    url: `https://timelyvoice.com/article/${slug}`
-  })}
-  </script>
-</head>
-<body>
-  <article style="max-width:800px;margin:0 auto;padding:24px;font-family:system-ui;">
-    <h1>${article.title}</h1>
-    ${article.contentHtml || article.body || "<p>No content found.</p>"}
-  </article>
-</body>
-</html>`;
+    // If caller didn't set a UA (or it's empty), use a trusted bot UA so
+    // backend skips any non-bot geo blocks and serves SSR.
+    const incomingUA = req.headers.get("user-agent");
+    const ua =
+      incomingUA && incomingUA.trim().length > 0
+        ? incomingUA
+        : "Googlebot/2.1 (+http://www.google.com/bot.html)";
 
-    return new Response(html, {
-      headers: { "content-type": "text/html; charset=utf-8" }
+    // IMPORTANT: fetch the backend's SSR HTML route
+    const upstream = `${BACKEND}/ssr/article/${encodeURIComponent(slug)}`;
+
+    const r = await fetch(upstream, {
+      // Pass through a few headers. Avoid blindly forwarding all.
+      headers: {
+        "user-agent": ua,
+        "x-forwarded-host": url.host,
+        "x-forwarded-proto": url.protocol.replace(":", ""),
+        // You can add an internal flag if you want to bypass geo in the backend,
+        // but not necessary if UA is trusted.
+        // "x-edge-ssr": "1",
+      },
+      cache: "no-store", // just to be explicit; backend controls caching anyway
     });
-  } catch (err) {
-    console.error(err);
-    return new Response("SSR failed", { status: 500 });
+
+    const bodyText = await r.text();
+
+    // If backend says 404 or 410 etc, just pass that code + text back
+    if (!r.ok) {
+      return new Response(bodyText || "Not found", {
+        status: r.status,
+        headers: {
+          "content-type": r.headers.get("content-type") ?? "text/html; charset=utf-8",
+          "cache-control": "public, max-age=0, must-revalidate",
+          "vary": "user-agent, accept-encoding",
+        },
+      });
+    }
+
+    // Return normalized headers (don’t stream all upstream headers verbatim)
+    return new Response(bodyText, {
+      status: 200,
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        // short cache to be safe; your backend also sets cache headers
+        "cache-control": "public, max-age=60, s-maxage=300, stale-while-revalidate=60",
+        "vary": "user-agent, accept-encoding",
+      },
+    });
+  } catch (e) {
+    return new Response("Edge SSR proxy failed", { status: 502 });
   }
 }
