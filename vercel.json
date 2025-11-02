@@ -1,9 +1,6 @@
 {
   "rewrites": [
-    {
-      "source": "/api/edge-ssr/:path*",
-      "destination": "/api/edge-ssr/:path*"
-    },
+    { "source": "/api/edge-ssr/:path*", "destination": "/api/edge-ssr/:path*" },
 
     {
       "source": "/article/:slug",
@@ -14,42 +11,18 @@
           "value": "(?:[Gg]ooglebot|[Aa]ds[Bb]ot|[Bb]ing[Bb]ot|[Dd]uck[Dd]uck[Bb]ot|facebookexternalhit|[Tt]witterbot|[Ll]inked[Ii]n[Bb]ot|[Ss]lackbot|[Dd]iscordbot|[Bb]ot)"
         }
       ],
-      "destination": "/api/edge-ssr/article/:slug"
+      "destination": "/api/edge-ssr/article?slug=:slug"
     },
 
-    {
-      "source": "/api/:path*",
-      "destination": "https://timelyvoice-backend.onrender.com/api/:path*"
-    },
-    {
-      "source": "/uploads/:path*",
-      "destination": "https://timelyvoice-backend.onrender.com/uploads/:path*"
-    },
+    { "source": "/api/:path*", "destination": "https://timelyvoice-backend.onrender.com/api/:path*" },
+    { "source": "/uploads/:path*", "destination": "https://timelyvoice-backend.onrender.com/uploads/:path*" },
 
-    {
-      "source": "/robots.txt",
-      "destination": "https://timelyvoice-backend.onrender.com/robots.txt"
-    },
-    {
-      "source": "/sitemap.xml",
-      "destination": "https://timelyvoice-backend.onrender.com/sitemap.xml"
-    },
-    {
-      "source": "/news-sitemap.xml",
-      "destination": "https://timelyvoice-backend.onrender.com/news-sitemap.xml"
-    },
-    {
-      "source": "/rss.xml",
-      "destination": "https://timelyvoice-backend.onrender.com/rss.xml"
-    },
-    {
-      "source": "/rss/:path*",
-      "destination": "https://timelyvoice-backend.onrender.com/rss/:path*"
-    },
+    { "source": "/robots.txt", "destination": "https://timelyvoice-backend.onrender.com/robots.txt" },
+    { "source": "/sitemap.xml", "destination": "https://timelyvoice-backend.onrender.com/sitemap.xml" },
+    { "source": "/news-sitemap.xml", "destination": "https://timelyvoice-backend.onrender.com/news-sitemap.xml" },
+    { "source": "/rss.xml", "destination": "https://timelyvoice-backend.onrender.com/rss.xml" },
+    { "source": "/rss/:path*", "destination": "https://timelyvoice-backend.onrender.com/rss/:path*" },
 
-    {
-      "source": "/:path*",
-      "destination": "/"
-    }
+    { "source": "/:path*", "destination": "/" }
   ]
 }
