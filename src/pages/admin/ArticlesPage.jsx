@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../App";
 import PasteImporter from "../../components/PasteImporter.jsx";
 import { useToast } from "../../providers/ToastProvider.jsx";
-
+import { getToken } from "../../App";
 export default function ArticlesPage() {
   const toast = useToast();
 
@@ -33,7 +33,7 @@ export default function ArticlesPage() {
 
 
   // Admin gate: if no JWT token, restrict publish/unpublish.
-  const isAdmin = !!(typeof window !== "undefined" && localStorage.getItem("token"));
+  const isAdmin = !!(typeof window !== "undefined" && getToken());
 
   // Basic editor form model (includes slug + GEO + SEO fields)
   const META_TITLE_MAX = 80;
@@ -214,7 +214,12 @@ export default function ArticlesPage() {
       updateItemsLocal(a => (a._id === id ? { ...a, status: newStatus } : a));
     }
     try {
-      const res = await api.patch(`/api/admin/articles/${id}`, patch);
+     const body = { ...patch };
+     // IMPORTANT: when publishing, also set publishedAt now
+      if (body.status === "published" && !body.publishedAt) {
+        body.publishedAt = new Date().toISOString();
+      }
+      const res = await api.patch(`/api/admin/articles/${id}`, body);
       toast.push({ type: "success", title: "Saved" });
     } catch (e) {
       toast.push({ type: "error", title: "Failed", message: String(e?.response?.data?.message || e.message) });
@@ -249,7 +254,7 @@ export default function ArticlesPage() {
       removeItemsLocal(ids);
       setSelectedIds(new Set());
       try {
-        await Promise.all(ids.map(id => api.delete(`/api/articles/${id}`)));
+       await Promise.all(ids.map(id => api.delete(`/api/admin/articles/${id}`)));
         toast.push({ type: "success", title: "Deleted", message: `${ids.length} article(s)` });
         if (data.items.length === ids.length && page > 1) setPage(p => p - 1);
       } catch (e) {
@@ -267,7 +272,10 @@ export default function ArticlesPage() {
     const newStatus = action === "publish" ? "published" : "draft";
     updateItemsLocal(a => (selectedIds.has(a._id) ? { ...a, status: newStatus } : a));
     const results = await Promise.allSettled(
-      ids.map(id => api.patch(`/api/admin/articles/${id}`, { status: newStatus }))
+     ids.map(id => api.patch(`/api/admin/articles/${id}`, {
+        status: newStatus,
+        ...(newStatus === "published" ? { publishedAt: new Date().toISOString() } : {})
+      }))
     );
     const failed = results.filter(r => r.status === "rejected").length;
     setSelectedIds(new Set());
@@ -325,7 +333,7 @@ export default function ArticlesPage() {
         body: a.body || "",
         category: a.category?.name || a.category || "General",
         status: a.status || "published",
-        publishAt: a.publishAt ? new Date(a.publishAt).toISOString().slice(0, 16) : "",
+        publishAt: a.publishedAt ? new Date(a.publishedAt).toISOString().slice(0, 16) : "",
         imageUrl: a.imageUrl || "",
         imagePublicId: a.imagePublicId || "",
         imageAlt: a.imageAlt || "",
@@ -385,7 +393,7 @@ export default function ArticlesPage() {
           ...form,
           category: form.category,
           tags: parseTags(tagsInput),
-          publishAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
+          publishedAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
           // Map editor fields -> API
           geoMode: form.geoMode || "global",
           geoAreas: parseGeoAreas(form.geoAreasText),
@@ -414,7 +422,7 @@ export default function ArticlesPage() {
         ...form,
         category: form.category,
         tags: parseTags(tagsInput),
-        publishAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
+        publishedAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
         // Map editor fields -> API
         geoMode: form.geoMode || "global",
         geoAreas: parseGeoAreas(form.geoAreasText),
@@ -687,7 +695,7 @@ export default function ArticlesPage() {
                   </span>
                 </td>
                 <td style={td}>{a.category?.name || a.category || "—"}</td>
-                <td style={td}>{fmt(a.publishAt) || "—"}</td>
+                <td style={td}>{fmt(a.publishedAt) || "—"}</td>
                 <td style={td}>{fmt(a.updatedAt)}</td>
 
                 {/* NEW: Preview column (thumb + category pill) */}
@@ -825,7 +833,15 @@ export default function ArticlesPage() {
           <label style={lbl}>Status
             <select
               value={form.status}
-              onChange={e=>setForm(f=>({ ...f, status: e.target.value }))}
+             onChange={e=>{
+     const s = e.target.value;
+     setForm(f=>({
+       ...f,
+       status: s,
+       // auto-fill publishAt UI field when switching to published
+       publishAt: s === "published" ? (f.publishAt || new Date().toISOString().slice(0,16)) : f.publishAt
+     }));
+   }}
               style={{ ...inp, opacity: isAdmin ? 1 : 0.6 }}
               disabled={!isAdmin}
               title={!isAdmin ? "Only admins can change publish status" : undefined}

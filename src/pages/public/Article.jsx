@@ -648,21 +648,30 @@ export default function ReaderArticle() {
     );
   }
 
-  // Early returns AFTER all hooks are declared
+ // --- 404 SEO handling (must always define hooks in same order) ---
+useEffect(() => {
   if (status === 'notfound') {
-    return (
-      <>
-        <SiteNav />
-        <main id="content" className="container">
-          <div style={{ padding: 24 }}>
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>This story isn’t available right now.</div>
-            <div>Explore the latest headlines below.</div>
-          </div>
-        </main>
-        <SiteFooter />
-      </>
-    );
+    removeManagedHeadTags();
+    upsertTag('meta', { name: 'robots', content: 'noindex, follow' });
+    upsertTag('title', {}, { textContent: `Story not found — ${SITE_NAME}` });
   }
+}, [status]);
+
+if (status === 'notfound') {
+  return (
+    <>
+      <SiteNav />
+      <main id="content" className="container">
+        <div style={{ padding: 24 }}>
+          <h1 style={{ fontWeight: 700, marginBottom: 8 }}>Story Not Available</h1>
+          <p>This story isn’t available right now. Explore the latest headlines below.</p>
+        </div>
+      </main>
+      <SiteFooter />
+    </>
+  );
+}
+
 
   if (!article) {
     return (

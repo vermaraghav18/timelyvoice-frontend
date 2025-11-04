@@ -53,7 +53,7 @@ import { initAnalytics, notifyRouteChange, track } from './lib/analytics';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 import AdsPage from "./admin/AdsPage";
-
+import XQueuePage from "./pages/admin/autmotion/XQueuePage";
 /* ========= NEW: E-E-A-T static pages (lazy) ========= */
 const AboutPage = lazy(() => import('./pages/static/About.jsx'));
 const ContactPage = lazy(() => import('./pages/static/Contact.jsx'));
@@ -319,8 +319,8 @@ export default function App() {
           <Route path="/admin/autmotion/queue" element={<AdminShell><AutmotionQueuePage /></AdminShell>} />
           <Route path="/admin/autmotion/drafts" element={<AdminShell><AutmotionDraftsPage /></AdminShell>} />
           <Route path="/admin/autmotion/x-sources" element={<AdminShell><AutmotionXSourcesPage /></AdminShell>} />
-          <Route path="/admin/autmotion/x-queue" element={<AdminShell><AutmotionXQueuePage /></AdminShell>} />
-
+         <Route path="/admin/autmotion/x-queue" element={<AdminShell><AutmotionXQueuePage /></AdminShell>} />
+  
           {/* Admin review of AI drafts (manual publish) */}
           <Route path="/admin/drafts" element={<AdminShell><AdminDrafts /></AdminShell>} />
         </Routes>
