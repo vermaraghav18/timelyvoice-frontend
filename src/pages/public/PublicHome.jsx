@@ -22,37 +22,28 @@ export default function PublicHome() {
     });
   }, []);
 
-  /* ---------- Main sections plan (Admin/Public) ---------- */
+  /* ---------- Main sections plan (Admin) ---------- */
   useEffect(() => {
     let cancel = false;
     (async () => {
       try {
         setSectionsLoading(true);
         setSectionsError("");
-
         const res = await api.get("/sections/plan", {
-          params: {
-            sectionType: "homepage",
-            sectionValue: "", // homepage is an empty string
-            // mode: "public", // include only if your backend expects it
-          },
-        });
+        params: {
+          sectionType: "homepage",
+          sectionValue: "",          // homepage is an empty string
+          // mode: "public",          // include only if your backend expects it
+        },
+      });
 
-        // Accept BOTH shapes:
-        //   1) array: [ ...sections ]
-        //   2) object: { sections: [...], rails: [...] }
-        const raw = res?.data;
-        const plan = Array.isArray(raw)
-          ? { sections: raw, rails: [] }
-          : (raw || { sections: [], rails: [] });
+        const data = Array.isArray(res.data) ? res.data : [];
 
-        // Merge sections + rails into a single list; normalize + sort by placementIndex
-        const merged = [...(plan.sections || []), ...(plan.rails || [])];
-
-        const ordered = merged
+        // Normalize + sort ONCE by placementIndex (numeric)
+        const ordered = data
           .map((r) => ({
             ...r,
-            placementIndex: Number.isFinite(Number(r?.placementIndex))
+            placementIndex: Number.isFinite(Number(r.placementIndex))
               ? Number(r.placementIndex)
               : 0,
           }))
@@ -60,8 +51,8 @@ export default function PublicHome() {
 
         if (!cancel) setSections(ordered);
       } catch (e) {
-        console.error(e);
         if (!cancel) setSectionsError("Failed to load homepage sections");
+        console.error(e);
       } finally {
         if (!cancel) setSectionsLoading(false);
       }
@@ -71,7 +62,7 @@ export default function PublicHome() {
     };
   }, []);
 
-  // Full-width templates (rendered outside the two-column grid)
+  // Define which templates are "full-width mains"
   const MAIN_TEMPLATES = new Set([
     "main_v1",
     "top_v1",
@@ -81,23 +72,17 @@ export default function PublicHome() {
     "main_v9",
     "m10",
     "main_m10",
-    "m11",
-    "main_m11",
-    "ad", // allow ad blocks to render as full-width
+    "m11",        // ✅ include M11
+    "main_m11",   // ✅ alias safeguard
+    "ad",        // <<< add this so ads render as full-width blocks in order
   ]);
 
-  // Derive groups WITHOUT re-sorting so global order is preserved
-  const mains = sections.filter((s) => MAIN_TEMPLATES.has(s?.template));
-  const rails = sections.filter((s) => s?.template?.startsWith?.("rail_"));
+  // Now derive groups WITHOUT re-sorting so global order is preserved
+  const mains = sections.filter((s) => MAIN_TEMPLATES.has(s.template));
+  const rails = sections.filter((s) => s.template?.startsWith?.("rail_"));
   const others = sections.filter(
-    (s) => !MAIN_TEMPLATES.has(s?.template) && !s?.template?.startsWith?.("rail_")
+    (s) => !MAIN_TEMPLATES.has(s.template) && !s.template?.startsWith?.("rail_")
   );
-
-  // Stable key helper
-  const keyOf = (sec) =>
-    sec?._id ||
-    sec?.id ||
-    `${sec?.slug || "sec"}|${sec?.template || "tpl"}|${sec?.placementIndex ?? 0}`;
 
   return (
     <>
@@ -114,9 +99,13 @@ export default function PublicHome() {
           <div style={{ padding: 12, color: "crimson" }}>{sectionsError}</div>
         ) : (
           <>
-            {/* FULL-WIDTH main blocks in backend order */}
+            {/* FULL-WIDTH main blocks: rendered in the same order as backend */}
             {mains.map((sec) => (
-              <div key={keyOf(sec)} className="fullwidth-section" style={{ marginBottom: 24 }}>
+              <div
+                key={sec._id || sec.id || `${sec.slug}|${sec.template}|${sec.placementIndex}`}
+                className="fullwidth-section"
+                style={{ marginBottom: 24 }}
+              >
                 <SectionRenderer section={sec} />
               </div>
             ))}
@@ -127,7 +116,12 @@ export default function PublicHome() {
                 {others.length === 0 ? (
                   <div style={{ padding: 8, color: "#666" }}>No sections</div>
                 ) : (
-                  others.map((sec) => <SectionRenderer key={keyOf(sec)} section={sec} />)
+                  others.map((sec) => (
+                    <SectionRenderer
+                      key={sec._id || sec.id || `${sec.slug}|${sec.template}|${sec.placementIndex}`}
+                      section={sec}
+                    />
+                  ))
                 )}
               </main>
 
@@ -135,7 +129,12 @@ export default function PublicHome() {
                 {rails.length === 0 ? (
                   <div style={{ padding: 8, color: "#666" }}>No rails</div>
                 ) : (
-                  rails.map((sec) => <SectionRenderer key={keyOf(sec)} section={sec} />)
+                  rails.map((sec) => (
+                    <SectionRenderer
+                      key={sec._id || sec.id || `${sec.slug}|${sec.template}|${sec.placementIndex}`}
+                      section={sec}
+                    />
+                  ))
                 )}
               </aside>
             </div>
