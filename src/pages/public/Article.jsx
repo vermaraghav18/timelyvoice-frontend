@@ -124,7 +124,7 @@ export default function ReaderArticle() {
   // Comments loader
   async function loadComments(articleSlug) {
     const { data } = await api.get(
-      `/api/public/articles/${encodeURIComponent(articleSlug)}/comments`,
+      `/public/articles/${encodeURIComponent(articleSlug)}/comments`,
       { validateStatus: () => true }
     );
     setComments(Array.isArray(data) ? data : []);
@@ -148,7 +148,7 @@ export default function ReaderArticle() {
     (async () => {
       try {
         setRailsLoading(true);
-        const res = await api.get('/api/sections/plan', {
+        const res = await api.get('/sections/plan', {
           params: { sectionType: 'homepage' },
           validateStatus: () => true,
         });
@@ -177,7 +177,7 @@ export default function ReaderArticle() {
       try {
         setStatus('loading');
 
-        const res = await api.get(`/api/articles/slug/${encodeURIComponent(slug)}`, {
+        const res = await api.get(`/articles/slug/${encodeURIComponent(slug)}`, {
           validateStatus: (s) => (s >= 200 && s < 300) || s === 308,
           headers: { 'Cache-Control': 'no-cache' },
         });
@@ -329,14 +329,14 @@ export default function ReaderArticle() {
 
         // related
         try {
-          const r1 = await api.get('/api/articles', {
+          const r1 = await api.get('/articles', {
             params: { page: 1, limit: 8, category: categoryName },
             validateStatus: () => true,
           });
           let pool = (r1.data?.items || []).filter((a) => a.slug !== doc.slug);
 
           if (pool.length < 4) {
-            const r2 = await api.get('/api/articles', {
+            const r2 = await api.get('/articles', {
               params: { page: 1, limit: 8 },
               validateStatus: () => true,
             });
@@ -375,7 +375,7 @@ export default function ReaderArticle() {
     (async () => {
       try {
         if (!article?.slug) return;
-        const res = await api.get('/api/top-news', { params: { limit: 50, page: 1 } });
+        const res = await api.get('/top-news', { params: { limit: 50, page: 1 } });
         const list = Array.isArray(res?.data?.items) ? res.data.items : [];
         const idx = list.findIndex(x => x.slug === article.slug);
         if (idx !== -1 && list[idx + 1]) {
@@ -399,7 +399,7 @@ export default function ReaderArticle() {
           if (!cancel) setNextArticle(null);
           return;
         }
-        const res = await api.get(`/api/articles/slug/${encodeURIComponent(nextSlug)}`, {
+        const res = await api.get(`/articles/slug/${encodeURIComponent(nextSlug)}`, {
           validateStatus: (s) => s >= 200 && s < 300,
           headers: { 'Cache-Control': 'no-cache' },
         });
@@ -782,7 +782,7 @@ if (status === 'notfound') {
                   <img
                     src={imageUrl}
                     alt={imageAlt}
-                    fetchpriority="high"
+                    fetchPriority="high"
                     decoding="async"
                     loading="eager"
                     width="1280"

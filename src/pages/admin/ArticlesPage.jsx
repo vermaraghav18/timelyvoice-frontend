@@ -104,7 +104,7 @@ export default function ArticlesPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await api.get("/api/categories", { params: { limit: 1000 } });
+        const res = await api.get("/categories", { params: { limit: 1000 } });
         const payload = res.data || {};
         setCategories(Array.isArray(payload) ? payload : (payload.items || payload.data || []));
       } catch {
@@ -131,7 +131,7 @@ export default function ArticlesPage() {
   const fetchArticles = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/api/admin/articles", {
+      const res = await api.get("/admin/articles", {
         params: {
           status: status || undefined,
           category: category || undefined,
@@ -219,7 +219,7 @@ export default function ArticlesPage() {
       if (body.status === "published" && !body.publishedAt) {
         body.publishedAt = new Date().toISOString();
       }
-      const res = await api.patch(`/api/admin/articles/${id}`, body);
+      const res = await api.patch(`/admin/articles/${id}`, body);
       toast.push({ type: "success", title: "Saved" });
     } catch (e) {
       toast.push({ type: "error", title: "Failed", message: String(e?.response?.data?.message || e.message) });
@@ -254,7 +254,7 @@ export default function ArticlesPage() {
       removeItemsLocal(ids);
       setSelectedIds(new Set());
       try {
-       await Promise.all(ids.map(id => api.delete(`/api/admin/articles/${id}`)));
+       await Promise.all(ids.map(id => api.delete(`/admin/articles/${id}`)));
         toast.push({ type: "success", title: "Deleted", message: `${ids.length} article(s)` });
         if (data.items.length === ids.length && page > 1) setPage(p => p - 1);
       } catch (e) {
@@ -272,7 +272,7 @@ export default function ArticlesPage() {
     const newStatus = action === "publish" ? "published" : "draft";
     updateItemsLocal(a => (selectedIds.has(a._id) ? { ...a, status: newStatus } : a));
     const results = await Promise.allSettled(
-     ids.map(id => api.patch(`/api/admin/articles/${id}`, {
+     ids.map(id => api.patch(`/admin/articles/${id}`, {
         status: newStatus,
         ...(newStatus === "published" ? { publishedAt: new Date().toISOString() } : {})
       }))
@@ -318,7 +318,7 @@ export default function ArticlesPage() {
 
   async function openEdit(id) {
     try {
-      const res = await api.get(`/api/admin/articles/${id}`, { headers: geoHeaders() });
+      const res = await api.get(`/admin/articles/${id}`, { headers: geoHeaders() });
       const a = res.data;
 
       // Turn array of geoAreas -> comma text for editor
@@ -401,7 +401,7 @@ export default function ArticlesPage() {
         // Enforce soft limits on meta fields before saving
         if (payload.metaTitle) payload.metaTitle = String(payload.metaTitle).slice(0, META_TITLE_MAX);
         if (payload.metaDesc)  payload.metaDesc  = String(payload.metaDesc).slice(0, META_DESC_MAX);
-        await api.patch(`/api/admin/articles/${editingId}`, payload);
+        await api.patch(`/admin/articles/${editingId}`, payload);
         setAutoSavedAt(new Date());
       } catch (e) {
         // Non-blocking toast to avoid noise on every keystroke
@@ -432,10 +432,10 @@ export default function ArticlesPage() {
       if (payload.metaDesc)  payload.metaDesc  = String(payload.metaDesc).slice(0, META_DESC_MAX);
 
       if (editingId) {
-        await api.patch(`/api/admin/articles/${editingId}`, payload);
+        await api.patch(`/admin/articles/${editingId}`, payload);
         toast.push({ type: "success", title: "Updated" });
       } else {
-       await api.post(`/api/admin/articles`, payload);
+       await api.post(`/admin/articles`, payload);
         toast.push({ type: "success", title: "Created" });
       }
 
@@ -498,7 +498,7 @@ export default function ArticlesPage() {
       try {
         const syncOg = !!(imgEdits[id]?.syncOg ?? true);
         const payload = syncOg ? { imageUrl: value, ogImage: value } : { imageUrl: value };
-       const res = await api.patch(`/api/admin/articles/${id}`, payload);
+       const res = await api.patch(`/admin/articles/${id}`, payload);
        const updated = res?.data || {};
        // Use server-trimmed values (may differ from what user typed)
        const nextImage = updated.imageUrl ?? value ?? "";

@@ -6,13 +6,13 @@ export default function CommentsPage() {
   const [items, setItems] = useState([]);
 
   async function load() {
-    const { data } = await api.get(`/api/admin/comments?status=${status}`);
+    const { data } = await api.get(`/admin/comments?status=${status}`);
     setItems(data || []);
   }
   useEffect(() => { load(); }, [status]);
 
   async function act(id, action) {
-    await api.patch(`/api/admin/comments/${id}`, { action });
+    await api.patch(`/admin/comments/${id}`, { action });
     load();
   }
 

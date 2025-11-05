@@ -35,7 +35,7 @@ export default function TagsPage() {
   async function load() {
     setLoading(true);
     try {
-      const res = await api.get("/api/tags");
+      const res = await api.get("/tags");
       const arr = Array.isArray(res.data) ? res.data : (res.data?.items || []);
       setAll(arr || []);
     } catch (e) {
@@ -78,7 +78,7 @@ export default function TagsPage() {
     try {
       const body = { name: name.trim() };
       if (slug.trim()) body.slug = slug.trim();
-      await api.post("/api/tags", body);
+      await api.post("/tags", body);
       toast.push({ type: "success", title: "Tag created" });
       setName(""); setSlug("");
       setPage(1);
@@ -109,7 +109,7 @@ export default function TagsPage() {
     try {
       const body = { name: editName.trim() };
       body.slug = editSlug.trim() || undefined;
-      await api.patch(`/api/tags/${id}`, body);
+      await api.patch(`/tags/${id}`, body);
       toast.push({ type: "success", title: "Changes saved" });
       cancelEdit();
       load();
@@ -125,7 +125,7 @@ export default function TagsPage() {
   async function remove(id) {
     if (!confirm("Delete this tag? This cannot be undone.")) return;
     try {
-      await api.delete(`/api/tags/${id}`);
+      await api.delete(`/tags/${id}`);
       toast.push({ type: "success", title: "Tag deleted" });
       load();
     } catch (e) {

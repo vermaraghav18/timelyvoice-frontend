@@ -30,7 +30,7 @@ export default function TickerAdmin() {
   const load = () => {
     setLoading(true);
     setErr('');
-    api.get('/api/ticker', { params: { all: 1 }, validateStatus: () => true })
+    api.get('/ticker', { params: { all: 1 }, validateStatus: () => true })
       .then(res => setItems(Array.isArray(res.data) ? res.data : []))
       .catch(e => setErr(e?.response?.data?.message || e?.message || 'Failed to load ticker'))
       .finally(() => setLoading(false));
@@ -55,7 +55,7 @@ export default function TickerAdmin() {
         active: !!form.active,
       };
       if (!payload.label || !payload.value) throw new Error('Label and value are required');
-      await api.post('/api/ticker', payload, { validateStatus: () => true });
+      await api.post('/ticker', payload, { validateStatus: () => true });
       setForm({ type: 'note', label: '', value: '', order: 0, active: true });
       load();
     } catch (e) {
@@ -68,7 +68,7 @@ export default function TickerAdmin() {
   const onUpdate = async (id, patch) => {
     setErr('');
     try {
-      await api.patch(`/api/ticker/${id}`, patch, { validateStatus: () => true });
+      await api.patch(`/ticker/${id}`, patch, { validateStatus: () => true });
       load();
     } catch (e) {
       setErr(e?.response?.data?.message || e?.message || 'Failed to update ticker item');
@@ -79,7 +79,7 @@ export default function TickerAdmin() {
     if (!confirm('Delete this ticker item?')) return;
     setErr('');
     try {
-      await api.delete(`/api/ticker/${id}`, { validateStatus: () => true });
+      await api.delete(`/ticker/${id}`, { validateStatus: () => true });
       load();
     } catch (e) {
       setErr(e?.response?.data?.message || e?.message || 'Failed to delete ticker item');

@@ -2,7 +2,17 @@
 // No-code friendly: configure BACKEND_URL only.
 // Excludes bots/admin on server; honors DNT + opt-out cookie.
 
-const BACKEND_URL = import.meta.env.VITE_API_BASE || 'http://localhost:4000';
+// Use relative base by default; Vite proxy will forward to backend in dev
+const BACKEND_URL = import.meta.env.VITE_API_BASE || '/api';
+
+// Disable analytics in local dev / localhost
+const IS_DEV_HOST = typeof window !== 'undefined'
+  ? ['localhost', '127.0.0.1'].includes(window.location.hostname)
+  : false;
+const IS_DEV_BUILD = !!import.meta.env?.DEV;
+// Allow override via env: VITE_ANALYTICS_ENABLE=false (even in prod)
+const ENV_ENABLE = (import.meta.env?.VITE_ANALYTICS_ENABLE ?? 'true') !== 'false';
+const ANALYTICS_ENABLED = ENV_ENABLE && !IS_DEV_HOST && !IS_DEV_BUILD;
 
 // Globals
 let started = false;
@@ -74,7 +84,7 @@ function safeSet(item, key, val) {
 // ---------- Core posting ----------
 function post(path, body) {
   try {
-    if (shouldDropClientSide()) return Promise.resolve();
+    if (!ANALYTICS_ENABLED || shouldDropClientSide()) return Promise.resolve();
     return fetch(`${BACKEND_URL}/analytics${path}`, {
       method: 'POST',
       headers: {
@@ -126,7 +136,7 @@ function getUTM() {
 }
 
 export function track(type, data = {}) {
-  if (shouldDropClientSide()) return Promise.resolve();
+ if (!ANALYTICS_ENABLED || shouldDropClientSide()) return Promise.resolve();
 
   const payload = {
     type,
@@ -213,7 +223,7 @@ function teardownScroll() {
  * De-dupes page_view events and (re)starts heartbeat for the new page.
  */
 export function notifyRouteChange(path = location.pathname, search = location.search) {
-  if (shouldDropClientSide()) {
+  if (!ANALYTICS_ENABLED || shouldDropClientSide()) {
     stopHeartbeat();
     return;
   }
@@ -236,8 +246,8 @@ export function initAnalytics() {
   if (started || typeof window === 'undefined') return;
   started = true;
 
-  // Respect browser DNT & opt-out cookie early (server also enforces)
-  if (shouldDropClientSide()) return;
+   // Disable entirely in dev or when opted out / DNT
+  if (!ANALYTICS_ENABLED || shouldDropClientSide()) return;
 
   // Initial page view (current URL)
   notifyRouteChange();

@@ -29,7 +29,7 @@ export default function PublicHome() {
       try {
         setSectionsLoading(true);
         setSectionsError("");
-        const res = await api.get("/api/sections/plan", {
+        const res = await api.get("/sections/plan", {
         params: {
           sectionType: "homepage",
           sectionValue: "",          // homepage is an empty string

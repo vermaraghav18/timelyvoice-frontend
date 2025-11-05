@@ -97,7 +97,7 @@ export default function FinanceCategoryPage({
 
       try {
         for (const cat of candidates) {
-          const res = await api.get('/api/articles', {
+          const res = await api.get('/articles', {
             params: { category: cat, limit: 60 },
             validateStatus: () => true,
           });
@@ -126,7 +126,7 @@ export default function FinanceCategoryPage({
     let cancel = false;
     (async () => {
       try {
-        const res = await api.get('/api/sections', { params: { path: pagePath } });
+        const res = await api.get('/sections', { params: { path: pagePath } });
         const items = Array.isArray(res.data) ? res.data : [];
         const filtered = items.filter(
           (s) => s?.enabled !== false && s?.target?.type === 'path' && normPath(s?.target?.value) === pagePath

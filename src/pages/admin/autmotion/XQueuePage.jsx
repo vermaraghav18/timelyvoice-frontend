@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-/**
- * Small fetch helper:
- * - Uses global window.__API_HEADERS__() if present (project's existing auth helper)
- * - Else falls back to Authorization: Bearer <localStorage.token>
- */
+let API_BASE = "/api";
+try { API_BASE = import.meta?.env?.VITE_API_BASE || "/api"; } catch {}
+
+
+
 async function apiFetch(path, { method = "GET", body, headers = {} } = {}) {
   const baseHeaders =
     (typeof window !== "undefined" &&
@@ -18,15 +18,30 @@ async function apiFetch(path, { method = "GET", body, headers = {} } = {}) {
           : undefined,
     };
 
-  const res = await fetch(path, {
+  // normalize URL: add API_BASE unless it's already absolute
+  const url =
+    /^https?:\/\//i.test(path)
+      ? path
+      : `${API_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
+
+  const res = await fetch(url, {
     method,
     headers: { ...baseHeaders, ...headers },
     body: body ? JSON.stringify(body) : undefined,
     credentials: "include",
   });
+
+  // friendlier error when server returns HTML (dev server or 404 page)
+  const ctype = res.headers.get("content-type") || "";
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(text || `${res.status} ${res.statusText}`);
+  }
+  if (!/application\/json/i.test(ctype)) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Expected JSON but got "${ctype || "unknown"}". First bytes: ${text.slice(0, 60)}`
+    );
   }
   return res.json();
 }
@@ -111,7 +126,7 @@ export default function XQueuePage() {
       params.set("limit", "100");
       params.set("sinceHours", String(sinceHours || 12));
       if (handleFilter.trim()) params.set("handle", handleFilter.replace(/^@/, ""));
-      const data = await apiFetch(`/api/automation/x/items?${params.toString()}`);
+      const data = await apiFetch(`/automation/x/items?${params.toString()}`);
       setItems(Array.isArray(data.rows) ? data.rows : []);
       setLastUpdated(new Date().toISOString());
     } catch (e) {
@@ -124,7 +139,7 @@ export default function XQueuePage() {
   // call backend to fetch from X for all enabled sources
   async function fetchAllSources() {
     try {
-      await apiFetch(`/api/automation/x/sources/fetch-all`, { method: "POST" });
+      await apiFetch(`/automation/x/sources/fetch-all`, { method: "POST" });
     } catch (e) {
       window.toast?.error?.(e.message) || console.warn(e);
     } finally {
@@ -144,16 +159,16 @@ export default function XQueuePage() {
     try {
       setBusyId(id);
       if (kind === "run") {
-        const r = await apiFetch(`/api/automation/x/items/${id}/run`, { method: "POST" });
+        const r = await apiFetch(`/automation/x/items/${id}/run`, { method: "POST" });
         window.toast?.success?.("Draft created") || alert(`Draft created (article ${r?.articleId || "?"})`);
       } else if (kind === "extract") {
-        await apiFetch(`/api/automation/x/items/${id}/extract`, { method: "POST" });
+        await apiFetch(`/automation/x/items/${id}/extract`, { method: "POST" });
         window.toast?.success?.("Extracted") || alert("Extracted");
       } else if (kind === "generate") {
-        await apiFetch(`/api/automation/x/items/${id}/generate`, { method: "POST" });
+        await apiFetch(`/automation/x/items/${id}/generate`, { method: "POST" });
         window.toast?.success?.("Generated") || alert("Generated");
       } else if (kind === "draft") {
-        const r = await apiFetch(`/api/automation/x/items/${id}/draft`, { method: "POST" });
+        const r = await apiFetch(`/automation/x/items/${id}/draft`, { method: "POST" });
         window.toast?.success?.("Draft created") || alert(`Draft created (article ${r?.articleId || "?"})`);
       }
       await load();

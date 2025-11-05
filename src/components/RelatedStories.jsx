@@ -25,12 +25,12 @@ export default function RelatedStories({
         const p1 = { page: 1, limit: limit * 2 };
         if (catName) p1.category = catName;
 
-        const r1 = await api.get('/api/articles', { params: p1, validateStatus: () => true });
+        const r1 = await api.get('/articles', { params: p1, validateStatus: () => true });
         let pool = (r1.data?.items || []).filter(a => a.slug !== currentSlug);
 
         // 2) if too few, pull global extras
         if (pool.length < limit) {
-          const r2 = await api.get('/api/articles', { params: { page: 1, limit: limit * 2 }, validateStatus: () => true });
+          const r2 = await api.get('/articles', { params: { page: 1, limit: limit * 2 }, validateStatus: () => true });
           const extra = (r2.data?.items || []).filter(
             a => a.slug !== currentSlug && !pool.find(p => p.slug === a.slug)
           );

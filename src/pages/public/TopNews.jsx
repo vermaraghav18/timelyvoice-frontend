@@ -45,7 +45,7 @@ export default function TopNews() {
       try {
         setLoading(true);
         setErr("");
-        const res = await api.get("/api/top-news", { params: { limit: 50, page: 1 } });
+        const res = await api.get("/top-news", { params: { limit: 50, page: 1 } });
         if (!cancel) setItems(res?.data?.items || []);
       } catch (e) {
         console.error(e);

@@ -15,7 +15,7 @@ function LoginForm({ onLoggedIn }) {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      const res = await api.post('/api/auth/login', { password });
+      const res = await api.post('/auth/login', { password });
       setToken(res.data.token);
       onLoggedIn();
     } catch (err) {
@@ -64,7 +64,7 @@ function NewArticle({ onCreated }) {
         const uploaded = await uploadImageViaCloudinary(imageFile);
         imageUrl = uploaded.url; imagePublicId = uploaded.publicId;
       }
-      const res = await api.post('/api/articles', {
+      const res = await api.post('/articles', {
         title, summary, author, body, category, imageUrl, imagePublicId,
         status, publishAt, geoMode,
         geoAreas: geoAreasInput.split(/[,;\n]/g).map(s => s.trim()).filter(Boolean)
@@ -149,7 +149,7 @@ function AdminRow({ a, onUpdated, onDeleted }) {
         const uploaded = await uploadImageViaCloudinary(imageFile);
         imageUrl = uploaded.url; imagePublicId = uploaded.publicId;
       }
-      const res = await api.patch(`/api/articles/${a.id}`, {
+      const res = await api.patch(`/articles/${a.id}`, {
         title, summary, author, body, category, imageUrl, imagePublicId,
         status, publishAt, geoMode,
         geoAreas: geoAreasInput.split(/[,;\n]/g).map(s => s.trim()).filter(Boolean)
@@ -164,7 +164,7 @@ function AdminRow({ a, onUpdated, onDeleted }) {
   const del = async () => {
     const ok = window.confirm(`Delete "${a.title}"? This cannot be undone.`);
     if (!ok) return;
-    try { await api.delete(`/api/articles/${a.id}`); onDeleted(a.id); }
+    try { await api.delete(`/articles/${a.id}`); onDeleted(a.id); }
     catch (err) { alert(err?.response?.data?.error || 'Failed to delete'); }
   };
 
@@ -242,7 +242,7 @@ export default function AdminDashboard() {
   const [geoPreview, setGeoPreview] = useState(getPreviewCountry());
 
   const fetchArticles = async () => {
-    const res = await api.get('/api/articles', { params: { page: 1, limit: 200, all: 1 } });
+    const res = await api.get('/articles', { params: { page: 1, limit: 200, all: 1 } });
     setArticles(res.data.items);
   };
 

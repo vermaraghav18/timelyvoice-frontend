@@ -17,7 +17,7 @@ export default function BreakingNewsAdmin() {
   const load = () => {
     setLoading(true);
     setErr('');
-    api.get('/api/breaking', { params: { all: 1 }, validateStatus: () => true })
+    api.get('/breaking', { params: { all: 1 }, validateStatus: () => true })
       .then(res => setItems(Array.isArray(res.data) ? res.data : []))
       .catch(e => setErr(e?.response?.data?.message || e?.message || 'Failed to load'))
       .finally(() => setLoading(false));
@@ -41,7 +41,7 @@ export default function BreakingNewsAdmin() {
         priority: Number(form.priority) || 0,
       };
       if (!payload.headline) throw new Error('Headline is required');
-      await api.post('/api/breaking', payload, { validateStatus: () => true });
+      await api.post('/breaking', payload, { validateStatus: () => true });
       setForm({ headline: '', url: '', active: true, priority: 0 });
       load();
     } catch (e) {
@@ -54,7 +54,7 @@ export default function BreakingNewsAdmin() {
   const onUpdate = async (id, patch) => {
     setErr('');
     try {
-      await api.patch(`/api/breaking/${id}`, patch, { validateStatus: () => true });
+      await api.patch(`/breaking/${id}`, patch, { validateStatus: () => true });
       load();
     } catch (e) {
       setErr(e?.response?.data?.message || e?.message || 'Failed to update');
@@ -65,7 +65,7 @@ export default function BreakingNewsAdmin() {
     if (!confirm('Delete this breaking item?')) return;
     setErr('');
     try {
-      await api.delete(`/api/breaking/${id}`, { validateStatus: () => true });
+      await api.delete(`/breaking/${id}`, { validateStatus: () => true });
       load();
     } catch (e) {
       setErr(e?.response?.data?.message || e?.message || 'Failed to delete');

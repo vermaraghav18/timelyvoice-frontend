@@ -68,7 +68,7 @@ export default function SiteNav() {
   useEffect(() => {
     let alive = true;
     api
-      .get('/api/breaking', { validateStatus: () => true })
+      .get('/breaking', { validateStatus: () => true })
       .then((res) => {
         if (!alive) return;
         const items = Array.isArray(res.data) ? res.data : [];
@@ -82,7 +82,7 @@ export default function SiteNav() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await api.get('/api/categories');
+        const res = await api.get('/categories');
         if (!cancelled) setAllCats(Array.isArray(res.data) ? res.data : []);
       } catch {
         if (!cancelled) setAllCats([]);

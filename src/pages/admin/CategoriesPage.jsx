@@ -13,7 +13,7 @@ export default function AdminCategoriesPage() {
   const load = () => {
     setLoading(true);
     api
-      .get('/api/categories')
+      .get('/categories')
       .then((res) => setItems(res.data || []))
       .catch((e) => setErr(e?.message || 'Failed to load'))
       .finally(() => setLoading(false));
@@ -31,7 +31,7 @@ export default function AdminCategoriesPage() {
     setCreating(true);
     setErr('');
     api
-      .post('/api/categories', form)
+      .post('/categories', form)
       .then(() => {
         setForm({ name: '', slug: '', type: 'topic', description: '' });
         load();
@@ -43,7 +43,7 @@ export default function AdminCategoriesPage() {
   const onSave = (row) => {
     setErr('');
     api
-      .patch(`/api/categories/${row._id}`, {
+      .patch(`/categories/${row._id}`, {
         name: row.name,
         slug: row.slug,
         description: row.description,

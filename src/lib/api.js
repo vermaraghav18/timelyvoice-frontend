@@ -1,5 +1,10 @@
 // frontend/src/lib/api.js
-const API = import.meta.env.VITE_API_BASE || "http://localhost:4000";
+const API = import.meta.env.VITE_API_BASE || "/api";
+
+export const api = axios.create({
+  baseURL: API,  // <-- this becomes "/api"
+});
+
 
 export async function apiGET(path, headers = {}) {
   const res = await fetch(`${API}${path}`, { headers, credentials: "include" });

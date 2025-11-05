@@ -13,7 +13,7 @@ export default function AdminMedia() {
   const fetchMedia = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/api/media', { params: { page: 1, limit: 50, q: q || undefined } });
+      const res = await api.get('/media', { params: { page: 1, limit: 50, q: q || undefined } });
       setItems(res.data.items || []);
     } finally {
       setLoading(false);
@@ -30,7 +30,7 @@ export default function AdminMedia() {
     if (!urlUpload.trim()) return;
     setMsg('Uploading…');
     try {
-      await api.post('/api/media/remote', { url: urlUpload.trim() });
+      await api.post('/media/remote', { url: urlUpload.trim() });
       setUrlUpload('');
       await fetchMedia();
       setMsg('Uploaded ✓');
@@ -42,7 +42,7 @@ export default function AdminMedia() {
   const del = async (id) => {
     if (!window.confirm('Delete this media item?')) return;
     try {
-      await api.delete(`/api/media/${id}`);
+      await api.delete(`/media/${id}`);
       await fetchMedia();
     } catch (err) {
       alert(err?.response?.data?.error || 'Delete failed');
