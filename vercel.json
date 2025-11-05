@@ -20,7 +20,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": "(?:[Gg]oogle[Bb]ot(?:-[Nn]ews|-[Ii]mage|-[Vv]ideo)?|[Mm]ediapartners-[Gg]oogle|[Aa]ds[Bb]ot(?:-[Gg]oogle)?|[Bb]ing[Bb]ot|[Dd]uck[Dd]uck[Bb]ot|[Yy]andex[Bb]ot|[Aa]pple[Bb]ot|[Ss]lurp|[Ff]acebook[Ee]xternal[Hh]it|[Tt]witter[Bb]ot|[Ll]inked[Ii]n[Bb]ot|[Ss]lack[Bb]ot|[Dd]iscord[Bb]ot|[Ww]hats[Aa]pp|[Tt]elegram[Bb]ot|[Pp]interest|[Ee]mbedly|[Bb]ot)"
+          "value": ".*(googlebot|bingbot|duckduckbot|yandex|baiduspider|slurp|mediapartners-google|adsbot-google).*"
         }
       ],
       "destination": "https://timelyvoice-backend.onrender.com/ssr/article/:slug"
