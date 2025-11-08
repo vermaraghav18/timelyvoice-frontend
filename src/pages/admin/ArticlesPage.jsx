@@ -46,7 +46,7 @@ export default function ArticlesPage() {
     author: "",
     body: "",
     category: "General",
-    status: "published",
+    status: "draft",
     publishAt: "",
     imageUrl: "",
     imagePublicId: "",
@@ -230,7 +230,7 @@ export default function ArticlesPage() {
   async function deleteOne(id) {
     removeItemsLocal([id]);
     try {
-      await api.delete(`/api/admin/articles/${id}`);
+      await api.delete(`/admin/articles/${id}`);
       toast.push({ type: "success", title: "Deleted" });
       if (data.items.length === 1 && page > 1) setPage(p => p - 1);
     } catch (e) {
@@ -297,7 +297,7 @@ export default function ArticlesPage() {
       author: "",
       body: "",
       category: categories[0]?.name || "General",
-      status: "published",
+      status: "draft",
       publishAt: new Date().toISOString().slice(0, 16),
       imageUrl: "",
       imagePublicId: "",

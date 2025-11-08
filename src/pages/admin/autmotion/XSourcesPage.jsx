@@ -22,7 +22,7 @@ export default function XSourcesPage() {
 
   async function load() {
     setLoading(true);
-    const r = await api.get("/automation/x/sources");
+    const r = await api.get("/api/automation/x/sources");
     setRows(r.data.rows || []);
     setLoading(false);
   }
@@ -38,25 +38,25 @@ export default function XSourcesPage() {
       defaultCategory: form.defaultCategory,
       geo: { mode: form.geoMode, areas: form.geoAreas.split(",").map(s=>s.trim()).filter(Boolean) },
     };
-    await api.post("/automation/x/sources", payload);
+    await api.post("/api/automation/x/sources", payload);
     setForm({ ...form, handle: "", label: "" });
     load();
   }
 
   async function fetchNow(id) {
-    await api.post(`/automation/x/sources/${id}/fetch`);
+    await api.post(`/api/automation/x/sources/${id}/fetch`);
     alert("Fetched latest tweets.");
     load();
   }
 
   async function toggleEnabled(row) {
-    await api.patch(`/automation/x/sources/${row._id}`, { enabled: !row.enabled });
+    await api.patch(`/api/automation/x/sources/${row._id}`, { enabled: !row.enabled });
     load();
   }
 
   async function del(id) {
     if (!confirm("Delete this handle?")) return;
-    await api.delete(`/automation/x/sources/${id}`);
+    await api.delete(`/api/automation/x/sources/${id}`);
     load();
   }
 
