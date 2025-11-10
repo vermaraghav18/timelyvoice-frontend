@@ -29,13 +29,14 @@ export default function PublicHome() {
       try {
         setSectionsLoading(true);
         setSectionsError("");
-        const res = await api.get("/sections/plan", {
-        params: {
-          sectionType: "homepage",
-          sectionValue: "",          // homepage is an empty string
-          // mode: "public",          // include only if your backend expects it
-        },
-      });
+
+        // Build params WITHOUT sending a blank sectionValue
+        const params = { sectionType: "homepage", mode: "public" };
+        // If you ever set a non-empty value for homepage, include it:
+        // params.sectionValue = "some-slug";
+
+        // IMPORTANT: baseURL is '/api', so use relative path here
+        const res = await api.get("/sections/plan", { params });
 
         const data = Array.isArray(res.data) ? res.data : [];
 
@@ -51,7 +52,9 @@ export default function PublicHome() {
 
         if (!cancel) setSections(ordered);
       } catch (e) {
-        if (!cancel) setSectionsError("Failed to load homepage sections");
+        if (!cancel) {
+          setSectionsError("Failed to load homepage sections");
+        }
         console.error(e);
       } finally {
         if (!cancel) setSectionsLoading(false);
@@ -74,7 +77,7 @@ export default function PublicHome() {
     "main_m10",
     "m11",        // ✅ include M11
     "main_m11",   // ✅ alias safeguard
-    "ad",        // <<< add this so ads render as full-width blocks in order
+    "ad",         // render ads as full-width blocks in order
   ]);
 
   // Now derive groups WITHOUT re-sorting so global order is preserved

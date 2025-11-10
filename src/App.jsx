@@ -53,7 +53,8 @@ import { initAnalytics, notifyRouteChange, track } from './lib/analytics';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 import AdsPage from "./admin/AdsPage";
-import XQueuePage from "./pages/admin/autmotion/XQueuePage";
+// ⛔️ removed duplicate non-lazy import of XQueuePage
+
 /* ========= NEW: E-E-A-T static pages (lazy) ========= */
 const AboutPage = lazy(() => import('./pages/static/About.jsx'));
 const ContactPage = lazy(() => import('./pages/static/Contact.jsx'));
@@ -64,12 +65,18 @@ const TermsPage = lazy(() => import('./pages/static/Terms.jsx'));
 const AdvertisingPage = lazy(() => import('./pages/static/Advertising.jsx'));
 const AuthorPage = lazy(() => import('./pages/static/Author.jsx'));
 
-/* ============ API base ============ */
-const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-export const API_BASE =
-  import.meta.env.VITE_API_BASE || (isLocalHost ? 'http://localhost:4000' : '');
+/* ============ API base (proxy-friendly) ============ */
+/**
+ * In dev, Vite proxies /api/* to http://localhost:4000 (see vite.config.js).
+ * To ensure the proxy is used, keep baseURL RELATIVE as '/api'.
+ * If you deploy behind a different origin, set VITE_API_BASE accordingly.
+ */
+export const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
 
-export const api = axios.create({ baseURL: API_BASE });
+export const api = axios.create({
+  baseURL: API_BASE,
+  timeout: 15000,
+});
 
 /* ============ Auth token helpers ============ */
 const tokenKey = 'news_admin_token';
@@ -87,15 +94,26 @@ export function setPreviewCountry(val) {
   else localStorage.removeItem(previewKey);
 }
 
-/* Attach token + preview to ALL /api requests */
+/**
+ * NORMALIZE + ATTACH HEADERS
+ * - If someone accidentally calls api.get('/api/...'), strip the duplicated '/api' prefix
+ *   so baseURL '/api' + url '/categories' becomes '/api/categories' (and NOT '/api/api/...').
+ * - Always attach auth token + optional geo preview header.
+ */
 api.interceptors.request.use((config) => {
-  if (config.url?.startsWith('/api/')) {
-    const t = getToken();
-    if (t) config.headers['Authorization'] = `Bearer ${t}`;
-    const preview = getPreviewCountry();
-    if (t && preview) {
-      config.headers['X-Geo-Preview-Country'] = preview.toUpperCase();
-    }
+  const url = config.url || '';
+  // Normalize: strip leading '/api' or 'api' if baseURL already includes '/api'
+  if (typeof url === 'string') {
+    if (url.startsWith('/api/')) config.url = url.slice(4);     // '/api/foo' -> '/foo'
+    else if (url === '/api') config.url = '/';                  // edge case
+  }
+
+  const t = getToken();
+  if (t) config.headers['Authorization'] = `Bearer ${t}`;
+
+  const preview = getPreviewCountry();
+  if (preview) {
+    config.headers['X-Geo-Preview-Country'] = preview.toUpperCase();
   }
   return config;
 });
@@ -121,7 +139,9 @@ export const CATEGORIES = ['All','General','Politics','Business','Finance','Tech
 /* ============ Cloudinary upload helper ============ */
 export async function uploadImageViaCloudinary(file) {
   if (!file) return { url: '', publicId: '' };
-  const sig = await api.post('/api/uploads/sign');
+
+  // IMPORTANT: because baseURL = '/api', this path must NOT start with '/api'
+  const sig = await api.post('/uploads/sign');
   const { signature, timestamp, apiKey, cloudName, folder } = sig.data;
 
   const form = new FormData();
@@ -297,6 +317,7 @@ export default function App() {
           <Route path="/advertising" element={<AdvertisingPage />} />
           <Route path="/author/:slug" element={<AuthorPage />} />
 
+          {/* 404 must come after public/admin routes */}
           <Route path="*" element={<NotFound />} />
 
           {/* Admin */}
@@ -319,8 +340,11 @@ export default function App() {
           <Route path="/admin/autmotion/queue" element={<AdminShell><AutmotionQueuePage /></AdminShell>} />
           <Route path="/admin/autmotion/drafts" element={<AdminShell><AutmotionDraftsPage /></AdminShell>} />
           <Route path="/admin/autmotion/x-sources" element={<AdminShell><AutmotionXSourcesPage /></AdminShell>} />
-         <Route path="/admin/autmotion/x-queue" element={<AdminShell><AutmotionXQueuePage /></AdminShell>} />
-  
+          <Route path="/admin/autmotion/x-queue" element={<AdminShell><AutmotionXQueuePage /></AdminShell>} />
+
+          {/* 👉 Alias so /admin/automation/x-queue also works */}
+          <Route path="/admin/automation/x-queue" element={<AdminShell><AutmotionXQueuePage /></AdminShell>} />
+
           {/* Admin review of AI drafts (manual publish) */}
           <Route path="/admin/drafts" element={<AdminShell><AdminDrafts /></AdminShell>} />
         </Routes>

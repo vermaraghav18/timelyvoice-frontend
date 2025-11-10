@@ -1,3 +1,4 @@
+// src/pages/public/TopNews.jsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, upsertTag } from "../../App.jsx";
@@ -45,7 +46,9 @@ export default function TopNews() {
       try {
         setLoading(true);
         setErr("");
-        const res = await api.get("/top-news", { params: { limit: 50, page: 1 } });
+
+        // IMPORTANT: baseURL is '/api', so use relative path here
+        const res = await api.get("/top-news", { params: { limit: 50, page: 1, mode: "public" } });
         if (!cancel) setItems(res?.data?.items || []);
       } catch (e) {
         console.error(e);
@@ -81,7 +84,6 @@ export default function TopNews() {
                     </Link>
 
                     {(a.summary || a.description || a.excerpt) && (
-                      // ⬇⬇ Summary now clickable; inherits your paragraph styling
                       <Link
                         to={href}
                         className="tn-summary"
@@ -92,10 +94,8 @@ export default function TopNews() {
                       </Link>
                     )}
 
-                    {/* Divider line */}
                     <div className="tn-divider"></div>
 
-                    {/* Source pill */}
                     <div className="tn-meta">
                       <span className="tn-source">The Timely Voice</span>
                     </div>

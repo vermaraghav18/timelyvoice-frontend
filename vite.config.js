@@ -10,10 +10,11 @@ export default defineConfig({
       '.ngrok-free.app',        // allow any *.ngrok-free.app URL
     ],
     proxy: {
-      // keep your API proxy to the local backend
+      // dev: forward /api/* to your backend (no CORS errors in the browser)
       '/api': {
         target: 'http://localhost:4000',
         changeOrigin: true,
+        secure: false,
       },
     },
   },

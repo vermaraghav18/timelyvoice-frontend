@@ -1,117 +1,189 @@
-// frontend/src/pages/admin/autmotion/XSourcesPage.jsx
-import { useEffect, useMemo, useState } from "react";
-import { api } from "../../../App.jsx";
+// src/pages/admin/automation/XSourcesPage.jsx
+import { useEffect, useRef, useState } from "react";
+import { useToast } from "../../../providers/ToastProvider.jsx";
+import { getToken } from "../../../App";
 
-const thtd = { borderBottom: "1px solid #e5e7eb", padding: "10px", textAlign: "left" };
-const btn = { padding: "8px 12px", border: "1px solid #e5e7eb", background: "#fff", borderRadius: 8, cursor: "pointer" };
-const btnPrimary = { ...btn, background: "#1D9A8E", color: "#fff", borderColor: "#1D9A8E" };
-const input = { border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 10px", width: "100%" };
+const API_ORIGIN =
+  (typeof window !== "undefined" && window.__API_ORIGIN__) ||
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_ORIGIN) ||
+  "http://localhost:4000";
+
+function authHeaders() {
+  const t = getToken();
+  const base = t ? { Authorization: `Bearer ${t}` } : {};
+  return { ...base, ...(window.__API_HEADERS__ || {}) };
+}
+
+async function apiFetch(path, opts = {}) {
+  const url = path.startsWith("http") ? path : `${API_ORIGIN}${path}`;
+  const res = await fetch(url, {
+    ...opts,
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+      ...(opts.headers || {}),
+    },
+    credentials: "include",
+  });
+  if (res.status === 404) return { notFound: true };
+  if (res.status === 401) {
+    const txt = await res.text().catch(() => "");
+    throw new Error(txt || "Unauthorized (need admin token)");
+  }
+  if (!res.ok) {
+    const msg = await res.text().catch(() => "");
+    throw new Error(msg || `HTTP ${res.status}`);
+  }
+  const ct = res.headers.get("content-type") || "";
+  return ct.includes("application/json") ? res.json() : res.text();
+}
 
 export default function XSourcesPage() {
-  const [rows, setRows] = useState([]);
-  const [form, setForm] = useState({
-    handle: "",
-    label: "",
-    enabled: true,
-    defaultAuthor: "Desk",
-    defaultCategory: "Politics",
-    geoMode: "Global",
-    geoAreas: "",
-  });
+  const toast = useToast();
+  const [sources, setSources] = useState([]);
+  const [handle, setHandle] = useState("");
+  const [label, setLabel] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
 
   async function load() {
     setLoading(true);
-    const r = await api.get("/api/automation/x/sources");
-    setRows(r.data.rows || []);
-    setLoading(false);
+    try {
+      const data = await apiFetch(`/api/automation/x/sources`);
+      if (!mounted.current) return;
+      if (data?.notFound) {
+        setSources([]);
+        return;
+      }
+      setSources(Array.isArray(data?.items) ? data.items : data || []);
+    } catch (e) {
+      toast.push({ type: "error", title: "Load failed", message: String(e.message || e) });
+      if (mounted.current) setSources([]);
+    } finally {
+      if (mounted.current) setLoading(false);
+    }
+  }
+
+  async function addSource() {
+    const body = {
+      handle: handle.replace(/^@/, "").trim(),
+      label: label.trim() || undefined,
+      enabled: true,
+    };
+    if (!body.handle) {
+      toast.push({ type: "warning", title: "Handle required" });
+      return;
+    }
+    try {
+      await apiFetch(`/api/automation/x/sources`, { method: "POST", body: JSON.stringify(body) });
+      setHandle("");
+      setLabel("");
+      load();
+      toast.push({ type: "success", title: "Source added" });
+    } catch (e) {
+      toast.push({ type: "error", title: "Add failed", message: String(e.message || e) });
+    }
+  }
+
+  async function toggleEnabled(id, enabled) {
+    try {
+      await apiFetch(`/api/automation/x/sources/${id}`, { method: "PATCH", body: JSON.stringify({ enabled }) });
+      load();
+    } catch (e) {
+      toast.push({ type: "error", title: "Update failed", message: String(e.message || e) });
+    }
+  }
+
+  async function remove(id) {
+    try {
+      await apiFetch(`/api/automation/x/sources/${id}`, { method: "DELETE" });
+      load();
+    } catch (e) {
+      toast.push({ type: "error", title: "Delete failed", message: String(e.message || e) });
+    }
   }
 
   useEffect(() => { load(); }, []);
 
-  async function addSource() {
-    const payload = {
-      handle: form.handle.replace(/^@/, ""),
-      label: form.label,
-      enabled: form.enabled,
-      defaultAuthor: form.defaultAuthor,
-      defaultCategory: form.defaultCategory,
-      geo: { mode: form.geoMode, areas: form.geoAreas.split(",").map(s=>s.trim()).filter(Boolean) },
-    };
-    await api.post("/api/automation/x/sources", payload);
-    setForm({ ...form, handle: "", label: "" });
-    load();
-  }
-
-  async function fetchNow(id) {
-    await api.post(`/api/automation/x/sources/${id}/fetch`);
-    alert("Fetched latest tweets.");
-    load();
-  }
-
-  async function toggleEnabled(row) {
-    await api.patch(`/api/automation/x/sources/${row._id}`, { enabled: !row.enabled });
-    load();
-  }
-
-  async function del(id) {
-    if (!confirm("Delete this handle?")) return;
-    await api.delete(`/api/automation/x/sources/${id}`);
-    load();
-  }
-
   return (
-    <div style={{ padding: 20 }}>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Autmotion › X Sources</h1>
+    <div style={{ maxWidth: 980, margin: "0 auto" }}>
+      <h1>Automotion › X Sources</h1>
 
-      <div style={{ display: "grid", gridTemplateColumns: "200px 200px 160px 200px 200px 120px", gap: 8, marginBottom: 12 }}>
-        <input style={input} placeholder="@MEAIndia" value={form.handle} onChange={e=>setForm(f=>({...f, handle:e.target.value}))} />
-        <input style={input} placeholder="Label (optional)" value={form.label} onChange={e=>setForm(f=>({...f, label:e.target.value}))} />
-        <select style={input} value={form.defaultCategory} onChange={e=>setForm(f=>({...f, defaultCategory:e.target.value}))}>
-          <option>Politics</option><option>Economy</option><option>World</option><option>India</option>
-        </select>
-        <input style={input} placeholder="Author" value={form.defaultAuthor} onChange={e=>setForm(f=>({...f, defaultAuthor:e.target.value}))} />
-        <select style={input} value={form.geoMode} onChange={e=>setForm(f=>({...f, geoMode:e.target.value}))}>
-          <option>Global</option><option>India</option><option>Targeted</option>
-        </select>
-        <button style={btnPrimary} onClick={addSource}>Add</button>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <input
+          placeholder="@handle"
+          value={handle}
+          onChange={(e) => setHandle(e.target.value)}
+          style={inp}
+        />
+        <input
+          placeholder="Label (optional)"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          style={inp}
+        />
+        <button onClick={addSource} style={btn(true)}>Add</button>
+        <button onClick={load} disabled={loading} style={btn()}>{loading ? "Loading…" : "Refresh"}</button>
       </div>
 
-      {loading ? <div>Loading...</div> : (
-        <table style={{ width:"100%", borderCollapse:"collapse" }}>
-          <thead>
+      <div style={{ border: "1px solid #eee", borderRadius: 12, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+          <thead style={{ background: "#f9fafb" }}>
             <tr>
-              <th style={thtd}>Handle</th>
-              <th style={thtd}>Label</th>
-              <th style={thtd}>Enabled</th>
-              <th style={thtd}>Defaults</th>
-              <th style={thtd}>Actions</th>
+              <th style={th}>Handle</th>
+              <th style={th}>Label</th>
+              <th style={th}>Enabled</th>
+              <th style={th}>Defaults</th>
+              <th style={th}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map(r=>(
-              <tr key={r._id}>
-                <td style={thtd}>@{r.handle}</td>
-                <td style={thtd}>{r.label || "-"}</td>
-                <td style={thtd}>
-                  <button style={btn} onClick={()=>toggleEnabled(r)}>{r.enabled ? "On" : "Off"}</button>
+            {sources.length === 0 && (
+              <tr><td colSpan={5} style={td}>No sources yet.</td></tr>
+            )}
+            {sources.map((s) => (
+              <tr key={s._id} style={{ borderTop: "1px solid #f0f0f0" }}>
+                <td style={td}>@{s.handle}</td>
+                <td style={td}>{s.label || "—"}</td>
+                <td style={td}>
+                  <label style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                    <input
+                      type="checkbox"
+                      checked={!!s.enabled}
+                      onChange={(e) => toggleEnabled(s._id, e.target.checked)}
+                    />
+                    <span>{s.enabled ? "Enabled" : "Disabled"}</span>
+                  </label>
                 </td>
-                <td style={thtd}>
-                  <div>Author: {r.defaultAuthor}</div>
-                  <div>Category: {r.defaultCategory}</div>
-                  <div>GEO: {r.geo?.mode} {r.geo?.areas?.length ? `(${r.geo.areas.join(", ")})` : ""}</div>
+                <td style={td}>
+                  author: {s.defaultAuthor || "—"}<br />
+                  category: {s.defaultCategory || "—"}
                 </td>
-                <td style={thtd}>
-                  <div style={{display:"flex", gap:8}}>
-                    <button style={btn} onClick={()=>fetchNow(r._id)}>Fetch</button>
-                    <button style={btn} onClick={()=>del(r._id)}>Delete</button>
+                <td style={td}>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => remove(s._id)} style={btn()}>Delete</button>
                   </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-      )}
+      </div>
     </div>
   );
 }
+
+const inp = { padding: "8px 10px", border: "1px solid #e5e7eb", borderRadius: 8, width: 260 };
+const th = { textAlign: "left", padding: 10, fontWeight: 600, fontSize: 13, borderBottom: "1px solid #eee" };
+const td = { padding: 10, verticalAlign: "top" };
+const btn = (primary = false) => ({
+  padding: "8px 12px",
+  borderRadius: 10,
+  border: "1px solid #e5e7eb",
+  background: primary ? "#1D9A8E" : "#fff",
+  color: primary ? "#fff" : "#111",
+  cursor: "pointer",
+  fontSize: 13,
+});
