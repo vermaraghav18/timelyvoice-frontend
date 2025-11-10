@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { api, styles, removeManagedHeadTags, upsertTag } from '../../App.jsx';
 import SiteNav from '../../components/SiteNav.jsx';
 import SiteFooter from '../../components/SiteFooter.jsx';
+import { buildCanonicalFromLocation } from '../../App.jsx';
 
 export default function TagPage() {
   const { slug } = useParams();
@@ -12,7 +13,9 @@ export default function TagPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  const canonical = useMemo(() => `${window.location.origin}/tag/${slug}`, [slug]);
+ const canonical = buildCanonicalFromLocation(['tag', String(slug || '').toLowerCase()]);
+upsertTag('link', { rel: 'canonical', href: canonical });
+
 
   useEffect(() => {
     let alive = true;

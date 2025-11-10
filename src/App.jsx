@@ -53,6 +53,7 @@ import { initAnalytics, notifyRouteChange, track } from './lib/analytics';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 import AdsPage from "./admin/AdsPage";
+
 // ⛔️ removed duplicate non-lazy import of XQueuePage
 
 /* ========= NEW: E-E-A-T static pages (lazy) ========= */
@@ -240,6 +241,33 @@ export function emitBreadcrumbs(trail = []) {
   });
 }
 
+// Build a normalized canonical URL from the current window location.
+// in App.jsx, replace buildCanonicalFromLocation with this version:
+export function buildCanonicalFromLocation() {
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const url = new URL(origin + window.location.pathname + window.location.search);
+
+  // strip tracking params
+  ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','fbclid','gclid']
+    .forEach(p => url.searchParams.delete(p));
+
+  // normalize path: no trailing slash (except root)
+  if (url.pathname !== '/' && url.pathname.endsWith('/')) {
+    url.pathname = url.pathname.replace(/\/+$/, '');
+  }
+
+  // NEW: lowercase slugs for /category|/tag|/author
+  url.pathname = url.pathname.replace(
+    /^\/(category|tag|author)\/([^\/]+)(.*)$/i,
+    (_m, seg, slug, rest) => `/${seg.toLowerCase()}/${slug.toLowerCase()}${rest || ''}`
+  );
+
+  const q = url.searchParams.toString();
+  url.search = q ? `?${q}` : '';
+  return url.toString();
+}
+
+
 /* ============ Category route wrapper (Finance/Business special layout) ============ */
 function AnyCategoryRoute() {
   const { slug } = useParams();
@@ -289,6 +317,12 @@ export default function App() {
         'query-input': 'required name=search_term_string',
       },
     });
+  }, [loc.pathname, loc.search]);
+
+  // ✅ Canonical tag: keep one normalized URL per page
+  useEffect(() => {
+    const href = buildCanonicalFromLocation();
+    upsertTag('link', { rel: 'canonical', href });
   }, [loc.pathname, loc.search]);
 
   return (

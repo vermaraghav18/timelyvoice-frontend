@@ -23,6 +23,10 @@ import SectionRenderer from '../../components/sections/SectionRenderer.jsx';
 import RelatedStories from '../../components/RelatedStories.jsx';
 import '../../styles/rails.css';
 
+import { buildCanonicalFromLocation } from '../../App.jsx';
+import { ensureRenderableImage } from '../../lib/images';
+
+
 // --- Publisher/site constants (used in JSON-LD) ---
 const SITE_NAME = 'NewsSite';
 const SITE_URL  = typeof window !== 'undefined' ? window.location.origin : 'https://example.com';
@@ -133,7 +137,11 @@ export default function ReaderArticle() {
   const bodyRef = useRef(null);
   useReadComplete({ id: article?.id || article?._id, slug: article?.slug, title: article?.title });
 
-  const canonical = useMemo(() => `${window.location.origin}/article/${slug}`, [slug]);
+const canonical = useMemo(
+  () => buildCanonicalFromLocation(['article', String(slug || '').toLowerCase()]),
+  [slug]
+);
+
 
   // Ensure the initial HTML never says "Article not found" (prevents Soft 404)
   useEffect(() => {
@@ -219,7 +227,8 @@ export default function ReaderArticle() {
         upsertTag('meta', { property: 'article:modified_time',  content: modifiedIso  });
 
         // Open Graph / Twitter
-        const ogImage = doc.ogImage || doc.coverImageUrl || doc.imageUrl || '';
+        const ogImage = ensureRenderableImage(doc);
+
         // Prefer metaTitle for social titles (falls back to page <title>)
         const ogTitle = (doc.metaTitle && doc.metaTitle.trim()) || title;
 
@@ -413,7 +422,8 @@ export default function ReaderArticle() {
 
   /* ---------- derived ---------- */
   const displayDate = article?.updatedAt || article?.publishedAt || article?.publishAt || article?.createdAt;
-  const imageUrl = article?.coverImageUrl || article?.imageUrl || '';
+const imageUrl = ensureRenderableImage(article);
+
   const imageAlt = article?.imageAlt || article?.title || '';
 
   // rails: alternate right, left, right, left…
@@ -525,7 +535,8 @@ export default function ReaderArticle() {
   function NextArticleInline({ doc, isMobile }) {
     if (!doc) return null;
 
-    const imageUrl = doc.coverImageUrl || doc.imageUrl || '';
+    const imageUrl = ensureRenderableImage(article);
+
     const imageAlt = doc.imageAlt || doc.title || '';
     const bodyHtml = doc.bodyHtml || doc.body || '';
     const normalized = normalizeBody(bodyHtml);

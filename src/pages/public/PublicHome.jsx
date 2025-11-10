@@ -5,6 +5,7 @@ import SiteNav from "../../components/SiteNav.jsx";
 import SiteFooter from "../../components/SiteFooter.jsx";
 import SectionRenderer from "../../components/sections/SectionRenderer.jsx";
 import "../../styles/rails.css";
+import { buildCanonicalFromLocation } from '../../App.jsx';
 
 export default function PublicHome() {
   const [sections, setSections] = useState([]);
@@ -15,7 +16,8 @@ export default function PublicHome() {
   useEffect(() => {
     const homeUrl = window.location.origin + "/";
     document.title = "My News — Latest headlines";
-    upsertTag("link", { rel: "canonical", href: homeUrl });
+    upsertTag("link", { rel: "canonical", href: buildCanonicalFromLocation([]) });
+
     upsertTag("meta", {
       name: "description",
       content: "Latest politics, business, tech, sports and world news.",

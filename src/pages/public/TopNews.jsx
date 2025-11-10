@@ -5,6 +5,7 @@ import { api, upsertTag } from "../../App.jsx";
 import SiteNav from "../../components/SiteNav.jsx";
 import SiteFooter from "../../components/SiteFooter.jsx";
 import "./TopNews.css";
+import { buildCanonicalFromLocation } from "../../App.jsx";
 
 const CAT_COLORS = {
   World: "linear-gradient(135deg, #3B82F6 0%, #0073ff 100%)",
@@ -31,15 +32,18 @@ export default function TopNews() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
+  /* ---------- SEO ---------- */
   useEffect(() => {
     document.title = "Top News — The Timely Voice";
-    upsertTag("link", { rel: "canonical", href: window.location.origin + "/top-news" });
+    const canonical = buildCanonicalFromLocation(["top-news"]);
+    upsertTag("link", { rel: "canonical", href: canonical });
     upsertTag("meta", {
       name: "description",
       content: "All the latest headlines across categories, newest first.",
     });
   }, []);
 
+  /* ---------- Fetch Top News ---------- */
   useEffect(() => {
     let cancel = false;
     (async () => {

@@ -1,12 +1,16 @@
 // src/pages/public/CategoryPage.jsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
-import { api, removeManagedHeadTags, upsertTag, setJsonLd } from '../../App.jsx';
+import { api, removeManagedHeadTags, upsertTag, setJsonLd, buildCanonicalFromLocation } from '../../App.jsx';
 
 import SiteNav from '../../components/SiteNav.jsx';
 import SiteFooter from '../../components/SiteFooter.jsx';
 import SectionRenderer from '../../components/sections/SectionRenderer.jsx';
 import '../../styles/rails.css';
+
+import { buildCanonicalFromLocation } from '../../App.jsx';
+import { ensureRenderableImage } from '../../lib/images';
+
 
 /* ---------- Google AdSense: lightweight blocks ---------- */
 const ADS_CLIENT = 'ca-pub-8472487092329023';
@@ -153,7 +157,8 @@ function LeadCard({ a }) {
   if (!a) return null;
   const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
   const updated = a.updatedAt || a.publishedAt || a.publishAt || a.createdAt;
-  const img = a.heroUrl || a.ogImage || a.imageUrl || a.thumbUrl || null;
+  const img = ensureRenderableImage(a);
+
   const summary = a.summary || a.excerpt || a.description || a.seoDescription ||
     (typeof a.body === 'string' ? a.body.replace(/<[^>]*>/g, '').slice(0, 220) : '');
 
@@ -183,7 +188,7 @@ function ArticleRow({ a }) {
   const categoryName = a.category || 'General';
   const categoryUrl = `/category/${encodeURIComponent(toSlug(categoryName))}`;
   const updated = a.updatedAt || a.publishedAt || a.publishAt || a.createdAt;
-  const thumb = a.thumbUrl || a.ogImage || a.imageUrl || null;
+  const thumb = ensureRenderableImage(a);
 
   return (
     <div style={cardStyle}>
@@ -324,7 +329,22 @@ export default function CategoryPage() {
     };
   }, []);
 
-  const canonical = useMemo(() => `${window.location.origin}/category/${slug}`, [slug]);
+ const normalizedSlug = useMemo(() => toSlug(slug), [slug]);
+const canonical = useMemo(
+  () => buildCanonicalFromLocation(['category', String(slug || '').toLowerCase()]),
+  [slug]
+);
+
+
+ // Optional: client-side normalize the visible path in dev
+ useEffect(() => {
+   const want = `/category/${normalizedSlug}`;
+  if (pathname !== want) {
+     // mirror the server’s 301 canonicalization
+     navigate(want, { replace: true });
+   }
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [normalizedSlug]);
 
   /* fetch category + articles */
   useEffect(() => {
@@ -333,8 +353,8 @@ export default function CategoryPage() {
     setNotFound(false);
 
     Promise.all([
-      api.get(`/categories/slug/${encodeURIComponent(slug)}`, { validateStatus: () => true }),
-      api.get(`/articles`, { params: { category: slug, limit: 50 }, validateStatus: () => true }),
+       api.get(`/categories/slug/${encodeURIComponent(normalizedSlug)}`, { validateStatus: () => true }),
+  api.get(`/public/categories/${encodeURIComponent(normalizedSlug)}/articles`, { params: { limit: 50 }, validateStatus: () => true }),
     ])
       .then(([cRes, aRes]) => {
         if (!alive) return;

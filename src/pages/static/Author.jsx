@@ -3,7 +3,7 @@ import { useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import SiteNav from '../../components/SiteNav.jsx';
 import SiteFooter from '../../components/SiteFooter.jsx';
-import { styles, removeManagedHeadTags, upsertTag, addJsonLd } from '../../App.jsx';
+import { styles, removeManagedHeadTags, upsertTag, addJsonLd, buildCanonicalFromLocation } from '../../App.jsx';
 
 function toTitleCase(s = '') {
   return s
@@ -17,26 +17,32 @@ export default function AuthorPage() {
   const displayName = useMemo(() => toTitleCase(slug || 'Author'), [slug]);
 
   useEffect(() => {
-    const url = `${window.location.origin}/author/${encodeURIComponent(slug || '')}`;
     removeManagedHeadTags();
+
+    // ✅ canonical (normalized, lower-cased)
+    const canonical = buildCanonicalFromLocation(['author', String(slug || '').toLowerCase()]);
+    upsertTag('link', { rel: 'canonical', href: canonical });
+
+    // ✅ title & description
     upsertTag('title', {}, { textContent: `${displayName} — Author — NewsSite` });
     upsertTag('meta', { name: 'description', content: `Articles and bio for ${displayName} on NewsSite.` });
 
+    // ✅ structured data
     addJsonLd('breadcrumbs', {
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: `${window.location.origin}/` },
-        { '@type': 'ListItem', position: 2, name: 'Author', item: `${window.location.origin}/author/${encodeURIComponent(slug || '')}` },
+        { '@type': 'ListItem', position: 2, name: 'Author', item: canonical },
       ],
     });
 
-    // Minimal Person entity (expand later with sameAs, jobTitle, etc.)
+    // ✅ Minimal Person entity (extend later if needed)
     addJsonLd('author-person', {
       '@context': 'https://schema.org',
       '@type': 'Person',
       name: displayName,
-      url,
+      url: canonical,
     });
   }, [slug, displayName]);
 
