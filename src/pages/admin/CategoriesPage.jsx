@@ -1,223 +1,181 @@
-// src/pages/admin/CategoriesPage.jsx
-import { useEffect, useState } from 'react';
-import { api, styles, removeManagedHeadTags, upsertTag } from '../../App.jsx';
+// frontend/src/pages/public/CategoryPage.jsx
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 
-export default function AdminCategoriesPage() {
+import '../../styles/tails.css';
+
+import {
+  api,
+  styles,
+  removeManagedHeadTags,
+  upsertTag,
+  addJsonLd,
+  buildCanonicalFromLocation, // ✅ import ONCE; do not redeclare
+} from '../../App.jsx';
+
+import { ensureRenderableImage } from '../../lib/images';
+
+function usePageParam() {
+  const [sp] = useSearchParams();
+  const p = parseInt(sp.get('page') || '1', 10);
+  return Number.isFinite(p) && p > 0 ? p : 1;
+}
+
+export default function CategoryPage() {
+  const { slug: rawSlug } = useParams(); // URL piece after /category/:slug
+  const slug = String(rawSlug || '').toLowerCase();
+  const page = usePageParam();
+  const location = useLocation();
+
+  const [cat, setCat] = useState(null);
   const [items, setItems] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ name: '', slug: '', type: 'topic', description: '' });
-  const [editRow, setEditRow] = useState(null);
   const [err, setErr] = useState('');
 
-  const load = () => {
-    setLoading(true);
-    api
-      .get('/categories')
-      .then((res) => setItems(res.data || []))
-      .catch((e) => setErr(e?.message || 'Failed to load'))
-      .finally(() => setLoading(false));
-  };
+  const totalPages = useMemo(
+    () => (pageSize > 0 ? Math.max(1, Math.ceil(total / pageSize)) : 1),
+    [total, pageSize]
+  );
 
+  // load category + articles
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      setLoading(true);
+      setErr('');
+      try {
+        // 1) category by slug (public)
+        const catRes = await api.get(`/categories/slug/${encodeURIComponent(slug)}`);
+        if (cancelled) return;
+        setCat(catRes.data);
+
+        // 2) list articles (public endpoint that respects geo + published)
+        const listRes = await api.get(
+          `/public/categories/${encodeURIComponent(slug)}/articles?page=${page}&limit=10`
+        );
+        if (cancelled) return;
+        setItems(listRes.data?.items || []);
+        setTotal(listRes.data?.total || 0);
+        setPageSize(listRes.data?.pageSize || 10);
+      } catch (e) {
+        if (cancelled) return;
+        const msg =
+          e?.response?.data?.error ||
+          e?.response?.data?.message ||
+          e?.message ||
+          'Failed to load';
+        setErr(msg);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, page]);
+
+  // head tags (canonical, title/desc, breadcrumbs)
   useEffect(() => {
     removeManagedHeadTags();
-    upsertTag('title', {}, { textContent: 'CMS — Categories · NewsSite' });
-    upsertTag('meta', { name: 'description', content: 'Manage categories' });
-    load();
-  }, []);
 
-  const onCreate = (e) => {
-    e.preventDefault();
-    setCreating(true);
-    setErr('');
-    api
-      .post('/categories', form)
-      .then(() => {
-        setForm({ name: '', slug: '', type: 'topic', description: '' });
-        load();
-      })
-      .catch((e) => setErr(e?.response?.data?.message || e.message || 'Create failed'))
-      .finally(() => setCreating(false));
-  };
+    const canon = buildCanonicalFromLocation(location); // ✅ use, not redeclare
+    upsertTag('link', { rel: 'canonical' }, { href: canon });
 
-  const onSave = (row) => {
-    setErr('');
-    api
-      .patch(`/categories/${row._id}`, {
-        name: row.name,
-        slug: row.slug,
-        description: row.description,
-        type: row.type || 'topic',
-      })
-      .then(() => {
-        setEditRow(null);
-        load();
-      })
-      .catch((e) => setErr(e?.response?.data?.message || e.message || 'Save failed'));
-  };
+    const titleTxt = cat?.name ? `${cat.name} — The Timely Voice` : 'Category — The Timely Voice';
+    upsertTag('title', {}, { textContent: titleTxt });
+
+    const descTxt = cat?.description
+      ? cat.description
+      : cat?.name
+      ? `Latest news and updates in ${cat.name}.`
+      : 'Latest category news and updates.';
+    upsertTag('meta', { name: 'description' }, { content: descTxt });
+
+    // breadcrumbs
+    addJsonLd('breadcrumbs', {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: `${window.location.origin}/`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: cat?.name || 'Category',
+          item: `${window.location.origin}/category/${encodeURIComponent(slug)}`,
+        },
+      ],
+    });
+  }, [location, cat, slug]);
 
   return (
     <main className={styles.container}>
-      <h1>CMS</h1>
-      <h2 className="mt-4 mb-2">Categories</h2>
+      <h1 className="mb-2">
+        {cat?.name || 'Category'}
+        {cat?.type ? (
+          <span className="ml-2 text-xs align-middle px-2 py-1 rounded bg-slate-100">
+            {cat.type}
+          </span>
+        ) : null}
+      </h1>
+      {cat?.description ? (
+        <p className="text-slate-600 mb-4">{cat.description}</p>
+      ) : null}
 
-      {err && <div className="mb-3 p-3 bg-red-50 rounded-lg text-red-700">{err}</div>}
-
-      <form onSubmit={onCreate} className="p-4 bg-white rounded-xl mb-6 grid gap-3 md:grid-cols-3">
-        <input
-          className="border rounded-lg px-3 py-2"
-          placeholder="Name (e.g., World)"
-          value={form.name}
-          onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
-          required
-        />
-        <input
-          className="border rounded-lg px-3 py-2"
-          placeholder="Slug (e.g., world)"
-          value={form.slug}
-          onChange={(e) => setForm((s) => ({ ...s, slug: e.target.value }))}
-          required
-        />
-        <select
-          className="border rounded-lg px-3 py-2"
-          value={form.type}
-          onChange={(e) => setForm((s) => ({ ...s, type: e.target.value }))}
-        >
-          <option value="topic">Topic</option>
-          <option value="state">State</option>
-          <option value="city">City</option>
-        </select>
-
-        <input
-          className="border rounded-lg px-3 py-2 md:col-span-3"
-          placeholder="Description (optional)"
-          value={form.description}
-          onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
-        />
-        <div>
-          <button disabled={creating} className="px-4 py-2 rounded-lg bg-emerald-600 text-white">
-            {creating ? 'Creating…' : 'Create'}
-          </button>
-        </div>
-      </form>
+      {err && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg">{err}</div>}
 
       {loading ? (
         <p>Loading…</p>
       ) : items.length === 0 ? (
-        <p>No categories yet. Create your first category above.</p>
+        <p>No articles yet.</p>
       ) : (
-        <div className="overflow-auto">
-          <table className="min-w-full bg-white rounded-xl">
-            <thead>
-              <tr className="text-left">
-                <th className="p-3">Name</th>
-                <th className="p-3">Slug</th>
-                <th className="p-3">Type</th>
-                <th className="p-3">Description</th>
-                <th className="p-3">Updated</th>
-                <th className="p-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((it) => {
-                const editing = editRow?._id === it._id;
-
-               return (
-  <tr key={it._id} className="border-t">
-    {/* Name */}
-    <td className="p-3">
-      {editing ? (
-        <input
-          className="border rounded-lg px-2 py-1 w-full"
-          value={editRow.name}
-          onChange={(e) => setEditRow((r) => ({ ...r, name: e.target.value }))}
-        />
-      ) : (
-        it.name
+        <section className="grid gap-4 md:grid-cols-2">
+          {items.map((a) => {
+            const img = ensureRenderableImage(a);
+            return (
+              <article key={a._id} className="rounded-xl bg-white border overflow-hidden">
+                <Link to={`/article/${encodeURIComponent(a.slug)}`} className="block" data-hero>
+                  {img ? <img src={img} alt="" loading="lazy" /> : null}
+                </Link>
+                <div className="p-3">
+                  <h3 className="m-0 text-lg">
+                    <Link to={`/article/${encodeURIComponent(a.slug)}`}>{a.title}</Link>
+                  </h3>
+                  <p className="text-slate-600 text-sm mt-1">{a.summary}</p>
+                </div>
+              </article>
+            );
+          })}
+        </section>
       )}
-    </td>
 
-    {/* Slug */}
-    <td className="p-3">
-      {editing ? (
-        <input
-          className="border rounded-lg px-2 py-1 w-full"
-          value={editRow.slug}
-          onChange={(e) => setEditRow((r) => ({ ...r, slug: e.target.value }))}
-        />
-      ) : (
-        it.slug
-      )}
-    </td>
-
-    {/* Type */}
-    <td className="p-3">
-      {editing ? (
-        <select
-          className="border rounded-lg px-2 py-1 w-full"
-          value={editRow.type || 'topic'}
-          onChange={(e) => setEditRow((r) => ({ ...r, type: e.target.value }))}
-        >
-          <option value="topic">Topic</option>
-          <option value="state">State</option>
-          <option value="city">City</option>
-        </select>
-      ) : (
-        it.type || 'topic'
-      )}
-    </td>
-
-    {/* Description */}
-    <td className="p-3">
-      {editing ? (
-        <input
-          className="border rounded-lg px-2 py-1 w-full"
-          value={editRow.description || ''}
-          onChange={(e) => setEditRow((r) => ({ ...r, description: e.target.value }))}
-        />
-      ) : (
-        it.description || ''
-      )}
-    </td>
-
-    {/* Updated */}
-    <td className="p-3">
-      {it.updatedAt ? new Date(it.updatedAt).toLocaleString() : '—'}
-    </td>
-
-    {/* Actions */}
-    <td className="p-3 space-x-2">
-      {editing ? (
-        <>
-          <button
-            className="px-3 py-1 rounded-lg bg-emerald-600 text-white"
-            onClick={() => onSave(editRow)}
-          >
-            Save
-          </button>
-          <button
-            className="px-3 py-1 rounded-lg bg-gray-200"
-            onClick={() => setEditRow(null)}
-          >
-            Cancel
-          </button>
-        </>
-      ) : (
-        <button
-          className="px-3 py-1 rounded-lg bg-gray-200"
-          onClick={() => setEditRow(it)}
-        >
-          Edit
-        </button>
-      )}
-    </td>
-  </tr>
-);
-
-              })}
-            </tbody>
-          </table>
-        </div>
+      {/* pagination */}
+      {totalPages > 1 && (
+        <nav className="mt-6 flex items-center gap-2">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+            const search = new URLSearchParams(location.search);
+            if (p === 1) search.delete('page');
+            else search.set('page', String(p));
+            const href = `/category/${encodeURIComponent(slug)}${search.toString() ? `?${search}` : ''}`;
+            const active = p === page;
+            return (
+              <Link
+                key={p}
+                to={href}
+                className={`px-3 py-1 rounded ${active ? 'bg-emerald-600 text-white' : 'bg-slate-100'}`}
+              >
+                {p}
+              </Link>
+            );
+          })}
+        </nav>
       )}
     </main>
   );

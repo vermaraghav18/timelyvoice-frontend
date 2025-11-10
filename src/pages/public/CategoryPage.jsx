@@ -1,16 +1,24 @@
-// src/pages/public/CategoryPage.jsx
+// frontend/src/pages/public/CategoryPage.jsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
-import { api, removeManagedHeadTags, upsertTag, setJsonLd, buildCanonicalFromLocation } from '../../App.jsx';
+
+// ✅ single, correctly-cased import from app.jsx (no duplicates)
+import {
+  api,
+  removeManagedHeadTags,
+  upsertTag,
+  setJsonLd,
+  buildCanonicalFromLocation,
+} from '../../App.jsx';
+
 
 import SiteNav from '../../components/SiteNav.jsx';
 import SiteFooter from '../../components/SiteFooter.jsx';
 import SectionRenderer from '../../components/sections/SectionRenderer.jsx';
 import '../../styles/rails.css';
 
-import { buildCanonicalFromLocation } from '../../App.jsx';
-import { ensureRenderableImage } from '../../lib/images';
-
+// ✅ correct extension to avoid resolver duplicates
+import { ensureRenderableImage } from '../../lib/images.js';
 
 /* ---------- Google AdSense: lightweight blocks ---------- */
 const ADS_CLIENT = 'ca-pub-8472487092329023';
@@ -122,7 +130,7 @@ const gridWrap = {
 
 const singleColWrap = { width: '100%', maxWidth: 760, padding: '0 12px' };
 
-const railCol = { minWidth: 0, position: 'relative' }; // relative so absolute pin can anchor
+const railCol = { minWidth: 0, position: 'relative' };
 const mainCol = { minWidth: 0 };
 
 const listStyle = { display: 'flex', flexDirection: 'column', gap: 8 };
@@ -329,22 +337,21 @@ export default function CategoryPage() {
     };
   }, []);
 
- const normalizedSlug = useMemo(() => toSlug(slug), [slug]);
-const canonical = useMemo(
-  () => buildCanonicalFromLocation(['category', String(slug || '').toLowerCase()]),
-  [slug]
-);
+  const normalizedSlug = useMemo(() => toSlug(slug), [slug]);
+  const canonical = useMemo(
+    () => buildCanonicalFromLocation(['category', String(slug || '').toLowerCase()]),
+    [slug]
+  );
 
-
- // Optional: client-side normalize the visible path in dev
- useEffect(() => {
-   const want = `/category/${normalizedSlug}`;
-  if (pathname !== want) {
-     // mirror the server’s 301 canonicalization
-     navigate(want, { replace: true });
-   }
-   // eslint-disable-next-line react-hooks/exhaustive-deps
- }, [normalizedSlug]);
+  // Optional: client-side normalize the visible path in dev
+  useEffect(() => {
+    const want = `/category/${normalizedSlug}`;
+    if (pathname !== want) {
+      // mirror the server’s 301 canonicalization
+      navigate(want, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [normalizedSlug]);
 
   /* fetch category + articles */
   useEffect(() => {
@@ -353,8 +360,8 @@ const canonical = useMemo(
     setNotFound(false);
 
     Promise.all([
-       api.get(`/categories/slug/${encodeURIComponent(normalizedSlug)}`, { validateStatus: () => true }),
-  api.get(`/public/categories/${encodeURIComponent(normalizedSlug)}/articles`, { params: { limit: 50 }, validateStatus: () => true }),
+      api.get(`/categories/slug/${encodeURIComponent(normalizedSlug)}`, { validateStatus: () => true }),
+      api.get(`/public/categories/${encodeURIComponent(normalizedSlug)}/articles`, { params: { limit: 50 }, validateStatus: () => true }),
     ])
       .then(([cRes, aRes]) => {
         if (!alive) return;
@@ -603,7 +610,7 @@ const canonical = useMemo(
                   <h1 style={{ margin: '4px 0 8px', fontSize: 22, lineHeight: 1.3 }}>
                     {category?.name || (slug || 'Category')}
                   </h1>
-                  {category?.description && category.description.trim().length >= MIN_INTRO_LEN && (
+                  {category?.description && category.description.trim().length >= 80 && (
                     <p style={{ margin: '6px 0 14px', fontSize: 15, lineHeight: 1.6, color: '#6b7280' }}>
                       {category.description.trim()}
                     </p>
@@ -700,7 +707,7 @@ const canonical = useMemo(
                 ))}
 
                 {/* Category intro (mobile) */}
-                {category?.description && category.description.trim().length >= MIN_INTRO_LEN && (
+                {category?.description && category.description.trim().length >= 80 && (
                   <p style={{ margin: '8px 0 12px', fontSize: 15, lineHeight: 1.6, color: '#6b7280' }}>
                     {category.description.trim()}
                   </p>
