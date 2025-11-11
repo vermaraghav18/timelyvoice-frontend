@@ -54,6 +54,9 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 import AdsPage from "./admin/AdsPage";
 
+// 👉 NEW: X Admin page (lazy)
+const AdminXPage = lazy(() => import('./pages/AdminX.jsx'));
+
 // ⛔️ removed duplicate non-lazy import of XQueuePage
 
 /* ========= NEW: E-E-A-T static pages (lazy) ========= */
@@ -242,7 +245,6 @@ export function emitBreadcrumbs(trail = []) {
 }
 
 // Build a normalized canonical URL from the current window location.
-// in App.jsx, replace buildCanonicalFromLocation with this version:
 export function buildCanonicalFromLocation() {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const url = new URL(origin + window.location.pathname + window.location.search);
@@ -339,6 +341,8 @@ export default function App() {
 
           <Route path="/tag/:slug" element={<TagPage />} />
           <Route path="/article/:slug" element={<ReaderArticle />} />
+          <Route path="/news/:slug" element={<ReaderArticle />} />
+
           <Route path="/search" element={<SearchPage />} />
 
           {/* ===== NEW: E-E-A-T static routes ===== */}
@@ -375,9 +379,11 @@ export default function App() {
           <Route path="/admin/autmotion/drafts" element={<AdminShell><AutmotionDraftsPage /></AdminShell>} />
           <Route path="/admin/autmotion/x-sources" element={<AdminShell><AutmotionXSourcesPage /></AdminShell>} />
           <Route path="/admin/autmotion/x-queue" element={<AdminShell><AutmotionXQueuePage /></AdminShell>} />
-
           {/* 👉 Alias so /admin/automation/x-queue also works */}
           <Route path="/admin/automation/x-queue" element={<AdminShell><AutmotionXQueuePage /></AdminShell>} />
+
+          {/* 👉 NEW: X Admin page */}
+          <Route path="/admin/x" element={<AdminShell><AdminXPage /></AdminShell>} />
 
           {/* Admin review of AI drafts (manual publish) */}
           <Route path="/admin/drafts" element={<AdminShell><AdminDrafts /></AdminShell>} />

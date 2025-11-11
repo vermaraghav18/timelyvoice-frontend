@@ -27,12 +27,23 @@ function articleHref(slug) {
   return `/article/${slug}`;
 }
 
+// Normalize + sort newest first
+function normalizeTopNews(items = []) {
+  return items
+    .filter(Boolean)
+    .map((i) => ({
+      ...i,
+      _ts: Date.parse(i.publishedAt || i.updatedAt || i.createdAt || 0),
+    }))
+    .sort((a, b) => b._ts - a._ts);
+}
+
 export default function TopNews() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  /* ---------- SEO ---------- */
+  // SEO
   useEffect(() => {
     document.title = "Top News — The Timely Voice";
     const canonical = buildCanonicalFromLocation(["top-news"]);
@@ -43,7 +54,7 @@ export default function TopNews() {
     });
   }, []);
 
-  /* ---------- Fetch Top News ---------- */
+  // Fetch (cache-buster) + normalize
   useEffect(() => {
     let cancel = false;
     (async () => {
@@ -51,9 +62,22 @@ export default function TopNews() {
         setLoading(true);
         setErr("");
 
-        // IMPORTANT: baseURL is '/api', so use relative path here
-        const res = await api.get("/top-news", { params: { limit: 50, page: 1, mode: "public" } });
-        if (!cancel) setItems(res?.data?.items || []);
+        const qs = new URLSearchParams({
+          page: 1,
+          limit: 50,
+          mode: "public",
+          __bust: Date.now(), // dev-only cache buster
+        });
+
+        const res = await api.get(`/top-news?${qs.toString()}`, {
+          validateStatus: () => true,
+          headers: { "Cache-Control": "no-cache" },
+        });
+
+        if (!cancel) {
+          const sorted = normalizeTopNews(res?.data?.items || []);
+          setItems(sorted);
+        }
       } catch (e) {
         console.error(e);
         if (!cancel) setErr("Failed to load top news");
@@ -61,7 +85,9 @@ export default function TopNews() {
         if (!cancel) setLoading(false);
       }
     })();
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, []);
 
   return (
@@ -78,7 +104,10 @@ export default function TopNews() {
           <ul className="tn-list">
             {items.map((a) => {
               const href = articleHref(a.slug);
-              const color = CAT_COLORS[a.category] || "#4B5563";
+              const catName =
+                a?.category?.name ??
+                (typeof a?.category === "string" ? a.category : "General");
+              const color = CAT_COLORS[catName] || "#4B5563";
 
               return (
                 <li className="tn-item" key={a.id || a._id || a.slug}>
@@ -107,20 +136,13 @@ export default function TopNews() {
 
                   <Link to={href} className="tn-thumb">
                     <span className="tn-badge">
-                      <span
-                        className="tn-pill"
-                        style={{ background: color }}
-                      >
-                        {a.category}
+                      <span className="tn-pill" style={{ background: color }}>
+                        {catName}
                       </span>
                     </span>
 
                     {a.imageUrl ? (
-                      <img
-                        src={a.imageUrl}
-                        alt={a.imageAlt || a.title}
-                        loading="lazy"
-                      />
+                      <img src={a.imageUrl} alt={a.imageAlt || a.title} loading="lazy" />
                     ) : (
                       <div className="tn-thumb ph" />
                     )}

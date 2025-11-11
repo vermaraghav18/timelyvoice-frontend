@@ -253,9 +253,15 @@ const canonical = useMemo(
         upsertTag('meta', { name: 'author', content: authorNameMeta });
 
         // ---------- JSON-LD: Strong NewsArticle + Breadcrumb ----------
-        const categoryObj = doc.category || null;
-        const categoryName = categoryObj?.name || categoryObj || 'General';
-        const categorySlug = categoryObj?.slug || categoryName;
+        const categoryObj = doc.category ?? null;
+        const categoryName =
+          categoryObj && typeof categoryObj === 'object'
+            ? (categoryObj.name || 'General')
+            : (categoryObj || 'General');
+        const categorySlug =
+          categoryObj && typeof categoryObj === 'object'
+            ? (categoryObj.slug || categoryName)
+            : categoryName;
 
         // Author: prefer Person; fall back to Organization “News Desk”
         const authorName = (doc.author && String(doc.author).trim()) || 'News Desk';
@@ -535,7 +541,7 @@ const imageUrl = ensureRenderableImage(article);
   function NextArticleInline({ doc, isMobile }) {
     if (!doc) return null;
 
-    const imageUrl = ensureRenderableImage(article);
+   const imageUrl = ensureRenderableImage(article);
 
     const imageAlt = doc.imageAlt || doc.title || '';
     const bodyHtml = doc.bodyHtml || doc.body || '';
@@ -815,10 +821,10 @@ if (status === 'notfound') {
               </div>
 
               {/* NEW: Related stories widget (improves internal linking) */}
-  <RelatedStories
+ <RelatedStories
     currentSlug={article.slug}
-   category={article?.category?.name || article?.category || 'General'}
-   title="Related stories"
+    category={article?.category?.name ?? (typeof article?.category === 'string' ? article.category : 'General')}
+    title="Related stories"
     dense={false}
   />
 
@@ -944,7 +950,7 @@ if (status === 'notfound') {
                                     justifyContent: 'center',
                                   }}
                                 >
-                                  {a.category || 'Sports'}
+                                 {a?.category?.name ?? (typeof a?.category === 'string' ? a.category : 'General')}
                                 </span>
                               </span>
 
