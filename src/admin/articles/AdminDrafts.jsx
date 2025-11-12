@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api, styles, CATEGORIES } from '../../App';
+import { clampLimit } from '../../lib/api-limit';
 
 /**
  * DESIGN + UX upgrades (no breaking logic changes):
@@ -160,7 +161,7 @@ export default function AdminDrafts() {
     setItemsLoading(true);
     try {
       const r = await api.get('/api/automation/items', {
-        params: { status: 'fetched,extr,gen', limit: 200 }
+        params: { status: 'fetched,extr,gen', limit: clampLimit(200) }
       });
       setItems(Array.isArray(r.data) ? r.data : []);
     } catch { /* ignore */ }

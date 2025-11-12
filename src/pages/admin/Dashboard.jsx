@@ -5,6 +5,7 @@ import {
   getToken, setToken, clearToken, setPreviewCountry, getPreviewCountry
 } from '../../App.jsx';
 import TodayAnalyticsCard from '../../components/admin/TodayAnalyticsCard.jsx';
+import { clampLimit } from '../../lib/api-limit';
 
 function LoginForm({ onLoggedIn }) {
   const [password, setPassword] = useState('');
@@ -242,7 +243,7 @@ export default function AdminDashboard() {
   const [geoPreview, setGeoPreview] = useState(getPreviewCountry());
 
   const fetchArticles = async () => {
-    const res = await api.get('/articles', { params: { page: 1, limit: 200, all: 1 } });
+    const res = await api.get('/articles', { params: { page: 1, limit: clampLimit(200), all: 1 } });
     setArticles(res.data.items);
   };
 
