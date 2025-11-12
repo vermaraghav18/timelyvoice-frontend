@@ -46,11 +46,8 @@ export default function CarouselSection({ title, items = [], moreLink }) {
           {items.map((a, idx) => {
             const { src, alt } = pickImg(a);
             const href = hrefOf(a);
-            const cat =
-              typeof a.category === "string"
-                ? a.category
-                : a.category?.name || a.section || "";
-
+           const catRaw = a?.category ?? a?.section ?? "";
+            const cat = typeof catRaw === "string" ? catRaw : (catRaw?.name ?? "");
             return (
               <Link
                 key={a.id || a._id || a.slug || idx}
@@ -67,7 +64,7 @@ export default function CarouselSection({ title, items = [], moreLink }) {
                   {src ? (
                     <>
                       <img src={src} alt={alt} loading="lazy" decoding="async" />
-                      {cat && <span className="tag-overlay">{cat}</span>}
+                      {cat && <span className="tag-overlay">{String(cat)}</span>}
                     </>
                   ) : (
                     <div className="thumb-ph" aria-hidden="true" />

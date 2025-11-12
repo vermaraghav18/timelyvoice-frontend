@@ -1,6 +1,6 @@
 // src/App.jsx
-import { useEffect, lazy, Suspense } from 'react';
-import { Routes, Route, useLocation, useParams } from 'react-router-dom';
+import { useEffect, useState, lazy, Suspense } from 'react';
+import { Routes, Route, useLocation, useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 // Import global CSS helpers
@@ -26,6 +26,7 @@ const AdminMedia = lazy(() => import('./pages/admin/MediaLibrary.jsx'));
 const ArticlesPage = lazy(() => import('./pages/admin/ArticlesPage.jsx'));
 const CategoriesPage = lazy(() => import('./pages/admin/CategoriesPage.jsx'));
 const TagsPage = lazy(() => import('./pages/admin/TagsPage.jsx'));
+// ✅ Correct filename
 const SettingsPage = lazy(() => import('./pages/admin/SettingsPage.jsx'));
 const CommentsPage = lazy(() => import('./pages/admin/CommentsPage.jsx'));
 const BreakingNewsAdmin = lazy(() => import('./pages/admin/BreakingNewsAdmin.jsx'));
@@ -57,8 +58,6 @@ import AdsPage from "./admin/AdsPage";
 // 👉 NEW: X Admin page (lazy)
 const AdminXPage = lazy(() => import('./pages/AdminX.jsx'));
 
-// ⛔️ removed duplicate non-lazy import of XQueuePage
-
 /* ========= NEW: E-E-A-T static pages (lazy) ========= */
 const AboutPage = lazy(() => import('./pages/static/About.jsx'));
 const ContactPage = lazy(() => import('./pages/static/Contact.jsx'));
@@ -71,9 +70,7 @@ const AuthorPage = lazy(() => import('./pages/static/Author.jsx'));
 
 /* ============ API base (proxy-friendly) ============ */
 /**
- * In dev, Vite proxies /api/* to http://localhost:4000 (see vite.config.js).
- * To ensure the proxy is used, keep baseURL RELATIVE as '/api'.
- * If you deploy behind a different origin, set VITE_API_BASE accordingly.
+ * Keep baseURL RELATIVE so Vite dev proxy handles /api → http://localhost:4000
  */
 export const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
 
@@ -90,9 +87,7 @@ export function clearToken() { localStorage.removeItem(tokenKey); }
 
 /* ============ Admin preview helpers ============ */
 const previewKey = 'geoPreviewCountry';
-export function getPreviewCountry() {
-  return localStorage.getItem(previewKey) || '';
-}
+export function getPreviewCountry() { return localStorage.getItem(previewKey) || ''; }
 export function setPreviewCountry(val) {
   if (val) localStorage.setItem(previewKey, val.toUpperCase());
   else localStorage.removeItem(previewKey);
@@ -100,25 +95,21 @@ export function setPreviewCountry(val) {
 
 /**
  * NORMALIZE + ATTACH HEADERS
- * - If someone accidentally calls api.get('/api/...'), strip the duplicated '/api' prefix
- *   so baseURL '/api' + url '/categories' becomes '/api/categories' (and NOT '/api/api/...').
- * - Always attach auth token + optional geo preview header.
  */
 api.interceptors.request.use((config) => {
   const url = config.url || '';
-  // Normalize: strip leading '/api' or 'api' if baseURL already includes '/api'
+  // Strip leading '/api' if present (baseURL already has '/api')
   if (typeof url === 'string') {
-    if (url.startsWith('/api/')) config.url = url.slice(4);     // '/api/foo' -> '/foo'
-    else if (url === '/api') config.url = '/';                  // edge case
+    if (url.startsWith('/api/')) config.url = url.slice(4);
+    else if (url === '/api') config.url = '/';
   }
 
   const t = getToken();
   if (t) config.headers['Authorization'] = `Bearer ${t}`;
 
   const preview = getPreviewCountry();
-  if (preview) {
-    config.headers['X-Geo-Preview-Country'] = preview.toUpperCase();
-  }
+  if (preview) config.headers['X-Geo-Preview-Country'] = preview.toUpperCase();
+
   return config;
 });
 
@@ -134,7 +125,7 @@ export const styles = {
   h3: { margin: '0 0 6px' },
   p: { margin: '8px 0 0' },
   muted: { color: '#666' },
-  hr: { border: 0, height: 1, background: '#f0f0f0', margin: '12px 0' },
+  hr: { border: 0, height: 1, background: '1px solid #f0f0f0', margin: '12px 0' },
   input: { width: '100%', padding: 10, borderRadius: 10, border: '1px solid #e5e7eb', outline: 'none', marginBottom: 8 },
 };
 
@@ -144,7 +135,6 @@ export const CATEGORIES = ['All','General','Politics','Business','Finance','Tech
 export async function uploadImageViaCloudinary(file) {
   if (!file) return { url: '', publicId: '' };
 
-  // IMPORTANT: because baseURL = '/api', this path must NOT start with '/api'
   const sig = await api.post('/uploads/sign');
   const { signature, timestamp, apiKey, cloudName, folder } = sig.data;
 
@@ -167,9 +157,7 @@ export function upsertTag(tagName, attrs = {}, { textContent } = {}) {
   if (!tagName || /[\[\]#.:]/.test(tagName)) {
     throw new Error(`upsertTag: tagName must be a bare tag (received "${tagName}")`);
   }
-  const attrSelector = Object.entries(attrs)
-    .map(([k, v]) => `[${k}="${String(v)}"]`)
-    .join('');
+  const attrSelector = Object.entries(attrs).map(([k, v]) => `[${k}="${String(v)}"]`).join('');
   const selector = `${tagName}${attrSelector}`;
   let el = document.head.querySelector(selector);
 
@@ -269,18 +257,35 @@ export function buildCanonicalFromLocation() {
   return url.toString();
 }
 
-
 /* ============ Category route wrapper (Finance/Business special layout) ============ */
 function AnyCategoryRoute() {
   const { slug } = useParams();
-  const raw = String(slug || ''); // keep original casing for API
-  const s = raw.toLowerCase();    // for routing decisions
+  const navigate = useNavigate();
+  const loc = useLocation();
 
-  if (s === 'finance' || s === 'business') {
+  const raw = String(slug || '');
+  const normalized = raw.toLowerCase();
+
+  const [ready, setReady] = useState(false);
+
+  // ✅ Normalize the path in a useEffect (no warnings, no render-time nav)
+  useEffect(() => {
+    const want = `/category/${normalized}`;
+    if (loc.pathname !== want) {
+      navigate(want, { replace: true });
+      // We’ll render on the next navigation tick
+      return;
+    }
+    setReady(true);
+  }, [normalized, loc.pathname, navigate]);
+
+  if (!ready) return null;
+
+  if (normalized === 'finance' || normalized === 'business') {
     return (
       <FinanceCategoryPage
-        categorySlug={raw} // pass original slug ("Business" or "finance")
-        displayName={s === 'business' ? 'Business' : 'Finance'}
+        categorySlug={normalized}
+        displayName={normalized === 'business' ? 'Business' : 'Finance'}
       />
     );
   }
@@ -292,9 +297,7 @@ export default function App() {
   const loc = useLocation();
 
   // Start analytics once
-  useEffect(() => {
-    initAnalytics();
-  }, []);
+  useEffect(() => { initAnalytics(); }, []);
 
   // On every route change
   useEffect(() => {
@@ -336,7 +339,7 @@ export default function App() {
           <Route path="/top-news" element={<TopNews />} />
           <Route path="/admin/ads" element={<AdminShell><AdsPage /></AdminShell>} />
 
-          {/* Route ALL categories through a wrapper so Finance layout applies to /finance and /Business */}
+          {/* Category routes (normalize & special layouts) */}
           <Route path="/category/:slug" element={<AnyCategoryRoute />} />
 
           <Route path="/tag/:slug" element={<TagPage />} />

@@ -1,11 +1,10 @@
-// src/pages/public/TopNews.jsx
+// frontend/src/pages/public/TopNews.jsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, upsertTag } from "../../App.jsx";
+import { api, upsertTag, buildCanonicalFromLocation } from "../../App.jsx";
 import SiteNav from "../../components/SiteNav.jsx";
 import SiteFooter from "../../components/SiteFooter.jsx";
 import "./TopNews.css";
-import { buildCanonicalFromLocation } from "../../App.jsx";
 
 const CAT_COLORS = {
   World: "linear-gradient(135deg, #3B82F6 0%, #0073ff 100%)",
@@ -27,15 +26,47 @@ function articleHref(slug) {
   return `/article/${slug}`;
 }
 
-// Normalize + sort newest first
+/** Safely parse many timestamp shapes → epoch ms (number) */
+function parseTs(v) {
+  if (!v) return 0;
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  const s = String(v).trim();
+  if (/^\d+$/.test(s)) return Number(s);
+  const withT = s.replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/, "$1T$2");
+  const t = Date.parse(withT);
+  return Number.isFinite(t) ? t : 0;
+}
+
+/** Normalize + sort newest first (stable) */
 function normalizeTopNews(items = []) {
   return items
     .filter(Boolean)
-    .map((i) => ({
-      ...i,
-      _ts: Date.parse(i.publishedAt || i.updatedAt || i.createdAt || 0),
-    }))
-    .sort((a, b) => b._ts - a._ts);
+    .map((i, idx) => {
+      const candidates = [
+        i.publishedAt,
+        i.publishAt,      // many payloads use this
+        i.updatedAt,
+        i.updated_at,
+        i.createdAt,
+        i.created_at,
+        i.pubDate,
+        i.timestamp,
+      ];
+      const best = Math.max(...candidates.map(parseTs), 0);
+      return { ...i, _ts: best, _idx: idx };
+    })
+    .sort((a, b) => (b._ts === a._ts ? a._idx - b._idx : b._ts - a._ts));
+}
+
+/** Case-insensitive category name */
+function getCategoryName(a) {
+  const raw = a?.category?.name ?? (typeof a?.category === "string" ? a.category : "General");
+  const map = {
+    world: "World", politics: "Politics", business: "Business",
+    entertainment: "Entertainment", general: "General", health: "Health",
+    science: "Science", sports: "Sports", tech: "Tech", technology: "Tech",
+  };
+  return map[String(raw || "General").trim().toLowerCase()] || "General";
 }
 
 export default function TopNews() {
@@ -77,8 +108,20 @@ export default function TopNews() {
         if (!cancel) {
           const sorted = normalizeTopNews(res?.data?.items || []);
           setItems(sorted);
+
+          if (process.env.NODE_ENV !== "production") {
+            // eslint-disable-next-line no-console
+            console.table(
+              sorted.slice(0, 5).map((x) => ({
+                title: x.title,
+                ts: x._ts,
+                published: x.publishedAt ?? x.publishAt ?? x.updatedAt,
+              }))
+            );
+          }
         }
       } catch (e) {
+        // eslint-disable-next-line no-console
         console.error(e);
         if (!cancel) setErr("Failed to load top news");
       } finally {
@@ -104,9 +147,7 @@ export default function TopNews() {
           <ul className="tn-list">
             {items.map((a) => {
               const href = articleHref(a.slug);
-              const catName =
-                a?.category?.name ??
-                (typeof a?.category === "string" ? a.category : "General");
+              const catName = getCategoryName(a);
               const color = CAT_COLORS[catName] || "#4B5563";
 
               return (

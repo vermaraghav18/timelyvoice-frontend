@@ -11,7 +11,6 @@ import {
   buildCanonicalFromLocation,
 } from '../../App.jsx';
 
-
 import SiteNav from '../../components/SiteNav.jsx';
 import SiteFooter from '../../components/SiteFooter.jsx';
 import SectionRenderer from '../../components/sections/SectionRenderer.jsx';
@@ -114,6 +113,58 @@ const toSlug = (s = '') =>
 
 /* ---------- small utils ---------- */
 const normPath = (p = '') => String(p).trim().replace(/\/+$/, '') || '/';
+const asInt = (v, d) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : d;
+};
+
+/* ---------- timestamp normalization & sorting (LATEST FIRST) ---------- */
+function parseTs(v) {
+  if (!v) return 0;
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  const s = String(v).trim();
+  if (/^\d+$/.test(s)) return Number(s);
+  // "YYYY-MM-DD HH:mm:ss+05:30" -> "YYYY-MM-DDTHH:mm:ss+05:30"
+  const withT = s.replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/, '$1T$2');
+  const t = Date.parse(withT);
+  return Number.isFinite(t) ? t : 0;
+}
+
+function normalizeArticlesLatestFirst(items = []) {
+  return items
+    .filter(Boolean)
+    .map((i, idx) => {
+      const candidates = [
+        i.publishedAt,
+        i.publishAt,
+        i.updatedAt,
+        i.updated_at,
+        i.createdAt,
+        i.created_at,
+        i.pubDate,
+        i.timestamp,
+      ];
+      const best = Math.max(...candidates.map(parseTs), 0);
+      return { ...i, _ts: best, _idx: idx };
+    })
+    .sort((a, b) => {
+      if (b._ts !== a._ts) return b._ts - a._ts;
+      return a._idx - b._idx; // stable tiebreaker
+    });
+}
+
+async function fetchArticlesWithRedirect(slug, page, limit, navigate) {
+  const r = await api.get(`/public/categories/${encodeURIComponent(slug)}/articles`, {
+    params: { page, limit },
+    validateStatus: () => true,
+  });
+  if (r?.status === 308 && r?.data?.redirectTo) {
+    const url = new URL(r.data.redirectTo, window.location.origin);
+    navigate({ pathname: url.pathname, search: url.search }, { replace: true });
+    return null; // caller returns; rerender will refetch
+  }
+  return r;
+}
 
 /* ---------- layout ---------- */
 const TOP_GAP = 16;
@@ -191,9 +242,21 @@ function LeadCard({ a }) {
 }
 
 /* ---------- Article Row (rest) ---------- */
+function getCategoryName(a) {
+  // backend sends category as canonical NAME string
+  const raw = typeof a?.category === 'string' ? a.category : (a?.category?.name ?? 'General');
+  const map = {
+    world: 'World', politics: 'Politics', business: 'Business',
+    entertainment: 'Entertainment', general: 'General', health: 'Health',
+    science: 'Science', sports: 'Sports', tech: 'Tech', technology: 'Tech',
+    india: 'India',
+  };
+  return map[String(raw || 'General').trim().toLowerCase()] || (raw || 'General');
+}
+
 function ArticleRow({ a }) {
   const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
-  const categoryName = a.category || 'General';
+  const categoryName = getCategoryName(a);
   const categoryUrl = `/category/${encodeURIComponent(toSlug(categoryName))}`;
   const updated = a.updatedAt || a.publishedAt || a.publishAt || a.createdAt;
   const thumb = ensureRenderableImage(a);
@@ -306,8 +369,14 @@ function useBottomPin(containerRef, childRef, offset = 16) {
 export default function CategoryPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname, search } = location;
   const pagePath = normPath(pathname);
+
+  // pagination from querystring
+  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
+  const page = asInt(searchParams.get('page'), 1);
+  const limit = asInt(searchParams.get('limit'), 20); // default 20, backend allows up to 50
 
   const [category, setCategory] = useState(null);
   const [articles, setArticles] = useState([]);
@@ -348,44 +417,94 @@ export default function CategoryPage() {
     const want = `/category/${normalizedSlug}`;
     if (pathname !== want) {
       // mirror the server’s 301 canonicalization
-      navigate(want, { replace: true });
+      navigate({ pathname: want, search }, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [normalizedSlug]);
+function extractCanonicalSlugFromRedirect(res) {
+  const p = res?.data?.redirectTo || '';
+  // matches: /categories/<slug>  OR  /public/categories/<slug>/articles
+  const m = String(p).match(/\/(?:public\/)?categories\/([^/]+)/i);
+  return m ? m[1] : null;
+}
 
-  /* fetch category + articles */
-  useEffect(() => {
-    let alive = true;
-    setLoading(true);
-    setNotFound(false);
+ /* fetch category + articles (slug-based, newest first) */
+useEffect(() => {
+  let alive = true;
+  setLoading(true);
+  setNotFound(false);
 
-    Promise.all([
-      api.get(`/categories/slug/${encodeURIComponent(normalizedSlug)}`, { validateStatus: () => true }),
-      api.get(`/public/categories/${encodeURIComponent(normalizedSlug)}/articles`, { params: { limit: 50 }, validateStatus: () => true }),
-    ])
-      .then(([cRes, aRes]) => {
-        if (!alive) return;
+  (async () => {
+    try {
+      // 1) Resolve category meta for the incoming slug
+      let cRes = await api.get(
+        `/categories/slug/${encodeURIComponent(normalizedSlug)}`,
+        { validateStatus: () => true }
+      );
 
-        if (cRes?.status === 308 && cRes?.data?.redirectTo) {
-          navigate(cRes.data.redirectTo, { replace: true });
-          return;
+      // If backend says 308, extract slug & navigate to FE route (NOT /api/…)
+      if (cRes?.status === 308) {
+        const newSlug = extractCanonicalSlugFromRedirect(cRes);
+        if (newSlug) {
+          navigate({ pathname: `/category/${newSlug}`, search }, { replace: true });
         }
+        return;
+      }
 
-        if (cRes.status === 200 && cRes.data) setCategory(cRes.data);
-        else setNotFound(true);
+      if (!alive) return;
 
-        if (aRes.status === 200 && Array.isArray(aRes.data?.items)) setArticles(aRes.data.items);
-        else setArticles([]);
-      })
-      .catch(() => {
-        if (!alive) return;
+      // Determine the effective slug to fetch with (prefer canonical from category doc)
+      let effectiveSlug = normalizedSlug;
+      if (cRes?.status === 200 && cRes?.data?.slug) {
+        setCategory(cRes.data);
+        effectiveSlug = cRes.data.slug;
+      } else if (cRes?.status === 404) {
+        setCategory(null);
         setNotFound(true);
         setArticles([]);
-      })
-      .finally(() => alive && setLoading(false));
+        return;
+      } else {
+        setCategory(null);
+      }
 
-    return () => { alive = false; };
-  }, [slug, navigate]);
+      // 2) Fetch the articles using the effective (canonical) slug
+      let aRes = await api.get(
+        `/public/categories/${encodeURIComponent(effectiveSlug)}/articles`,
+        { params: { page, limit }, validateStatus: () => true }
+      );
+
+      // If backend says 308 here, also map to FE route
+      if (aRes?.status === 308) {
+        const newSlug = extractCanonicalSlugFromRedirect(aRes);
+        if (newSlug) {
+          navigate({ pathname: `/category/${newSlug}`, search }, { replace: true });
+        }
+        return;
+      }
+
+      if (!alive) return;
+
+      if (aRes?.status === 200 && Array.isArray(aRes.data?.items)) {
+        const sorted = normalizeArticlesLatestFirst(aRes.data.items);
+        setArticles(sorted);
+      } else if (aRes?.status === 404) {
+        setArticles([]);
+        setNotFound(true);
+      } else {
+        setArticles([]);
+      }
+    } catch {
+      if (!alive) return;
+      setNotFound(true);
+      setArticles([]);
+    } finally {
+      if (alive) setLoading(false);
+    }
+  })();
+
+  return () => { alive = false; };
+}, [slug, page, limit, navigate, normalizedSlug, search]); // include `search`
+
 
   /* SEO */
   useEffect(() => {
@@ -401,7 +520,7 @@ export default function CategoryPage() {
       upsertTag('link', {
         rel: 'alternate', type: 'application/rss+xml',
         title: `Timely Voice — ${category?.name || slug}`,
-        href: `${window.location.origin}/rss/${encodeURIComponent(slug)}.xml`,
+        href: `${window.location.origin}/rss/${encodeURIComponent(normalizedSlug)}.xml`,
       });
     }
 
@@ -432,7 +551,7 @@ export default function CategoryPage() {
     } else {
       upsertTag('meta', { name: 'robots', 'data-managed': 'robots' }, { remove: true });
     }
-  }, [category, canonical, slug, articles]);
+  }, [category, canonical, slug, normalizedSlug, articles]);
 
   /* fetch sections for THIS page path (head_*) */
   useEffect(() => {
@@ -508,12 +627,14 @@ export default function CategoryPage() {
         if (!cancel) setPlanSections(rows);
       } catch (e) {
         if (!cancel) { setRailsError('Failed to load rails'); setPlanSections([]); }
+        // eslint-disable-next-line no-console
         console.error(e);
       } finally { if (!cancel) setRailsLoading(false); }
     })();
     return () => { cancel = true; };
   }, [slug]);
 
+  // ✅ use the sorted array directly
   const lead = articles?.[0] || null;
   const rest = Array.isArray(articles) && articles.length > 1 ? articles.slice(1) : [];
   const hasAnyRails = leftRails.length > 0 || rightRails.length > 0;
@@ -521,16 +642,16 @@ export default function CategoryPage() {
   const LEFT_FIRST_PULLUP = 0;
   const RIGHT_FIRST_PULLUP = 0;
 
+  const [isMobileState, setIsMobileState] = useState(false); // to trigger infeed recompute on first paint
+  useEffect(() => { setIsMobileState(isMobile); }, [isMobile]);
+
   const infeed = useMemo(() => {
     if (!isMobile) return null;
     return interleaveAfterEveryN(rest, rails, 8);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMobile, rest, rails]);
+  }, [isMobileState, rest, rails]);
 
   const isWorldCategory = String(slug || '').toLowerCase() === 'world';
-
-  // Intro length threshold
-  const MIN_INTRO_LEN = 80;
 
   // Ad positions (1-based)
   const AD_POSITIONS_DESKTOP = [6, 9, 13, 17];
@@ -557,6 +678,16 @@ export default function CategoryPage() {
   const leftRailStyle = useBottomPin(leftAsideRef, leftRailRef, BOTTOM_OFFSET);
   const rightRailStyle = useBottomPin(rightAsideRef, rightRailRef, BOTTOM_OFFSET);
 
+  // ---------- simple pagination controls ----------
+  const total = null; // could be surfaced if needed (aRes.data.total)
+  const totalPages = null; // likewise; current backend returns these, but we didn't store them
+  const gotoPage = (p) => {
+    const params = new URLSearchParams(search);
+    if (p <= 1) params.delete('page'); else params.set('page', String(p));
+    params.set('limit', String(limit || 20));
+    navigate({ pathname, search: `?${params.toString()}` }, { replace: false });
+  };
+
   return (
     <>
       <SiteNav />
@@ -579,7 +710,7 @@ export default function CategoryPage() {
               {!railsLoading && !railsError && (
                 <div ref={leftRailRef} style={leftRailStyle}>
                   {leftRails.map((sec, i) => (
-                    <div key={sec._id || sec.id || sec.slug || i} style={{ marginTop: i === 0 ? LEFT_FIRST_PULLUP : 12 }}>
+                    <div key={sec._id || sec.id || sec.slug || i} style={{ marginTop: i === 0 ? 0 : 12 }}>
                       <SectionRenderer section={sec} />
                     </div>
                   ))}
@@ -606,15 +737,7 @@ export default function CategoryPage() {
                     </div>
                   ))}
 
-                  {/* Category heading + intro (desktop) */}
-                  <h1 style={{ margin: '4px 0 8px', fontSize: 22, lineHeight: 1.3 }}>
-                    {category?.name || (slug || 'Category')}
-                  </h1>
-                  {category?.description && category.description.trim().length >= 80 && (
-                    <p style={{ margin: '6px 0 14px', fontSize: 15, lineHeight: 1.6, color: '#6b7280' }}>
-                      {category.description.trim()}
-                    </p>
-                  )}
+                 
 
                   {(!articles || articles.length === 0) ? (
                     <p style={{ textAlign: 'center' }}>No articles yet.</p>
@@ -631,24 +754,24 @@ export default function CategoryPage() {
                               {renderInsetAfter(pos)}
 
                               {/* Delay ads until after useful content */}
-                              {isWorldCategory && AD_POSITIONS_DESKTOP.includes(pos) && (
+                              {isWorldCategory && [6, 9, 13, 17].includes(pos) && (
                                 <>
-                                  {pos === AD_POSITIONS_DESKTOP[0] && (
+                                  {pos === 6 && (
                                     <div style={{ margin: '12px 0', textAlign: 'center' }}>
                                       <AdSenseAuto slot={ADS_SLOT_MAIN} />
                                     </div>
                                   )}
-                                  {pos === AD_POSITIONS_DESKTOP[1] && (
+                                  {pos === 9 && (
                                     <div style={{ margin: '12px 0' }}>
                                       <AdSenseInArticle />
                                     </div>
                                   )}
-                                  {pos === AD_POSITIONS_DESKTOP[2] && (
+                                  {pos === 13 && (
                                     <div style={{ margin: '12px 0' }}>
                                       <AdSenseFluidKey />
                                     </div>
                                   )}
-                                  {pos === AD_POSITIONS_DESKTOP[3] && (
+                                  {pos === 17 && (
                                     <div style={{ margin: '12px 0', textAlign: 'center' }}>
                                       <AdSenseAuto slot={ADS_SLOT_SECOND} />
                                     </div>
@@ -658,6 +781,20 @@ export default function CategoryPage() {
                             </div>
                           );
                         })}
+                      </div>
+
+                      {/* simple pagination (Prev/Next) */}
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 16 }}>
+                        {page > 1 && (
+                          <button onClick={() => gotoPage(page - 1)} style={{ padding: '6px 10px' }}>
+                            ← Newer
+                          </button>
+                        )}
+                        {rest.length + (lead ? 1 : 0) >= limit && (
+                          <button onClick={() => gotoPage(page + 1)} style={{ padding: '6px 10px' }}>
+                            Older →
+                          </button>
+                        )}
                       </div>
 
                       {isWorldCategory && (
@@ -678,7 +815,7 @@ export default function CategoryPage() {
               {!railsLoading && !railsError && (
                 <div ref={rightRailRef} style={rightRailStyle}>
                   {rightRails.map((sec, i) => (
-                    <div key={sec._id || sec.id || sec.slug || i} style={{ marginTop: i === 0 ? RIGHT_FIRST_PULLUP : 12 }}>
+                    <div key={sec._id || sec.id || sec.slug || i} style={{ marginTop: i === 0 ? 0 : 12 }}>
                       <SectionRenderer section={sec} />
                     </div>
                   ))}
@@ -727,24 +864,24 @@ export default function CategoryPage() {
                               <ArticleRow a={block.data} />
                               {renderInsetAfter(idx + 1)}
 
-                              {isWorldCategory && AD_POSITIONS_MOBILE.includes(idx + 1) && (
+                              {isWorldCategory && [7, 11, 15, 19].includes(idx + 1) && (
                                 <>
-                                  {idx + 1 === AD_POSITIONS_MOBILE[0] && (
+                                  {idx + 1 === 7 && (
                                     <div style={{ margin: '12px 0', textAlign: 'center' }}>
                                       <AdSenseAuto slot={ADS_SLOT_MAIN} />
                                     </div>
                                   )}
-                                  {idx + 1 === AD_POSITIONS_MOBILE[1] && (
+                                  {idx + 1 === 11 && (
                                     <div style={{ margin: '12px 0' }}>
                                       <AdSenseInArticle />
                                     </div>
                                   )}
-                                  {idx + 1 === AD_POSITIONS_MOBILE[2] && (
+                                  {idx + 1 === 15 && (
                                     <div style={{ margin: '12px 0' }}>
                                       <AdSenseFluidKey />
                                     </div>
                                   )}
-                                  {idx + 1 === AD_POSITIONS_MOBILE[3] && (
+                                  {idx + 1 === 19 && (
                                     <div style={{ margin: '12px 0', textAlign: 'center' }}>
                                       <AdSenseAuto slot={ADS_SLOT_SECOND} />
                                     </div>
@@ -771,24 +908,24 @@ export default function CategoryPage() {
                               <ArticleRow a={a} />
                               {renderInsetAfter(pos)}
 
-                              {isWorldCategory && AD_POSITIONS_DESKTOP.includes(pos) && (
+                              {isWorldCategory && [6, 9, 13, 17].includes(pos) && (
                                 <>
-                                  {pos === AD_POSITIONS_DESKTOP[0] && (
+                                  {pos === 6 && (
                                     <div style={{ margin: '12px 0', textAlign: 'center' }}>
                                       <AdSenseAuto slot={ADS_SLOT_MAIN} />
                                     </div>
                                   )}
-                                  {pos === AD_POSITIONS_DESKTOP[1] && (
+                                  {pos === 9 && (
                                     <div style={{ margin: '12px 0' }}>
                                       <AdSenseInArticle />
                                     </div>
                                   )}
-                                  {pos === AD_POSITIONS_DESKTOP[2] && (
+                                  {pos === 13 && (
                                     <div style={{ margin: '12px 0' }}>
                                       <AdSenseFluidKey />
                                     </div>
                                   )}
-                                  {pos === AD_POSITIONS_DESKTOP[3] && (
+                                  {pos === 17 && (
                                     <div style={{ margin: '12px 0', textAlign: 'center' }}>
                                       <AdSenseAuto slot={ADS_SLOT_SECOND} />
                                     </div>
@@ -800,6 +937,20 @@ export default function CategoryPage() {
                         })}
                       </div>
                     )}
+
+                    {/* simple pagination (Prev/Next) */}
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 16 }}>
+                      {page > 1 && (
+                        <button onClick={() => gotoPage(page - 1)} style={{ padding: '6px 10px' }}>
+                          ← Newer
+                        </button>
+                      )}
+                      {rest.length + (lead ? 1 : 0) >= limit && (
+                        <button onClick={() => gotoPage(page + 1)} style={{ padding: '6px 10px' }}>
+                          Older →
+                        </button>
+                      )}
+                    </div>
 
                     {isWorldCategory && (
                       <div style={{ margin: '16px 0' }}>

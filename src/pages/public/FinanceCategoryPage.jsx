@@ -4,15 +4,14 @@ import { Link, useLocation } from 'react-router-dom';
 import { api, removeManagedHeadTags, upsertTag } from '../../App.jsx';
 import SiteNav from '../../components/SiteNav.jsx';
 import SiteFooter from '../../components/SiteFooter.jsx';
-// Reuse the same CSS as Top News so visuals match exactly
 import '../public/TopNews.css';
-
-// If you want to keep using SectionRenderer for path head banners or rails later, import it.
-// (We’ll load path head_* banners just like before; rails are optional and off by default)
 import SectionRenderer from '../../components/sections/SectionRenderer.jsx';
 
-/* ---------- identical helpers ---------- */
+/* ---------- helpers ---------- */
 const normPath = (p = '') => String(p).trim().replace(/\/+$/, '') || '/';
+const toTitleCase = (x = '') =>
+  x ? x.charAt(0).toUpperCase() + x.slice(1).toLowerCase() : x;
+
 function timeAgo(input) {
   const d = input ? new Date(input) : null;
   if (!d || isNaN(d)) return '';
@@ -52,7 +51,7 @@ function articleHref(slug) {
 
 /* ---------- FINANCE/BUSINESS page (TopNews layout clone) ---------- */
 export default function FinanceCategoryPage({
-  categorySlug = 'finance',        // comes from App.jsx: 'finance' or 'Business'
+  categorySlug = 'finance',  // 'finance' or 'business'
   displayName = 'Finance',
 }) {
   const { pathname } = useLocation();
@@ -62,10 +61,9 @@ export default function FinanceCategoryPage({
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
 
-  // Path head_* banners (you can add head banners targeted to /category/Business or /category/finance)
+  // Path head_* banners (optional)
   const [pageSections, setPageSections] = useState([]);
 
-  // Use actual URL for canonical so both /category/Business and /category/finance are correct
   const canonical = useMemo(
     () => (typeof window !== 'undefined' ? `${window.location.origin}${pathname}` : ''),
     [pathname]
@@ -82,8 +80,7 @@ export default function FinanceCategoryPage({
     if (canonical) upsertTag('link', { rel: 'canonical', href: canonical });
   }, [canonical, displayName]);
 
-  // Load articles with slug tolerance: try raw, lower, TitleCase
-  const toTitleCase = (x = '') => (x ? x.charAt(0).toUpperCase() + x.slice(1).toLowerCase() : x);
+  // Load articles using tolerant backend endpoint
   useEffect(() => {
     let alive = true;
 
@@ -93,21 +90,51 @@ export default function FinanceCategoryPage({
       setItems([]);
 
       const raw = String(categorySlug || '');
-      const candidates = Array.from(new Set([raw, raw.toLowerCase(), toTitleCase(raw)]));
-
       try {
+        // Primary: tolerant server-side matcher (case-insensitive, name/slug aware, proper sorting)
+        const r = await api.get(`/public/categories/${encodeURIComponent(raw)}/articles`, {
+          params: { limit: 60 },
+          validateStatus: () => true,
+        });
+
+        if (!alive) return;
+
+        if (r.status === 200 && Array.isArray(r?.data?.items)) {
+          setItems(r.data.items);
+          return;
+        }
+
+        // Fallback (only if the tolerant endpoint is unavailable):
+        const candidates = Array.from(new Set([raw, raw.toLowerCase(), toTitleCase(raw)]));
+        const all = [];
+
         for (const cat of candidates) {
           const res = await api.get('/articles', {
             params: { category: cat, limit: 60 },
             validateStatus: () => true,
           });
           const arr = Array.isArray(res?.data?.items) ? res.data.items : [];
-          if (!alive) return;
-          if (arr.length) {
-            setItems(arr);
-            break;
-          }
+          all.push(...arr);
         }
+
+        // De-dup by _id/slug and sort by the best available timestamp (newest first)
+        const seen = new Set();
+        const merged = [];
+        for (const a of all) {
+          const key = a._id || a.id || a.slug;
+          if (!key || seen.has(key)) continue;
+          seen.add(key);
+          merged.push(a);
+        }
+        merged.sort((a, b) => {
+          const ta =
+            new Date(a.publishedAt || a.publishAt || a.updatedAt || a.createdAt || 0).getTime() || 0;
+          const tb =
+            new Date(b.publishedAt || b.publishAt || b.updatedAt || b.createdAt || 0).getTime() || 0;
+          return tb - ta;
+        });
+
+        setItems(merged);
       } catch (e) {
         if (alive) setErr('Failed to load stories');
       } finally {
@@ -121,17 +148,21 @@ export default function FinanceCategoryPage({
     };
   }, [categorySlug]);
 
-  // Path-scoped head_* sections (optional, kept from your earlier version)
+  // Path-scoped head_* sections (optional)
   useEffect(() => {
     let cancel = false;
     (async () => {
       try {
         const res = await api.get('/sections', { params: { path: pagePath } });
-        const items = Array.isArray(res.data) ? res.data : [];
-        const filtered = items.filter(
-          (s) => s?.enabled !== false && s?.target?.type === 'path' && normPath(s?.target?.value) === pagePath
-        );
-        filtered.sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
+        const list = Array.isArray(res.data) ? res.data : [];
+        const filtered = list
+          .filter(
+            (s) =>
+              s?.enabled !== false &&
+              s?.target?.type === 'path' &&
+              normPath(s?.target?.value) === pagePath
+          )
+          .sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
         if (!cancel) setPageSections(filtered);
       } catch {
         if (!cancel) setPageSections([]);
@@ -147,10 +178,8 @@ export default function FinanceCategoryPage({
       <SiteNav />
 
       <main className="container">
-        {/* Optional: if you want a visible page title, bump .tn-title font-size in TopNews.css */}
         <h1 className="tn-title">{displayName}</h1>
 
-        {/* Path head banners (if any) */}
         {pageSections.length > 0 && (
           <div style={{ marginBottom: 12 }}>
             {pageSections.map((sec) => (
@@ -193,13 +222,12 @@ export default function FinanceCategoryPage({
                           </Link>
                         )}
 
-                        {/* Divider line */}
                         <div className="tn-divider" />
 
-                        {/* Centered meta (source + time) */}
                         <div className="tn-meta">
                           <span className="tn-source">
-                            The Timely Voice • Updated {timeAgo(a.updatedAt || a.publishedAt || a.publishAt || a.createdAt)}
+                            The Timely Voice • Updated{' '}
+                            {timeAgo(a.updatedAt || a.publishedAt || a.publishAt || a.createdAt)}
                           </span>
                         </div>
                       </div>

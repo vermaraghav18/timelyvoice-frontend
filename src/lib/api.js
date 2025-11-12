@@ -1,62 +1,113 @@
 // frontend/src/lib/api.js
-const API = import.meta.env.VITE_API_BASE || "/api";
+import axios from "axios";
 
+/**
+ * Base API URL:
+ * - Prefer VITE_API_BASE_URL, then VITE_API_BASE, else default to '/api'
+ * - Strip any trailing slash to avoid '//' when concatenating paths
+ */
+const RAW_BASE =
+  import.meta.env.VITE_API_BASE_URL ??
+  import.meta.env.VITE_API_BASE ??
+  "/api";
+
+export const API_BASE = String(RAW_BASE || "/api").replace(/\/+$/, "");
+
+/**
+ * Read auth token (keep both keys to be compatible with existing code)
+ */
+function readToken() {
+  return (
+    localStorage.getItem("adminToken") ||
+    localStorage.getItem("token") ||
+    null
+  );
+}
+
+/**
+ * Axios client (preferred)
+ */
 export const api = axios.create({
-  baseURL: API,  // <-- this becomes "/api"
+  baseURL: API_BASE,
+  withCredentials: true,
+  headers: { "Content-Type": "application/json" },
 });
 
+// Attach Authorization header automatically if token is present
+api.interceptors.request.use((config) => {
+  const token = readToken();
+  if (token && !config.headers?.Authorization) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export default api;
+
+/**
+ * Small helpers for places that already used fetch.
+ * All of these prefix `API_BASE` and include credentials + Authorization.
+ */
+
+export function authHeader(token) {
+  const t = token || readToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}
+
+async function doFetch(path, init = {}) {
+  const url = `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+  const token = readToken();
+  const headers = {
+    ...(init.headers || {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+  const res = await fetch(url, {
+    credentials: "include",
+    ...init,
+    headers,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`${init.method || "GET"} ${url} failed: ${res.status} ${text}`);
+  }
+  // try json; if it fails, return raw text
+  try {
+    return await res.json();
+  } catch {
+    return await res.text();
+  }
+}
 
 export async function apiGET(path, headers = {}) {
-  const res = await fetch(`${API}${path}`, { headers, credentials: "include" });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  return doFetch(path, { method: "GET", headers });
 }
 
 export async function apiJSON(method, path, body, headers = {}) {
-  const res = await fetch(`${API}${path}`, {
+  return doFetch(path, {
     method,
     headers: { "Content-Type": "application/json", ...headers },
-    body: JSON.stringify(body),
-    credentials: "include",
+    body: body != null ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
 }
 
-// For multipart uploads (if you later use /api/media/upload)
 export async function apiMultipart(path, formData, headers = {}) {
-  const res = await fetch(`${API}${path}`, { method: "POST", body: formData, headers, credentials: "include" });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
-// Simple token storage (you already have login flow)
-export function authHeader(token) {
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-export async function apiGet(path) {
-  const token = localStorage.getItem("adminToken");
-  const r = await fetch(path, {
-    headers: { Authorization: token ? `Bearer ${token}` : undefined }
+  // Let the browser set the multipart boundary; do not set Content-Type
+  return doFetch(path, {
+    method: "POST",
+    headers,
+    body: formData,
   });
-  if (!r.ok) throw new Error(`GET ${path} failed: ${r.status}`);
-  return await r.json();
+}
+
+/**
+ * Backwards-compat thin wrappers (keep names you already used).
+ * NOTE: These now also prefix API_BASE so you can pass relative paths like '/sections'.
+ */
+export async function apiGet(path) {
+  return apiGET(path);
 }
 
 export async function apiPost(path, body) {
-  const token = localStorage.getItem("adminToken");
-  const r = await fetch(path, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: token ? `Bearer ${token}` : undefined
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
-  if (!r.ok) {
-    const t = await r.text().catch(() => "");
-    throw new Error(`POST ${path} failed: ${r.status} ${t}`);
-  }
-  return await r.json();
+  return apiJSON("POST", path, body);
 }
