@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 
-import '../../styles/tails.css';
+import '../../styles/tailwind.css';
 
 import {
   api,
