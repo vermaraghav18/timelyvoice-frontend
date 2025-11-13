@@ -692,8 +692,19 @@ export default function ArticlesPage() {
   }
 
   return (
-    <div className="space-y-4" style={{ display: "grid", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+    <div
+      className="admin-articles-root"
+      style={{ display: "grid", gap: 12 }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
         <h1 style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>
           Articles
           {previewEnabled && /^[A-Z]{2}$/.test((previewCountry || "").toUpperCase()) && (
@@ -708,7 +719,13 @@ export default function ArticlesPage() {
         </button>
       </div>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          flexWrap: "wrap",
+        }}
+      >
         <button
           onClick={() => bulkAction("publish")}
           style={{ ...btnPrimary, opacity: isAdmin ? 1 : 0.6, pointerEvents: isAdmin ? "auto" : "none" }}
@@ -727,7 +744,14 @@ export default function ArticlesPage() {
       </div>
 
       {/* Filters */}
-      <div style={{ display: "grid", gridTemplateColumns: "160px 200px 1fr auto", gap: 8, alignItems: "center" }}>
+      <div
+        className="admin-articles-filters"
+        style={{
+          display: "grid",
+          gap: 8,
+          alignItems: "center",
+        }}
+      >
         <select
           value={status}
           onChange={(e) => {
@@ -768,7 +792,14 @@ export default function ArticlesPage() {
           style={inp}
         />
 
-        <div style={{ display: "flex", alignItems: "center", gap: 6, justifySelf: "end" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            justifySelf: "end",
+          }}
+        >
           <label style={{ fontSize: 12, color: "#666" }}>Rows</label>
           <select
             value={limit}
@@ -788,7 +819,14 @@ export default function ArticlesPage() {
       </div>
 
       {/* X-Geo preview header controls */}
-      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
         <label style={{ fontSize: 13, color: "#111827" }}>
           <input
             type="checkbox"
@@ -816,9 +854,28 @@ export default function ArticlesPage() {
         </span>
       </div>
 
-      <div style={{ overflow: "auto", border: "1px solid #eee", borderRadius: 12, background: "#fff" }}>
-        <table style={{ width: "100%", fontSize: 14, borderCollapse: "collapse" }}>
-          <thead style={{ background: "#f9fafb", textAlign: "left" }}>
+      <div
+        style={{
+          overflow: "auto",
+          border: "1px solid #eee",
+          borderRadius: 12,
+          background: "#fff",
+        }}
+      >
+        <table
+          style={{
+            width: "100%",
+            fontSize: 14,
+            borderCollapse: "collapse",
+            minWidth: 720,
+          }}
+        >
+          <thead
+            style={{
+              background: "#f9fafb",
+              textAlign: "left",
+            }}
+          >
             <tr>
               <th style={th}>
                 <input
@@ -919,7 +976,7 @@ export default function ArticlesPage() {
                           placeholder="https://…"
                           style={inp}
                         />
-                        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
                           <label style={{ display: "inline-flex", gap: 6, alignItems: "center", fontSize: 12 }}>
                             <input
                               type="checkbox"
@@ -972,13 +1029,12 @@ export default function ArticlesPage() {
                     <td style={td}>{fmt(a.publishedAt) || "—"}</td>
                     <td style={td}>{fmt(a.updatedAt)}</td>
 
-                    {/* NEW: Preview column (thumb + category pill) */}
+                    {/* Preview column */}
                     <td style={{ ...td, width: 230 }}>
                       <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start" }}>
                         <span style={badge}>{a.category?.name || a.category || "General"}</span>
                         {(() => {
                           const base = previewUrl;
-                          // Use updatedAt as a stable seed so we only rebust when the row changes
                           const seed =
                             (a.updatedAt ? new Date(a.updatedAt).getTime() : 0) || Date.now();
                           const thumbSrc = withCacheBust(base, seed);
@@ -998,7 +1054,6 @@ export default function ArticlesPage() {
                                 border: "1px solid #eee",
                                 background: "#f8fafc",
                               }}
-                              // Retry up to 2 times with a new cache-buster, then give up
                               onError={(e) => {
                                 const tries = Number(e.currentTarget.dataset.tries || 0);
                                 if (tries < 2 && base) {
@@ -1037,7 +1092,7 @@ export default function ArticlesPage() {
                     </td>
 
                     <td style={td}>
-                      <div style={{ display: "flex", gap: 6 }}>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                         <button onClick={() => openEdit(a._id)} style={btnSmallGhost}>
                           Edit
                         </button>
@@ -1077,7 +1132,15 @@ export default function ArticlesPage() {
         </table>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 8,
+        }}
+      >
         <div style={{ fontSize: 12, color: "#666" }}>Total: {data.total}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} style={btnGhost}>
@@ -1100,11 +1163,20 @@ export default function ArticlesPage() {
       {showForm && (
         <div style={modalBackdrop}>
           <div style={modalCard}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 8,
+                gap: 8,
+                flexWrap: "wrap",
+              }}
+            >
               <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
                 {editingId ? "Edit Article" : "Create Article"}
               </h2>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 {editingId && (
                   <span style={{ fontSize: 12, color: autoSaving ? "#92400e" : "#16a34a" }}>
                     {autoSaving ? "Saving…" : autoSavedAt ? `Saved ${autoSavedAt.toLocaleTimeString()}` : "Autosave on"}
@@ -1271,7 +1343,9 @@ export default function ArticlesPage() {
                   Meta Title
                   <input
                     value={form.metaTitle}
-                    onChange={(e) => setForm((f) => ({ ...f, metaTitle: e.target.value.slice(0, META_TITLE_MAX) }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, metaTitle: e.target.value.slice(0, META_TITLE_MAX) }))
+                    }
                     style={inp}
                     maxLength={META_TITLE_MAX}
                   />
@@ -1298,7 +1372,9 @@ export default function ArticlesPage() {
                 <textarea
                   rows={2}
                   value={form.metaDesc}
-                  onChange={(e) => setForm((f) => ({ ...f, metaDesc: e.target.value.slice(0, META_DESC_MAX) }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, metaDesc: e.target.value.slice(0, META_DESC_MAX) }))
+                  }
                   style={ta}
                   maxLength={META_DESC_MAX}
                 />
@@ -1406,7 +1482,15 @@ export default function ArticlesPage() {
                 />
               </label>
 
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 6 }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  justifyContent: "flex-end",
+                  marginTop: 6,
+                  flexWrap: "wrap",
+                }}
+              >
                 <button type="button" onClick={closeForm} style={btnGhost}>
                   Cancel
                 </button>
@@ -1418,6 +1502,30 @@ export default function ArticlesPage() {
           </div>
         </div>
       )}
+
+      {/* small responsive CSS for this page */}
+      <style>{`
+        .admin-articles-root {
+          width: 100%;
+        }
+
+        /* Filters row: 4 columns on desktop, stacked on small screens */
+        .admin-articles-filters {
+          grid-template-columns: 160px 200px 1fr auto;
+        }
+
+        @media (max-width: 900px) {
+          .admin-articles-filters {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .admin-articles-filters {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -1501,8 +1609,19 @@ const modalCard = {
   padding: 16,
   boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
 };
-const grid2 = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 };
-const grid3 = { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 };
+
+/* RESPONSIVE grid helpers: no logic change, they just stack nicely on small screens */
+const grid2 = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  gap: 10,
+};
+const grid3 = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+  gap: 10,
+};
+
 const chip = {
   padding: "2px 8px",
   borderRadius: 999,
