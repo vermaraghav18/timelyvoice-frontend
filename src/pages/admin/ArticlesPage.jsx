@@ -1472,15 +1472,20 @@ export default function ArticlesPage() {
                 </div>
               )}
 
-              <label style={lbl}>
-                Body
-                <textarea
-                  rows={8}
-                  value={form.body}
-                  onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
-                  style={ta}
-                />
-              </label>
+             <label style={lbl}>
+              Body
+              <textarea
+                rows={8}
+                value={form.body}
+                onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+                style={ta}
+              />
+              <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+                Supports simple formatting:
+                <br /># Heading, ## Subheading, - bullet, 1. numbered item
+              </div>
+            </label>
+
 
               <div
                 style={{

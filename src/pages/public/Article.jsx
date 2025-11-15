@@ -54,21 +54,111 @@ function useIsMobile(breakpoint = 768) {
   return isMobile;
 }
 
-/** Normalize article body to paragraphs */
-function normalizeBody(htmlOrText = '') {
-  let s = String(htmlOrText || '').trim();
-  if (!/<p[\s>]/i.test(s)) {
-    s = s
-      .replace(/\r\n?/g, '\n')
-      .split(/\n{2,}/g)
-      .map(p => p.trim())
-      .filter(Boolean)
-      .map(p => `<p>${p}</p>`)
-      .join('');
+/** Normalize article body:
+ * - If it already contains HTML (<p>, <h2>, <ul>…), keep it as-is.
+ * - Otherwise interpret simple markdown-like syntax:
+ *   # Heading     → <h2>
+ *   ## Subhead    → <h3>
+ *   - item / * / • → <ul><li>item</li>…
+ *   1. item       → <ol><li>item</li>…
+ *   Blank lines   → paragraphs (<p>…</p>)
+ */
+function normalizeBody(htmlOrText = "") {
+  let s = String(htmlOrText || "").trim();
+  if (!s) return "";
+
+  // If it already looks like HTML content, don't touch it.
+  if (/(<(p|h1|h2|h3|h4|h5|ul|ol|li|blockquote|br)[\s>])/i.test(s)) {
+    return s;
   }
-  s = s.replace(/<p>\s*<\/p>/gi, '');
-  return s;
+
+  const lines = s.replace(/\r\n?/g, "\n").split("\n");
+
+  const blocks = [];
+  let paraLines = [];
+  let listItems = [];
+  let listType = null; // 'ul' or 'ol'
+
+  const flushParagraph = () => {
+    if (!paraLines.length) return;
+    const text = paraLines.join(" ").trim();
+    if (text) blocks.push(`<p>${text}</p>`);
+    paraLines = [];
+  };
+
+  const flushList = () => {
+    if (!listItems.length) return;
+    const tag = listType === "ol" ? "ol" : "ul";
+    const inner = listItems.map((li) => `<li>${li}</li>`).join("");
+    blocks.push(`<${tag}>${inner}</${tag}>`);
+    listItems = [];
+    listType = null;
+  };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+
+    // Blank line → paragraph / list break
+    if (!line) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+
+    // Headings: #, ##, ###  (we start from <h2> because the title is <h1>)
+    const headingMatch = line.match(/^(#{1,3})\s+(.*)$/);
+    if (headingMatch) {
+      flushParagraph();
+      flushList();
+      const hashes = headingMatch[1].length;
+      const text = headingMatch[2].trim();
+      const hLevel = Math.min(4, hashes + 1); // # → h2, ## → h3, ### → h4
+      blocks.push(`<h${hLevel}>${text}</h${hLevel}>`);
+      continue;
+    }
+
+    // Bullets: -, *, •
+    const bulletMatch = line.match(/^([-*•])\s+(.*)$/);
+    // Ordered: 1. item / 1) item
+    const orderedMatch = line.match(/^(\d+)[.)]\s+(.*)$/);
+
+    if (bulletMatch || orderedMatch) {
+      flushParagraph();
+      const text = (bulletMatch ? bulletMatch[2] : orderedMatch[2]).trim();
+      const nextType = orderedMatch ? "ol" : "ul";
+
+      if (!listType) {
+        listType = nextType;
+      } else if (listType !== nextType) {
+        // If list type changed, close previous list
+        flushList();
+        listType = nextType;
+      }
+
+      listItems.push(text);
+      continue;
+    }
+
+    // Normal text line
+    if (listType) {
+      // End of list, start paragraph
+      flushList();
+    }
+    paraLines.push(line);
+  }
+
+  // Flush any trailing structures
+  flushParagraph();
+  flushList();
+
+  let html = blocks.join("");
+  html = html.replace(/<p>\s*<\/p>/gi, "");
+  if (!html) {
+    return s ? `<p>${s}</p>` : "";
+  }
+  return html;
 }
+
 
 /** Split normalized HTML into array of paragraph HTML strings */
 function splitParagraphs(normalizedHtml = '') {
