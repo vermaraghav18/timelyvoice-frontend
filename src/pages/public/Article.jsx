@@ -67,11 +67,23 @@ function normalizeBody(htmlOrText = "") {
   let s = String(htmlOrText || "").trim();
   if (!s) return "";
 
-  // If it already looks like HTML content, don't touch it.
-  if (/(<(p|h1|h2|h3|h4|h5|ul|ol|li|blockquote|br)[\s>])/i.test(s)) {
+  // 1) Strip markdown-style heading hashes at the start of lines.
+  //    "#### Heading" -> "Heading"
+  s = s.replace(/^#{1,6}\s*/gm, "");
+
+  // 2) Strip markdown bold/italic markers but keep the inner text.
+  //    "**word**" -> "word", "*word*" -> "word"
+  s = s.replace(/\*\*(.+?)\*\*/g, "$1");
+  s = s.replace(/\*(.+?)\*/g, "$1");
+
+  // 3) If it already looks like HTML, return cleaned string directly.
+  //    This means your inline colors from admin (style="background-color:#5D8AA8")
+  //    are used exactly as you write them.
+  if (/(<(p|h1|h2|h3|h4|h5|ul|ol|li|blockquote|br|span|div|mark)[\s>])/i.test(s)) {
     return s;
   }
 
+  // 4) Otherwise, treat it as simple markdown-ish text and build HTML
   const lines = s.replace(/\r\n?/g, "\n").split("\n");
 
   const blocks = [];
@@ -98,14 +110,13 @@ function normalizeBody(htmlOrText = "") {
   for (const raw of lines) {
     const line = raw.trim();
 
-    // Blank line → paragraph / list break
     if (!line) {
       flushParagraph();
       flushList();
       continue;
     }
 
-    // Headings: #, ##, ###  (we start from <h2> because the title is <h1>)
+    // Headings: #, ##, ### -> h2, h3, h4
     const headingMatch = line.match(/^(#{1,3})\s+(.*)$/);
     if (headingMatch) {
       flushParagraph();
@@ -130,7 +141,6 @@ function normalizeBody(htmlOrText = "") {
       if (!listType) {
         listType = nextType;
       } else if (listType !== nextType) {
-        // If list type changed, close previous list
         flushList();
         listType = nextType;
       }
@@ -141,26 +151,17 @@ function normalizeBody(htmlOrText = "") {
 
     // Normal text line
     if (listType) {
-      // End of list, start paragraph
       flushList();
     }
     paraLines.push(line);
   }
 
   // Flush any trailing structures
-   // Flush any trailing structures
   flushParagraph();
   flushList();
 
   let html = blocks.join("");
-
-  // 1) Convert **text** into a highlighted span (removes the bloody stars)
-  //    Example: **Valsalva maneuver** → <span class="hl-key">Valsalva maneuver</span>
-  html = html.replace(/\*\*(.+?)\*\*/g, '<span class="hl-key">$1</span>');
-
-  // 2) Clean up empty paragraphs
   html = html.replace(/<p>\s*<\/p>/gi, "");
-
   if (!html) {
     return s ? `<p>${s}</p>` : "";
   }
