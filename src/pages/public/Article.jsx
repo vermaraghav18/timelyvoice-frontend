@@ -148,16 +148,25 @@ function normalizeBody(htmlOrText = "") {
   }
 
   // Flush any trailing structures
+   // Flush any trailing structures
   flushParagraph();
   flushList();
 
   let html = blocks.join("");
+
+  // 1) Convert **text** into a highlighted span (removes the bloody stars)
+  //    Example: **Valsalva maneuver** → <span class="hl-key">Valsalva maneuver</span>
+  html = html.replace(/\*\*(.+?)\*\*/g, '<span class="hl-key">$1</span>');
+
+  // 2) Clean up empty paragraphs
   html = html.replace(/<p>\s*<\/p>/gi, "");
+
   if (!html) {
     return s ? `<p>${s}</p>` : "";
   }
   return html;
 }
+
 
 
 /** Split normalized HTML into array of paragraph HTML strings */
@@ -795,41 +804,67 @@ if (status === 'notfound') {
   return (
     <>
       {/* Styles scoped to .article-body for professional rhythm */}
-      <style>{`
-        .article-body p {
-          margin: 1.25em 0;
-          line-height: 1.85;
-          font-size: 19px;
-          color: #e8ecf1;
-        }
-        .article-body p:first-of-type::first-letter {
-          font-size: 2.6em;
-          font-weight: 700;
-          float: left;
-          line-height: 1;
-          margin-right: 8px;
-          color: #00bfff;
-        }
-        .article-body h2 {
-          font-size: 22px;
-          margin-top: 1.8em;
-          margin-bottom: 0.8em;
-          border-left: 3px solid #00bfff;
-          padding-left: 10px;
-          color: #ffffff;
-        }
-        .article-body a {
-          color: #61dafb;
-          text-decoration: underline;
-        }
-        .article-body blockquote {
-          border-left: 4px solid #00bfff;
-          padding-left: 12px;
-          margin: 1.6em 0;
-          font-style: italic;
-          color: #d4d4d4;
-        }
-      `}</style>
+     <style>{`
+  .article-body p {
+    margin: 1.25em 0;
+    line-height: 1.85;
+    font-size: 19px;
+    color: #e8ecf1;
+  }
+
+  .article-body p:first-of-type::first-letter {
+    font-size: 2.6em;
+    font-weight: 700;
+    float: left;
+    line-height: 1;
+    margin-right: 8px;
+    color: #00bfff;
+  }
+
+  /* MAIN HEADLINES (h2) – orange highlight bar */
+  .article-body h2 {
+    font-size: 22px;
+    margin-top: 1.8em;
+    margin-bottom: 0.8em;
+    padding: 6px 10px;
+    color: #000000;
+    background-color: #ff9800;
+    display: inline-block;
+    border-radius: 3px;
+    border-left: none;
+  }
+
+  /* Optional: smaller subheads (h3) – lighter style */
+  .article-body h3 {
+    font-size: 19px;
+    margin-top: 1.6em;
+    margin-bottom: 0.6em;
+    color: #ffdd73;
+  }
+
+  .article-body a {
+    color: #61dafb;
+    text-decoration: underline;
+  }
+
+  .article-body blockquote {
+    border-left: 4px solid #00bfff;
+    padding-left: 12px;
+    margin: 1.6em 0;
+    font-style: italic;
+    color: #d4d4d4;
+  }
+
+  /* INLINE HIGHLIGHT: yellow for important words */
+  .article-body .hl-key,
+  .article-body mark {
+    background-color: #ffe766;
+    color: #000000;
+    padding: 0 2px;
+    border-radius: 2px;
+  }
+`}</style>
+
 
       <SiteNav />
       <div style={outerContainer}>

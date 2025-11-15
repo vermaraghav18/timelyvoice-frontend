@@ -1480,10 +1480,11 @@ export default function ArticlesPage() {
                 onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
                 style={ta}
               />
-              <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+                <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
                 Supports simple formatting:
-                <br /># Heading, ## Subheading, - bullet, 1. numbered item
+                <br /># Heading, ## Subheading, - bullet, 1. numbered item, **highlighted text**
               </div>
+
             </label>
 
 
