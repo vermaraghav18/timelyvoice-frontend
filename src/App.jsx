@@ -18,6 +18,7 @@ const TagPage = lazy(() => import('./pages/public/TagPage.jsx'));
 const ReaderArticle = lazy(() => import('./pages/public/Article.jsx'));
 const TopNews = lazy(() => import('./pages/public/TopNews.jsx'));
 const FinanceCategoryPage = lazy(() => import('./pages/public/FinanceCategoryPage.jsx'));
+const HealthPage = lazy(() => import('./pages/public/HealthPage.jsx'));   // ✅ NEW lazy import
 
 // Admin pages (lazy)
 const AdminShell = lazy(() => import('./layouts/AdminShell.jsx'));
@@ -54,10 +55,6 @@ import { initAnalytics, notifyRouteChange, track } from './lib/analytics';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 import AdsPage from "./admin/AdsPage";
-
-import HealthPage from './pages/public/HealthPage.jsx';
-
-
 
 // 👉 NEW: X Admin page (lazy)
 const AdminXPage = lazy(() => import('./pages/AdminX.jsx'));

@@ -49,9 +49,33 @@ function articleHref(slug) {
   return `/article/${slug}`;
 }
 
-/* ---------- FINANCE/BUSINESS page (TopNews layout clone) ---------- */
+/**
+ * Get a nice display label for the article category:
+ * - if category is an object → use .name or .slug
+ * - if category is string and looks like a Mongo ID → fallback to displayName
+ * - otherwise use the string or fallback.
+ */
+function getCategoryLabel(article, fallback) {
+  const cat = article?.category;
+
+  if (cat && typeof cat === 'object') {
+    return cat.name || cat.slug || fallback;
+  }
+
+  if (typeof cat === 'string') {
+    // if it's a 24-char hex string (likely Mongo ObjectId), ignore it
+    if (/^[0-9a-fA-F]{24}$/.test(cat)) {
+      return fallback;
+    }
+    return cat;
+  }
+
+  return fallback;
+}
+
+/* ---------- FINANCE/BUSINESS/HEALTH page (TopNews layout clone) ---------- */
 export default function FinanceCategoryPage({
-  categorySlug = 'finance',  // 'finance' or 'business'
+  categorySlug = 'finance',  // 'finance' | 'business' | 'health' etc.
   displayName = 'Finance',
 }) {
   const { pathname } = useLocation();
@@ -201,7 +225,11 @@ export default function FinanceCategoryPage({
               <ul className="tn-list">
                 {items.map((a) => {
                   const href = articleHref(a.slug);
-                  const pillBg = CAT_COLORS[a.category] || '#4B5563';
+
+                  // ✅ derive a clean label for the pill
+                  const catLabel = getCategoryLabel(a, displayName);
+                  const pillBg = CAT_COLORS[catLabel] || '#4B5563';
+
                   const summary = a.summary || a.description || a.excerpt || '';
 
                   return (
@@ -235,7 +263,7 @@ export default function FinanceCategoryPage({
                       <Link to={href} className="tn-thumb">
                         <span className="tn-badge">
                           <span className="tn-pill" style={{ background: pillBg }}>
-                            {a.category || displayName}
+                            {catLabel}
                           </span>
                         </span>
 

@@ -7,20 +7,21 @@ const LINKS = [
   { label: 'Home', path: '/' },
   { label: 'Top News', path: '/top-news' },
 
-  // India tab
+  // India tab maps to Politics category
   { label: 'India', slug: 'Politics' },
 
   // World tab
   { label: 'World', slug: 'World' },
 
-  // ✅ Health tab in the top navbar
-  { label: 'Health', slug: 'Health' },
+  // Health tab → dedicated /health page
+  { label: 'Health', path: '/health' },
 
   // The rest:
   { label: 'Finance', slug: 'Business' },
   { label: 'FilmyBazaar', slug: 'Entertainment' },
   { label: 'Sports & Tech', slug: 'Sports' },
 ];
+
 
 const WRAP_STYLE = {
   background: '#0B3D91',
