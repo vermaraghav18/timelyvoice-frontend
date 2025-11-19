@@ -55,6 +55,10 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 import AdsPage from "./admin/AdsPage";
 
+import HealthPage from './pages/public/HealthPage.jsx';
+
+
+
 // 👉 NEW: X Admin page (lazy)
 const AdminXPage = lazy(() => import('./pages/AdminX.jsx'));
 
@@ -337,6 +341,8 @@ export default function App() {
           {/* Public */}
           <Route path="/" element={<PublicHome />} />
           <Route path="/top-news" element={<TopNews />} />
+          <Route path="/health" element={<HealthPage />} />
+
           <Route path="/admin/ads" element={<AdminShell><AdsPage /></AdminShell>} />
 
           {/* Category routes (normalize & special layouts) */}

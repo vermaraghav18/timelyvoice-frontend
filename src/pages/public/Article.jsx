@@ -59,8 +59,8 @@ function useIsMobile(breakpoint = 768) {
  * - Otherwise interpret simple markdown-like syntax:
  *   # Heading     → <h2>
  *   ## Subhead    → <h3>
- *   - item / * / • → <ul><li>item</li>…
- *   1. item       → <ol><li>item</li>…
+ *   - item / * / • → <ul><li>item</li>…>
+ *   1. item       → <ol><li>item</li>…>
  *   Blank lines   → paragraphs (<p>…</p>)
  */
 function normalizeBody(htmlOrText = "") {
@@ -168,8 +168,6 @@ function normalizeBody(htmlOrText = "") {
   return html;
 }
 
-
-
 /** Split normalized HTML into array of paragraph HTML strings */
 function splitParagraphs(normalizedHtml = '') {
   if (!normalizedHtml) return [];
@@ -202,6 +200,23 @@ function AdSlot({ slotId = 'in-article-1', client = 'ca-pub-XXXXXXXXXXXXXXX', sl
     </div>
   );
 }
+
+/** 🔧 Helper to choose the visible byline:
+ * - Prefer author if present
+ * - Otherwise use source (but ignore "Automation")
+ * - Otherwise fall back to "News Desk"
+ */
+function pickByline(doc = {}) {
+  const author = (doc.author ?? '').toString().trim();
+  const source = (doc.source ?? '').toString().trim();
+
+  if (author) return author;
+  if (source && source.toLowerCase() !== 'automation') {
+    return source;
+  }
+  return 'News Desk';
+}
+
 /* ----------------------------------- */
 
 export default function ReaderArticle() {
@@ -237,11 +252,10 @@ export default function ReaderArticle() {
   const bodyRef = useRef(null);
   useReadComplete({ id: article?.id || article?._id, slug: article?.slug, title: article?.title });
 
-const canonical = useMemo(
-  () => buildCanonicalFromLocation(['article', String(slug || '').toLowerCase()]),
-  [slug]
-);
-
+  const canonical = useMemo(
+    () => buildCanonicalFromLocation(['article', String(slug || '').toLowerCase()]),
+    [slug]
+  );
 
   // Ensure the initial HTML never says "Article not found" (prevents Soft 404)
   useEffect(() => {
@@ -348,7 +362,7 @@ const canonical = useMemo(
         upsertTag('meta', { name: 'twitter:description', content: String(desc).slice(0, 200) });
         if (ogImage) upsertTag('meta', { name: 'twitter:image', content: ogImage });
 
-        // Optional author meta (helps some parsers)
+        // Optional author meta (helps some parsers) – prefers doc.author only
         const authorNameMeta = (doc.author && String(doc.author).trim()) || 'News Desk';
         upsertTag('meta', { name: 'author', content: authorNameMeta });
 
@@ -373,9 +387,6 @@ const canonical = useMemo(
         // Dates (ISO)
         const datePublishedISO = publishedIso;
         const dateModifiedISO = modifiedIso;
-
-        // Images
-        // (ogImage defined above)
 
         // Publisher Organization node (with logo)
         const publisherNode = {
@@ -528,8 +539,7 @@ const canonical = useMemo(
 
   /* ---------- derived ---------- */
   const displayDate = article?.updatedAt || article?.publishedAt || article?.publishAt || article?.createdAt;
-const imageUrl = ensureRenderableImage(article);
-
+  const imageUrl = ensureRenderableImage(article);
   const imageAlt = article?.imageAlt || article?.title || '';
 
   // rails: alternate right, left, right, left…
@@ -612,7 +622,6 @@ const imageUrl = ensureRenderableImage(article);
     fontSize: isMobile ? 17 : 18,
     lineHeight: 1.75,
     margin: '0 0 16px',
-    // fixed typo: "20pxpx" -> "20px"
     boxShadow: '0 8px 20px 0 #000, 0 0 0 1px rgba(255,255,255,0.06)',
   };
 
@@ -628,8 +637,6 @@ const imageUrl = ensureRenderableImage(article);
     color: '#ffffffff',
   };
 
-  // const shareBottom = { marginTop: isMobile ? 10 : 12, paddingTop: isMobile ? 6 : 8, borderTop: '0px solid #e5e7eb' };
-
   // ---- BODY PREP ----
   const normalizedBody = useMemo(
     () => normalizeBody(article?.bodyHtml || article?.body || ''),
@@ -641,9 +648,9 @@ const imageUrl = ensureRenderableImage(article);
   function NextArticleInline({ doc, isMobile }) {
     if (!doc) return null;
 
-   const imageUrl = ensureRenderableImage(article);
-
-    const imageAlt = doc.imageAlt || doc.title || '';
+    // 🔧 fix: use image of the next article, not the current one
+    const nextImageUrl = ensureRenderableImage(doc);
+    const nextImageAlt = doc.imageAlt || doc.title || '';
     const bodyHtml = doc.bodyHtml || doc.body || '';
     const normalized = normalizeBody(bodyHtml);
     const paras = splitParagraphs(normalized);
@@ -716,12 +723,15 @@ const imageUrl = ensureRenderableImage(article);
           <a href={`/article/${doc.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
             <h2 style={titleH}>{doc.title}</h2>
           </a>
-          <div style={srcRow}>By {doc.source || doc.author || 'News Desk'}</div>
-          {imageUrl && (
+
+          {/* ✅ use pickByline here */}
+          <div style={srcRow}>By {pickByline(doc)}</div>
+
+          {nextImageUrl && (
             <figure style={{ margin: '0 0 12px' }}>
               <img
-                src={imageUrl}
-                alt={imageAlt}
+                src={nextImageUrl}
+                alt={nextImageAlt}
                 loading="lazy"
                 decoding="async"
                 width="1280"
@@ -765,30 +775,29 @@ const imageUrl = ensureRenderableImage(article);
     );
   }
 
- // --- 404 SEO handling (must always define hooks in same order) ---
-useEffect(() => {
+  // --- 404 SEO handling (must always define hooks in same order) ---
+  useEffect(() => {
+    if (status === 'notfound') {
+      removeManagedHeadTags();
+      upsertTag('meta', { name: 'robots', content: 'noindex, follow' });
+      upsertTag('title', {}, { textContent: `Story not found — ${SITE_NAME}` });
+    }
+  }, [status]);
+
   if (status === 'notfound') {
-    removeManagedHeadTags();
-    upsertTag('meta', { name: 'robots', content: 'noindex, follow' });
-    upsertTag('title', {}, { textContent: `Story not found — ${SITE_NAME}` });
+    return (
+      <>
+        <SiteNav />
+        <main id="content" className="container">
+          <div style={{ padding: 24 }}>
+            <h1 style={{ fontWeight: 700, marginBottom: 8 }}>Story Not Available</h1>
+            <p>This story isn’t available right now. Explore the latest headlines below.</p>
+          </div>
+        </main>
+        <SiteFooter />
+      </>
+    );
   }
-}, [status]);
-
-if (status === 'notfound') {
-  return (
-    <>
-      <SiteNav />
-      <main id="content" className="container">
-        <div style={{ padding: 24 }}>
-          <h1 style={{ fontWeight: 700, marginBottom: 8 }}>Story Not Available</h1>
-          <p>This story isn’t available right now. Explore the latest headlines below.</p>
-        </div>
-      </main>
-      <SiteFooter />
-    </>
-  );
-}
-
 
   if (!article) {
     return (
@@ -805,7 +814,7 @@ if (status === 'notfound') {
   return (
     <>
       {/* Styles scoped to .article-body for professional rhythm */}
-     <style>{`
+      <style>{`
   .article-body p {
     margin: 1.25em 0;
     line-height: 1.85;
@@ -866,7 +875,6 @@ if (status === 'notfound') {
   }
 `}</style>
 
-
       <SiteNav />
       <div style={outerContainer}>
         <div style={mainWrapper}>
@@ -899,7 +907,8 @@ if (status === 'notfound') {
             >
               <h1 style={titleH1}>{article.title}</h1>
 
-              <div style={sourceRow}>By {article.source || article.author || 'News Desk'}</div>
+              {/* ✅ main byline fixed */}
+              <div style={sourceRow}>By {pickByline(article)}</div>
 
               {/* thin updated row */}
               <div style={timeShareBar}>
@@ -947,13 +956,12 @@ if (status === 'notfound') {
               </div>
 
               {/* NEW: Related stories widget (improves internal linking) */}
- <RelatedStories
-    currentSlug={article.slug}
-    category={article?.category?.name ?? (typeof article?.category === 'string' ? article.category : 'General')}
-    title="Related stories"
-    dense={false}
-  />
-
+              <RelatedStories
+                currentSlug={article.slug}
+                category={article?.category?.name ?? (typeof article?.category === 'string' ? article.category : 'General')}
+                title="Related stories"
+                dense={false}
+              />
               {/* <div style={shareBottom}><ShareBar /></div> */}
             </article>
 
@@ -1076,7 +1084,7 @@ if (status === 'notfound') {
                                     justifyContent: 'center',
                                   }}
                                 >
-                                 {a?.category?.name ?? (typeof a?.category === 'string' ? a.category : 'General')}
+                                  {a?.category?.name ?? (typeof a?.category === 'string' ? a.category : 'General')}
                                 </span>
                               </span>
 
@@ -1124,6 +1132,7 @@ if (status === 'notfound') {
                 </div>
               </section>
             )}
+
             {/* thin divider after Keep Reading */}
             <div
               style={{
