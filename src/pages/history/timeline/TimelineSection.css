@@ -1,0 +1,137 @@
+/* OUTER WRAPPER – no background, just layout */
+.tv-timeline {
+  position: relative;
+  width: 100%;
+  max-width: 880px;          /* controls how wide the line is */
+  margin: 32px auto 24px;    /* center in the page */
+  height: 140px;
+  background: none;
+  border-radius: 0;
+  overflow: visible;         /* allow tooltip to go outside */
+}
+
+/* horizontal base line */
+.tv-base-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 55%;                  /* a bit lower to give room for tooltip */
+  height: 1.5px;
+  background: #4f6ef7;
+  opacity: 0;
+  transition: opacity 0.35s ease-out;
+}
+
+/* full vertical tick crossing the base line (up + down) */
+.tv-year-tick {
+  position: absolute;
+  top: 55%;                  /* must match tv-base-line top */
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    #6a8bff,
+    #4f6ef7,
+    #6a8bff
+  );
+  transform: translate(-50%, -50%) scaleY(0); /* intro animation */
+  transform-origin: center center;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    transform 0.22s ease-out,
+    box-shadow 0.22s ease-out,
+    background 0.22s ease-out,
+    opacity 0.18s ease-out;
+  opacity: 0;
+}
+
+/* when mounted, fade everything in */
+.tv-timeline.is-mounted .tv-base-line {
+  opacity: 1;
+}
+
+.tv-timeline.is-mounted .tv-year-tick {
+  transform: translate(-50%, -50%) scaleY(1);
+  opacity: 1;
+}
+
+/* hover: gentle grow + glow */
+.tv-year-tick:hover {
+  transform: translate(-50%, -50%) scaleY(1.15);
+  box-shadow: 0 0 10px rgba(124, 154, 255, 0.55);
+  background: linear-gradient(
+    to bottom,
+    #8ea5ff,
+    #4f6ef7,
+    #8ea5ff
+  );
+}
+
+/* when a year is hovered, dim the others */
+.tv-timeline.has-hover .tv-year-tick.tv-year-tick--dim {
+  opacity: 0.35;
+}
+
+/* TOOLTIP – light white box, readable */
+.tv-tooltip {
+  position: absolute;
+  bottom: 100%;              /* sit above the line */
+  left: 8px;                 /* default: to the right of the line */
+  background: #ffffff;       /* LIGHT box */
+  color: #0f172a;            /* dark text for contrast */
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #cbd5f5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  min-width: 220px;
+  max-width: 340px;          /* keep it from being too wide */
+  font-size: 12px;
+  z-index: 10;
+  white-space: normal;       /* allow wrapping */
+  pointer-events: none;      /* avoids flicker when hovering edge */
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.16s ease-out, transform 0.16s ease-out;
+}
+
+/* visible state (used in JSX) */
+.tv-tooltip-show {
+  opacity: 1;
+  transform: translateY(-8px);
+}
+
+.tv-tooltip-year {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.tv-tooltip-item {
+  opacity: 0.9;
+  margin-bottom: 2px;
+}
+
+/* when tick is near right edge, open tooltip to LEFT of the line */
+.tv-tooltip--left {
+  left: auto;
+  right: 8px;
+}
+
+/* bottom labels – aligned under first & last tick (JS sets left:%) */
+.tv-start-label,
+.tv-end-label {
+  position: absolute;
+  bottom: 4px;
+  transform: translateX(-50%);
+  font-weight: 600;
+  color: #e5edff;            /* works on your dark background */
+  font-size: 13px;
+}
+
+/* optional: shrink a bit on very small screens */
+@media (max-width: 768px) {
+  .tv-timeline {
+    max-width: 100%;
+    margin: 24px auto 16px;
+    height: 140px;
+  }
+}

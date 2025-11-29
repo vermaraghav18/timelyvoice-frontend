@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
 // src/components/nav/PrimaryNav.jsx
+// src/components/nav/PrimaryNav.jsx
 const LINKS = [
   { label: 'Home', path: '/' },
   { label: 'Top News', path: '/top-news' },
@@ -17,7 +18,8 @@ const LINKS = [
   { label: 'Health', path: '/health' },
 
   // The rest:
-  { label: 'Finance', slug: 'Business' },
+ { label: 'Finance', slug: 'Business' },
+  { label: 'History', slug: 'history' },
   { label: 'FilmyBazaar', slug: 'Entertainment' },
   { label: 'Sports & Tech', slug: 'Sports' },
 ];
@@ -118,7 +120,7 @@ export default function PrimaryNav() {
   const activeRef = useRef(null);
 
   // Only show these in the row (order here doesn’t matter; LINKS order controls display)
-  const visibleLabels = ['Home', 'Top News', 'India', 'World', 'Health', 'Finance'];
+  const visibleLabels = ['Home', 'Top News', 'India', 'World', 'Health', 'Finance', 'History'];
   const visibleIndexes = LINKS.map((l, i) => (visibleLabels.includes(l.label) ? i : -1)).filter(i => i >= 0);
   const lastVisibleIndex = visibleIndexes.length ? visibleIndexes[visibleIndexes.length - 1] : -1;
 

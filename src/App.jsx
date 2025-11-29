@@ -18,7 +18,10 @@ const TagPage = lazy(() => import('./pages/public/TagPage.jsx'));
 const ReaderArticle = lazy(() => import('./pages/public/Article.jsx'));
 const TopNews = lazy(() => import('./pages/public/TopNews.jsx'));
 const FinanceCategoryPage = lazy(() => import('./pages/public/FinanceCategoryPage.jsx'));
-const HealthPage = lazy(() => import('./pages/public/HealthPage.jsx'));   // ✅ NEW lazy import
+const HealthPage = lazy(() => import('./pages/public/HealthPage.jsx'));   // NEW lazy import
+
+// ⭐⭐⭐ NEW: History Page (lazy import)
+const HistoryPage = lazy(() => import('./pages/history/HistoryPage.jsx'));
 
 // Admin pages (lazy)
 const AdminShell = lazy(() => import('./layouts/AdminShell.jsx'));
@@ -27,7 +30,6 @@ const AdminMedia = lazy(() => import('./pages/admin/MediaLibrary.jsx'));
 const ArticlesPage = lazy(() => import('./pages/admin/ArticlesPage.jsx'));
 const CategoriesPage = lazy(() => import('./pages/admin/CategoriesPage.jsx'));
 const TagsPage = lazy(() => import('./pages/admin/TagsPage.jsx'));
-// ✅ Correct filename
 const SettingsPage = lazy(() => import('./pages/admin/SettingsPage.jsx'));
 const CommentsPage = lazy(() => import('./pages/admin/CommentsPage.jsx'));
 const BreakingNewsAdmin = lazy(() => import('./pages/admin/BreakingNewsAdmin.jsx'));
@@ -56,7 +58,7 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 import AdsPage from "./admin/AdsPage";
 
-// 👉 NEW: X Admin page (lazy)
+// NEW: X Admin page
 const AdminXPage = lazy(() => import('./pages/AdminX.jsx'));
 
 /* ========= NEW: E-E-A-T static pages (lazy) ========= */
@@ -99,7 +101,6 @@ export function setPreviewCountry(val) {
  */
 api.interceptors.request.use((config) => {
   const url = config.url || '';
-  // Strip leading '/api' if present (baseURL already has '/api')
   if (typeof url === 'string') {
     if (url.startsWith('/api/')) config.url = url.slice(4);
     else if (url === '/api') config.url = '/';
@@ -233,21 +234,17 @@ export function emitBreadcrumbs(trail = []) {
   });
 }
 
-// Build a normalized canonical URL from the current window location.
 export function buildCanonicalFromLocation() {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const url = new URL(origin + window.location.pathname + window.location.search);
 
-  // strip tracking params
   ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','fbclid','gclid']
     .forEach(p => url.searchParams.delete(p));
 
-  // normalize path: no trailing slash (except root)
   if (url.pathname !== '/' && url.pathname.endsWith('/')) {
     url.pathname = url.pathname.replace(/\/+$/, '');
   }
 
-  // NEW: lowercase slugs for /category|/tag|/author
   url.pathname = url.pathname.replace(
     /^\/(category|tag|author)\/([^\/]+)(.*)$/i,
     (_m, seg, slug, rest) => `/${seg.toLowerCase()}/${slug.toLowerCase()}${rest || ''}`
@@ -269,18 +266,21 @@ function AnyCategoryRoute() {
 
   const [ready, setReady] = useState(false);
 
-  // ✅ Normalize the path in a useEffect (no warnings, no render-time nav)
   useEffect(() => {
     const want = `/category/${normalized}`;
     if (loc.pathname !== want) {
       navigate(want, { replace: true });
-      // We’ll render on the next navigation tick
       return;
     }
     setReady(true);
   }, [normalized, loc.pathname, navigate]);
 
   if (!ready) return null;
+
+  // ⭐⭐⭐ NEW: History category override
+  if (normalized === 'history') {
+    return <HistoryPage />;
+  }
 
   if (normalized === 'finance' || normalized === 'business') {
     return (
@@ -290,6 +290,7 @@ function AnyCategoryRoute() {
       />
     );
   }
+
   return <CategoryPage />;
 }
 
@@ -297,16 +298,13 @@ function AnyCategoryRoute() {
 export default function App() {
   const loc = useLocation();
 
-  // Start analytics once
   useEffect(() => { initAnalytics(); }, []);
 
-  // On every route change
   useEffect(() => {
     notifyRouteChange(loc.pathname, loc.search);
     track('page_view', { path: `${loc.pathname}${loc.search}` });
   }, [loc.pathname, loc.search]);
 
-  // Global WebSite + SearchAction JSON-LD (re-applied on navigation)
   useEffect(() => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const siteName = 'My News';
@@ -325,7 +323,6 @@ export default function App() {
     });
   }, [loc.pathname, loc.search]);
 
-  // ✅ Canonical tag: keep one normalized URL per page
   useEffect(() => {
     const href = buildCanonicalFromLocation();
     upsertTag('link', { rel: 'canonical', href });
@@ -342,7 +339,7 @@ export default function App() {
 
           <Route path="/admin/ads" element={<AdminShell><AdsPage /></AdminShell>} />
 
-          {/* Category routes (normalize & special layouts) */}
+          {/* Category routes */}
           <Route path="/category/:slug" element={<AnyCategoryRoute />} />
 
           <Route path="/tag/:slug" element={<TagPage />} />
@@ -351,7 +348,7 @@ export default function App() {
 
           <Route path="/search" element={<SearchPage />} />
 
-          {/* ===== NEW: E-E-A-T static routes ===== */}
+          {/* Static pages */}
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/editorial-policy" element={<EditorialPolicyPage />} />
@@ -361,13 +358,12 @@ export default function App() {
           <Route path="/advertising" element={<AdvertisingPage />} />
           <Route path="/author/:slug" element={<AuthorPage />} />
 
-          {/* 404 must come after public/admin routes */}
+          {/* 404 */}
           <Route path="*" element={<NotFound />} />
 
           {/* Admin */}
           <Route path="/admin" element={<AdminShell><AdminDashboard /></AdminShell>} />
           <Route path="/admin/articles" element={<AdminShell><ArticlesPage /></AdminShell>} />
-          {/* NEW: Bulk import route */}
           <Route path="/admin/articles/bulk" element={<AdminShell><ArticlesBulkImport /></AdminShell>} />
           <Route path="/admin/media" element={<AdminShell><AdminMedia /></AdminShell>} />
           <Route path="/admin/categories" element={<AdminShell><CategoriesPage /></AdminShell>} />
@@ -385,13 +381,9 @@ export default function App() {
           <Route path="/admin/autmotion/drafts" element={<AdminShell><AutmotionDraftsPage /></AdminShell>} />
           <Route path="/admin/autmotion/x-sources" element={<AdminShell><AutmotionXSourcesPage /></AdminShell>} />
           <Route path="/admin/autmotion/x-queue" element={<AdminShell><AutmotionXQueuePage /></AdminShell>} />
-          {/* 👉 Alias so /admin/automation/x-queue also works */}
           <Route path="/admin/automation/x-queue" element={<AdminShell><AutmotionXQueuePage /></AdminShell>} />
 
-          {/* 👉 NEW: X Admin page */}
           <Route path="/admin/x" element={<AdminShell><AdminXPage /></AdminShell>} />
-
-          {/* Admin review of AI drafts (manual publish) */}
           <Route path="/admin/drafts" element={<AdminShell><AdminDrafts /></AdminShell>} />
         </Routes>
       </Suspense>

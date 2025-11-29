@@ -115,7 +115,28 @@ export default function ArticlesPage() {
     // GEO
     geoMode: "global",
     geoAreasText: "",
+
+     year: "",
+    era: "BC",
   });
+
+    // Figure out if the selected category is "History"
+  const historyCategory = useMemo(
+    () =>
+      categories.find(
+        (c) =>
+          (c.slug || "").toLowerCase() === "history" ||
+          (c.name || "").toLowerCase() === "history"
+      ),
+    [categories]
+  );
+
+  const isHistorySelected =
+    !!historyCategory &&
+    (form.category === historyCategory._id ||
+      form.category === historyCategory.slug ||
+      form.category === historyCategory.name);
+
   const [tagsInput, setTagsInput] = useState("");
 
   // --- GEO Preview inputs (local-only helper fields)
@@ -407,7 +428,9 @@ export default function ArticlesPage() {
       ogImage: "",
       tags: [],
       geoMode: "global",
-      geoAreasText: "",
+     geoAreasText: "",
+      year: "",
+      era: "BC",
     });
     setTagsInput("");
     setTestCountry("");
@@ -433,7 +456,8 @@ export default function ArticlesPage() {
         summary: a.summary || "",
         author: a.author || "",
         body: a.body || "",
-        category: a.category?._id || a.category || "",
+          category: resolveCategoryId(a.category?._id || a.category || ""),
+
         status: a.status || "published",
         publishAt: a.publishedAt ? new Date(a.publishedAt).toISOString().slice(0, 16) : "",
         imageUrl: a.imageUrl || "",
@@ -445,6 +469,8 @@ export default function ArticlesPage() {
         tags: Array.isArray(a.tags) ? a.tags : [],
         geoMode: a.geoMode || "global",
         geoAreasText,
+         year: a.year ?? "",
+        era: a.era || "BC",
       });
       setTagsInput((Array.isArray(a.tags) ? a.tags : []).join(", "));
       setTestCountry("");
@@ -498,26 +524,30 @@ export default function ArticlesPage() {
       try {
         setAutoSaving(true);
         const payload = {
-          title: form.title?.trim(),
-          slug: form.slug?.trim() || undefined,
-          summary: form.summary?.trim(),
-          author: form.author?.trim(),
-          body: form.body, // keep full body
-          category: resolveCategoryId(form.category), // ensure _id
-          status: form.status === "published" ? "published" : "draft",
-          publishedAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
-          imageUrl: normalizeCloudinaryUrl(form.imageUrl) || undefined,
-          imagePublicId: form.imagePublicId || undefined,
-          imageAlt: form.imageAlt || undefined,
-          metaTitle: form.metaTitle ? String(form.metaTitle).slice(0, META_TITLE_MAX) : undefined,
-          metaDesc: form.metaDesc ? String(form.metaDesc).slice(0, META_DESC_MAX) : undefined,
-          ogImage: normalizeCloudinaryUrl(form.ogImage) || undefined,
-          tags: parseTags(tagsInput),
-          geo: {
-            mode: form.geoMode || "global",
-            areas: parseGeoAreas(form.geoAreasText),
-          },
-        };
+  title: form.title?.trim(),
+  slug: form.slug?.trim() || undefined,
+  summary: form.summary?.trim(),
+  author: form.author?.trim(),
+  body: form.body,
+  category: resolveCategoryId(form.category),
+  status: form.status === "published" ? "published" : "draft",
+  publishedAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
+  imageUrl: normalizeCloudinaryUrl(form.imageUrl) || undefined,
+  imagePublicId: form.imagePublicId || undefined,
+  imageAlt: form.imageAlt || undefined,
+  metaTitle: form.metaTitle ? String(form.metaTitle).slice(0, META_TITLE_MAX) : undefined,
+  metaDesc: form.metaDesc ? String(form.metaDesc).slice(0, META_DESC_MAX) : undefined,
+  ogImage: normalizeCloudinaryUrl(form.ogImage) || undefined,
+  tags: parseTags(tagsInput),
+  geo: {
+    mode: form.geoMode || "global",
+    areas: parseGeoAreas(form.geoAreasText),
+  },
+  // ⬇⬇ NEW
+  year: form.year ? Number(form.year) : undefined,
+  era: form.era || "BC",
+};
+
         // Enforce soft limits on meta fields before saving
         if (payload.metaTitle) payload.metaTitle = String(payload.metaTitle).slice(0, META_TITLE_MAX);
         if (payload.metaDesc) payload.metaDesc = String(payload.metaDesc).slice(0, META_DESC_MAX);
@@ -539,34 +569,37 @@ export default function ArticlesPage() {
     try {
       // build a clean payload the backend expects
       const payload = {
-        title: form.title?.trim(),
-        // auto-generate slug client-side if blank (prevents 400s on servers that require slug)
-        slug:
-          form.slug?.trim() ||
-          form.title
-            ?.trim()
-            ?.toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-+|-+$/g, "") ||
-          undefined,
-        summary: form.summary?.trim(),
-        author: form.author?.trim() || "Staff",
-        body: form.body,
-        category: resolveCategoryId(form.category),
-        status: form.status === "published" ? "published" : "draft",
-        publishedAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
-        imageUrl: normalizeCloudinaryUrl(form.imageUrl) || undefined,
-        imagePublicId: form.imagePublicId || undefined,
-        imageAlt: form.imageAlt || undefined,
-        metaTitle: form.metaTitle ? String(form.metaTitle).slice(0, META_TITLE_MAX) : undefined,
-        metaDesc: form.metaDesc ? String(form.metaDesc).slice(0, META_DESC_MAX) : undefined,
-        ogImage: normalizeCloudinaryUrl(form.ogImage) || undefined,
-        tags: parseTags(tagsInput),
-        geo: {
-          mode: form.geoMode || "global",
-          areas: parseGeoAreas(form.geoAreasText),
-        },
-      };
+  title: form.title?.trim(),
+  slug:
+    form.slug?.trim() ||
+    form.title
+      ?.trim()
+      ?.toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") ||
+    undefined,
+  summary: form.summary?.trim(),
+  author: form.author?.trim() || "Staff",
+  body: form.body,
+  category: resolveCategoryId(form.category),
+  status: form.status === "published" ? "published" : "draft",
+  publishedAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
+  imageUrl: normalizeCloudinaryUrl(form.imageUrl) || undefined,
+  imagePublicId: form.imagePublicId || undefined,
+  imageAlt: form.imageAlt || undefined,
+  metaTitle: form.metaTitle ? String(form.metaTitle).slice(0, META_TITLE_MAX) : undefined,
+  metaDesc: form.metaDesc ? String(form.metaDesc).slice(0, META_DESC_MAX) : undefined,
+  ogImage: normalizeCloudinaryUrl(form.ogImage) || undefined,
+  tags: parseTags(tagsInput),
+  geo: {
+    mode: form.geoMode || "global",
+    areas: parseGeoAreas(form.geoAreasText),
+  },
+  // ⬇⬇ NEW
+  year: form.year ? Number(form.year) : undefined,
+  era: form.era || "BC",
+};
+
       // Soft limits: also enforce on manual Save
       if (payload.metaTitle) payload.metaTitle = String(payload.metaTitle).slice(0, META_TITLE_MAX);
       if (payload.metaDesc) payload.metaDesc = String(payload.metaDesc).slice(0, META_DESC_MAX);
@@ -1258,55 +1291,85 @@ export default function ArticlesPage() {
                 />
               </label>
 
-              <div style={grid3}>
-                <label style={lbl}>
-                  Category
-                  <select
-                    value={form.category}
-                    onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                    style={inp}
-                  >
-                    {categories.map((c) => (
-                      <option key={c._id} value={c._id}>
-                        {c.name}
-                      </option>
-                    ))}
-                    <option value="">General</option>
-                  </select>
-                </label>
+             <div style={grid3}>
+  <label style={lbl}>
+    Category
+    <select
+      value={form.category}
+      onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+      style={inp}
+    >
+      {categories.map((c) => (
+        <option key={c._id} value={c._id}>
+          {c.name}
+        </option>
+      ))}
+      <option value="">General</option>
+    </select>
+  </label>
 
-                <label style={lbl}>
-                  Status
-                  <select
-                    value={form.status}
-                    onChange={(e) => {
-                      const s = e.target.value;
-                      setForm((f) => ({
-                        ...f,
-                        status: s,
-                        // auto-fill publishAt UI field when switching to published
-                        publishAt: s === "published" ? f.publishAt || new Date().toISOString().slice(0, 16) : f.publishAt,
-                      }));
-                    }}
-                    style={{ ...inp, opacity: isAdmin ? 1 : 0.6 }}
-                    disabled={!isAdmin}
-                    title={!isAdmin ? "Only admins can change publish status" : undefined}
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="published">Published</option>
-                  </select>
-                </label>
+  {/* Year field – only when History category is selected */}
+  {isHistorySelected && (
+    <label style={lbl}>
+      Year (BC)
+      <input
+        type="number"
+        min="0"
+        max="4000"
+        value={form.year}
+        onChange={(e) =>
+          setForm((f) => ({
+            ...f,
+            year: e.target.value,
+          }))
+        }
+        style={inp}
+        placeholder="e.g. 2500"
+      />
+      <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+        Only used for History articles (treated as BC).
+      </div>
+    </label>
+  )}
 
-                <label style={lbl}>
-                  Publish At
-                  <input
-                    type="datetime-local"
-                    value={form.publishAt}
-                    onChange={(e) => setForm((f) => ({ ...f, publishAt: e.target.value }))}
-                    style={inp}
-                  />
-                </label>
-              </div>
+  <label style={lbl}>
+    Status
+    <select
+      value={form.status}
+      onChange={(e) => {
+        const s = e.target.value;
+        setForm((f) => ({
+          ...f,
+          status: s,
+          // auto-fill publishAt UI field when switching to published
+          publishAt:
+            s === "published"
+              ? f.publishAt || new Date().toISOString().slice(0, 16)
+              : f.publishAt,
+        }));
+      }}
+      style={{ ...inp, opacity: isAdmin ? 1 : 0.6 }}
+      disabled={!isAdmin}
+      title={!isAdmin ? "Only admins can change publish status" : undefined}
+    >
+      <option value="draft">Draft</option>
+      <option value="published">Published</option>
+    </select>
+  </label>
+
+  <label style={lbl}>
+    Publish At
+    <input
+      type="datetime-local"
+      value={form.publishAt}
+      onChange={(e) =>
+        setForm((f) => ({ ...f, publishAt: e.target.value }))
+      }
+      style={inp}
+    />
+  </label>
+</div>
+
 
               <div style={grid2}>
                 <label style={lbl}>
