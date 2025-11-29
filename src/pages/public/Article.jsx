@@ -206,16 +206,112 @@ function AdSlot({ slotId = 'in-article-1', client = 'ca-pub-XXXXXXXXXXXXXXX', sl
  * - Otherwise use source (but ignore "Automation")
  * - Otherwise fall back to "News Desk"
  */
+const BRAND_NEWS_DESK = 'Timely Voice News Desk';
+
 function pickByline(doc = {}) {
   const author = (doc.author ?? '').toString().trim();
   const source = (doc.source ?? '').toString().trim();
 
+  // If you ever add a real author later, this will show their name
   if (author) return author;
+
+  // If there's a meaningful source and it's not just "Automation"
   if (source && source.toLowerCase() !== 'automation') {
     return source;
   }
-  return 'News Desk';
+
+  // Default: your branded news desk
+  return BRAND_NEWS_DESK;
 }
+
+function AuthorBox({ article }) {
+  if (!article) return null;
+
+  const byline = pickByline(article);
+  const isBrand =
+    byline.toLowerCase().includes('timely voice');
+
+  const displayName = isBrand ? 'Timely Voice News' : byline;
+
+  return (
+    <section
+      style={{
+        marginTop: 24,
+        marginBottom: 16,
+        padding: 12,
+        borderRadius: 0,
+        border: '1px solid rgba(148, 163, 184, 0.6)',
+        background:
+          'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,64,175,0.9))',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+      }}
+    >
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+        {/* Initial / logo circle */}
+        <div
+          style={{
+            flexShrink: 0,
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            background:
+              'radial-gradient(circle at 30% 30%, #facc15, #f97316 55%, #7c2d12)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 800,
+            fontSize: 18,
+            color: '#000',
+            boxShadow: '0 0 0 2px rgba(15,23,42,0.9)',
+          }}
+        >
+          {displayName.charAt(0).toUpperCase()}
+        </div>
+
+        {/* Text block */}
+        <div style={{ flex: 1 }}>
+          <div
+            style={{
+              fontSize: 14,
+              textTransform: 'uppercase',
+              letterSpacing: 1.2,
+              color: '#93c5fd',
+              marginBottom: 2,
+              fontWeight: 600,
+            }}
+          >
+            Reported by
+          </div>
+          <div
+            style={{
+              fontSize: 17,
+              fontWeight: 700,
+              color: '#e5f0ff',
+              marginBottom: 6,
+            }}
+          >
+            {displayName}
+          </div>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 14,
+              lineHeight: 1.6,
+              color: '#cbd5f5',
+            }}
+          >
+            Timely Voice News monitors verified government releases, reputable
+            publications and agency wires to compile clear, exam-friendly news
+            reports. Stories are edited for accuracy, clarity and neutrality
+            before publishing.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+
 
 /* ----------------------------------- */
 
@@ -363,8 +459,10 @@ export default function ReaderArticle() {
         if (ogImage) upsertTag('meta', { name: 'twitter:image', content: ogImage });
 
         // Optional author meta (helps some parsers) – prefers doc.author only
-        const authorNameMeta = (doc.author && String(doc.author).trim()) || 'News Desk';
-        upsertTag('meta', { name: 'author', content: authorNameMeta });
+          const authorNameMeta =
+            (doc.author && String(doc.author).trim()) || 'Timely Voice News';
+          upsertTag('meta', { name: 'author', content: authorNameMeta });
+
 
         // ---------- JSON-LD: Strong NewsArticle + Breadcrumb ----------
         const categoryObj = doc.category ?? null;
@@ -378,11 +476,15 @@ export default function ReaderArticle() {
             : categoryName;
 
         // Author: prefer Person; fall back to Organization “News Desk”
-        const authorName = (doc.author && String(doc.author).trim()) || 'News Desk';
+        // Author: prefer Person; fall back to your branded Organization
+        const authorName =
+          (doc.author && String(doc.author).trim()) || 'Timely Voice News';
+
         const authorNode =
-          authorName.toLowerCase() === 'news desk'
+          authorName.toLowerCase().includes('timely voice')
             ? { '@type': 'Organization', name: authorName }
             : { '@type': 'Person', name: authorName };
+
 
         // Dates (ISO)
         const datePublishedISO = publishedIso;
@@ -954,6 +1056,10 @@ export default function ReaderArticle() {
                   </div>
                 ))}
               </div>
+
+               {/* ✅ Author / newsroom box under the article */}
+              <AuthorBox article={article} />
+
 
               {/* NEW: Related stories widget (improves internal linking) */}
               <RelatedStories
