@@ -757,29 +757,47 @@ export default function CategoryPage() {
     };
   }, [slug, page, limit, navigate, normalizedSlug, search]);
 
-  /* SEO */
+   /* SEO */
   useEffect(() => {
     removeManagedHeadTags();
 
-    const title = categoryCopy.metaTitle;
-    const desc =
-      categoryCopy.metaDescription ||
-      (category?.description ||
-        `Latest ${category?.name || ''} stories on ${BRAND_NAME}`
-      ).trim();
+    const title = category
+      ? `${category.name} — NewsSite`
+      : `Category — NewsSite`;
 
+    const desc = (
+      category?.description ||
+      `Latest ${category?.name || ''} stories on NewsSite`
+    ).trim();
+
+    // <title>
     upsertTag('title', {}, { textContent: title });
+
+    // description
     upsertTag('meta', {
       name: 'description',
-      content: desc || `Browse category on ${BRAND_NAME}`,
+      content: desc || 'Browse category on NewsSite',
     });
-    upsertTag('link', { rel: 'canonical', href: canonical });
 
+    // canonical
+    upsertTag('link', {
+      rel: 'canonical',
+      href: canonical,
+    });
+
+    // ✅ ALWAYS allow indexing for category pages
+    upsertTag('meta', {
+      name: 'robots',
+      content: 'index,follow',
+      'data-managed': 'robots',
+    });
+
+    // RSS <link rel="alternate">
     if (slug) {
       upsertTag('link', {
         rel: 'alternate',
         type: 'application/rss+xml',
-        title: `${BRAND_NAME} — ${category?.name || slug}`,
+        title: `Timely Voice — ${category?.name || slug}`,
         href: `${window.location.origin}/rss/${encodeURIComponent(
           normalizedSlug
         )}.xml`,
@@ -791,10 +809,16 @@ export default function CategoryPage() {
       const coll = {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
-        name: title,
-        description: desc,
+        name: category
+          ? `${category.name} — NewsSite`
+          : 'Category — NewsSite',
+        description: (
+          category?.description ||
+          `Latest ${category?.name || ''} stories on NewsSite`
+        ).trim(),
         url: canonical,
       };
+
       const breadcrumb = {
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
@@ -813,20 +837,14 @@ export default function CategoryPage() {
           },
         ],
       };
+
       setJsonLd({
         '@context': 'https://schema.org',
         '@graph': [coll, breadcrumb],
       });
     } catch {}
+  }, [category, canonical, slug, normalizedSlug]);
 
-        // Always remove any old managed robots tag so categories stay indexable
-    upsertTag(
-      'meta',
-      { name: 'robots', 'data-managed': 'robots' },
-      { remove: true }
-    );
-
-  }, [category, canonical, slug, normalizedSlug, articles, categoryCopy]);
 
   /* fetch sections for THIS page path (head_*) */
   useEffect(() => {
