@@ -758,51 +758,54 @@ export default function CategoryPage() {
   }, [slug, page, limit, navigate, normalizedSlug, search]);
 
    /* SEO */
-  useEffect(() => {
-    removeManagedHeadTags();
+  /* SEO */
+useEffect(() => {
+  removeManagedHeadTags();
 
-    const title = category
-      ? `${category.name} — NewsSite`
-      : `Category — NewsSite`;
+  const title = category
+    ? `${category.name} — NewsSite`
+    : `Category — NewsSite`;
 
-    const desc = (
-      category?.description ||
-      `Latest ${category?.name || ''} stories on NewsSite`
-    ).trim();
+  const desc = (
+    category?.description ||
+    `Latest ${category?.name || ''} stories on NewsSite`
+  ).trim();
 
-    // <title>
-    upsertTag('title', {}, { textContent: title });
+  // <title>
+  upsertTag('title', {}, { textContent: title });
 
-    // description
-    upsertTag('meta', {
-      name: 'description',
-      content: desc || 'Browse category on NewsSite',
-    });
+  // description
+  upsertTag('meta', {
+    name: 'description',
+    content: desc || 'Browse category on NewsSite',
+  });
 
-    // canonical
+  // canonical
+  upsertTag('link', {
+    rel: 'canonical',
+    href: canonical,
+  });
+
+  // ✅ robots: first wipe all, then set index,follow
+  upsertTag('meta', { name: 'robots' }, { remove: true });
+  upsertTag('meta', {
+    name: 'robots',
+    content: 'index,follow',
+    'data-managed': 'robots',
+  });
+
+  // RSS <link rel="alternate">
+  if (slug) {
     upsertTag('link', {
-      rel: 'canonical',
-      href: canonical,
+      rel: 'alternate',
+      type: 'application/rss+xml',
+      title: `Timely Voice — ${category?.name || slug}`,
+      href: `${window.location.origin}/rss/${encodeURIComponent(
+        normalizedSlug
+      )}.xml`,
     });
+  }
 
-    // ✅ ALWAYS allow indexing for category pages
-    upsertTag('meta', {
-      name: 'robots',
-      content: 'index,follow',
-      'data-managed': 'robots',
-    });
-
-    // RSS <link rel="alternate">
-    if (slug) {
-      upsertTag('link', {
-        rel: 'alternate',
-        type: 'application/rss+xml',
-        title: `Timely Voice — ${category?.name || slug}`,
-        href: `${window.location.origin}/rss/${encodeURIComponent(
-          normalizedSlug
-        )}.xml`,
-      });
-    }
 
     // JSON-LD: CollectionPage + Breadcrumb
     try {
