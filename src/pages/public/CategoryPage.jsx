@@ -819,21 +819,13 @@ export default function CategoryPage() {
       });
     } catch {}
 
-    // Noindex empty categories (avoid thin content indexing)
-    const isEmpty = Array.isArray(articles) && articles.length === 0;
-    if (isEmpty) {
-      upsertTag('meta', {
-        name: 'robots',
-        content: 'noindex,follow',
-        'data-managed': 'robots',
-      });
-    } else {
-      upsertTag(
-        'meta',
-        { name: 'robots', 'data-managed': 'robots' },
-        { remove: true }
-      );
-    }
+        // Always remove any old managed robots tag so categories stay indexable
+    upsertTag(
+      'meta',
+      { name: 'robots', 'data-managed': 'robots' },
+      { remove: true }
+    );
+
   }, [category, canonical, slug, normalizedSlug, articles, categoryCopy]);
 
   /* fetch sections for THIS page path (head_*) */
