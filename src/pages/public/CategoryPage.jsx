@@ -757,68 +757,60 @@ export default function CategoryPage() {
     };
   }, [slug, page, limit, navigate, normalizedSlug, search]);
 
-   /* SEO */
   /* SEO */
-useEffect(() => {
-  removeManagedHeadTags();
+  useEffect(() => {
+    removeManagedHeadTags();
 
-  const title = category
-    ? `${category.name} — NewsSite`
-    : `Category — NewsSite`;
+    // Use the nice copy we built above
+    const { metaTitle, metaDescription } = categoryCopy;
 
-  const desc = (
-    category?.description ||
-    `Latest ${category?.name || ''} stories on NewsSite`
-  ).trim();
+    // <title>
+    upsertTag('title', {}, { textContent: metaTitle });
 
-  // <title>
-  upsertTag('title', {}, { textContent: title });
+    // <meta name="description">
+    upsertTag(
+      'meta',
+      { name: 'description' },
+      {
+        content:
+          metaDescription ||
+          'Browse latest stories on The Timely Voice.',
+      }
+    );
 
-  // description
-  upsertTag('meta', {
-    name: 'description',
-    content: desc || 'Browse category on NewsSite',
-  });
-
-  // canonical
-  upsertTag('link', {
-    rel: 'canonical',
-    href: canonical,
-  });
-
-  // ✅ robots: first wipe all, then set index,follow
-  upsertTag('meta', { name: 'robots' }, { remove: true });
-  upsertTag('meta', {
-    name: 'robots',
-    content: 'index,follow',
-    'data-managed': 'robots',
-  });
-
-  // RSS <link rel="alternate">
-  if (slug) {
+    // canonical
     upsertTag('link', {
-      rel: 'alternate',
-      type: 'application/rss+xml',
-      title: `Timely Voice — ${category?.name || slug}`,
-      href: `${window.location.origin}/rss/${encodeURIComponent(
-        normalizedSlug
-      )}.xml`,
+      rel: 'canonical',
+      href: canonical,
     });
-  }
 
+    // ✅ ALWAYS allow indexing for category pages
+    upsertTag('meta', {
+      name: 'robots',
+      content: 'index,follow',
+      'data-managed': 'robots',
+    });
+
+    // RSS <link rel="alternate">
+    if (slug) {
+      upsertTag('link', {
+        rel: 'alternate',
+        type: 'application/rss+xml',
+        title: `Timely Voice — ${category?.name || slug}`,
+        href: `${window.location.origin}/rss/${encodeURIComponent(
+          normalizedSlug
+        )}.xml`,
+      });
+    }
 
     // JSON-LD: CollectionPage + Breadcrumb
     try {
+      const { displayName } = categoryCopy;
       const coll = {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
-        name: category
-          ? `${category.name} — NewsSite`
-          : 'Category — NewsSite',
-        description: (
-          category?.description ||
-          `Latest ${category?.name || ''} stories on NewsSite`
-        ).trim(),
+        name: metaTitle,
+        description: metaDescription,
         url: canonical,
       };
 
@@ -835,7 +827,7 @@ useEffect(() => {
           {
             '@type': 'ListItem',
             position: 2,
-            name: category?.name || slug,
+            name: displayName || slug,
             item: canonical,
           },
         ],
@@ -846,8 +838,7 @@ useEffect(() => {
         '@graph': [coll, breadcrumb],
       });
     } catch {}
-  }, [category, canonical, slug, normalizedSlug]);
-
+  }, [categoryCopy, canonical, slug, normalizedSlug]);
 
   /* fetch sections for THIS page path (head_*) */
   useEffect(() => {
@@ -1114,10 +1105,11 @@ useEffect(() => {
 
               {!loading && notFound && (
                 <>
-                  <h2>Category not found</h2>
-                  <p>
-                    Try another category or go back to the{' '}
-                    <Link to="/">home page</Link>.
+                  <h1>{categoryCopy.displayName}</h1>
+                  {renderCategoryIntro()}
+                  <p style={{ marginTop: 8 }}>
+                    We’re currently updating this section. Meanwhile, you can explore the latest{' '}
+                    <Link to="/top-news">top stories</Link> on {BRAND_NAME}.
                   </p>
                 </>
               )}
@@ -1137,9 +1129,15 @@ useEffect(() => {
                   {renderCategoryIntro()}
 
                   {(!articles || articles.length === 0) ? (
-                    <p style={{ textAlign: 'center' }}>
-                      No articles yet.
-                    </p>
+                    <>
+                      <h1>{categoryCopy.displayName}</h1>
+                      {renderCategoryIntro()}
+                      <p style={{ marginTop: 8, textAlign: 'center' }}>
+                        New stories will appear here soon. For now, visit our{' '}
+                        <Link to="/top-news">Top News</Link> or{' '}
+                        <Link to="/world">World</Link> sections.
+                      </p>
+                    </>
                   ) : (
                     <>
                       <LeadCard a={lead} />
@@ -1303,10 +1301,11 @@ useEffect(() => {
 
             {!loading && notFound && (
               <>
-                <h2>Category not found</h2>
-                <p>
-                  Try another category or go back to the{' '}
-                  <Link to="/">home page</Link>.
+                <h1>{categoryCopy.displayName}</h1>
+                {renderCategoryIntro()}
+                <p style={{ marginTop: 8 }}>
+                  We’re updating this section. You can read our latest{' '}
+                  <Link to="/top-news">top stories</Link> in the meantime.
                 </p>
               </>
             )}
@@ -1326,12 +1325,19 @@ useEffect(() => {
                 {renderCategoryIntro()}
 
                 {(!articles || articles.length === 0) ? (
-                  <p style={{ textAlign: 'center' }}>
-                    No articles yet.
-                  </p>
+                  <>
+                    <h1>{categoryCopy.displayName}</h1>
+                    {renderCategoryIntro()}
+                    <p style={{ marginTop: 8, textAlign: 'center' }}>
+                      New articles for this category are coming soon. Check{' '}
+                      <Link to="/top-news">Top News</Link> or{' '}
+                      <Link to="/world">World</Link> while you wait.
+                    </p>
+                  </>
                 ) : (
                   <>
                     <LeadCard a={lead} />
+                    {/* rest of your existing code stays the same */}
 
                     {isMobile ? (
                       <div style={listStyle}>
