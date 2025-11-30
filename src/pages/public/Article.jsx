@@ -28,7 +28,8 @@ import { ensureRenderableImage } from '../../lib/images';
 
 
 // --- Publisher/site constants (used in JSON-LD) ---
-const SITE_NAME = 'NewsSite';
+const SITE_NAME = 'The Timely Voice';
+
 const SITE_URL  = typeof window !== 'undefined' ? window.location.origin : 'https://example.com';
 // Use a square logo that actually exists and is at least 112x112. 512x512 PNG/SVG recommended.
 const SITE_LOGO = `${SITE_URL}/logo-512.png`;

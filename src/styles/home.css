@@ -10,6 +10,25 @@
   
 }
 
+/* Legal / static pages: force light text on dark background */
+.legal-page,
+.legal-page h1,
+.legal-page h2,
+.legal-page h3,
+.legal-page h4,
+.legal-page p,
+.legal-page li,
+.legal-page a {
+  color: #ffffff !important;
+}
+
+/* Slightly softer white for long paragraphs if you want */
+.legal-page p,
+.legal-page li {
+  color: #e5edff !important;
+}
+
+
 
 /* Articles list */
 .article-list {

@@ -70,6 +70,7 @@ const PrivacyPolicyPage = lazy(() => import('./pages/static/PrivacyPolicy.jsx'))
 const TermsPage = lazy(() => import('./pages/static/Terms.jsx'));
 const AdvertisingPage = lazy(() => import('./pages/static/Advertising.jsx'));
 const AuthorPage = lazy(() => import('./pages/static/Author.jsx'));
+const EditorialDisclaimerPage = lazy(() => import('./pages/static/EditorialDisclaimer.jsx'));
 
 /* ============ API base (proxy-friendly) ============ */
 /**
@@ -302,7 +303,7 @@ export default function App() {
 
   useEffect(() => {
     notifyRouteChange(loc.pathname, loc.search);
-    track('page_view', { path: `${loc.pathname}${loc.search}` });
+    track('page_view', { path: `${loc.pathname}{loc.search}` });
   }, [loc.pathname, loc.search]);
 
   useEffect(() => {
@@ -354,7 +355,9 @@ export default function App() {
           <Route path="/editorial-policy" element={<EditorialPolicyPage />} />
           <Route path="/corrections" element={<CorrectionsPage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="/editorial-disclaimer" element={<EditorialDisclaimerPage />} />
           <Route path="/terms" element={<TermsPage />} />
+          <Route path="/terms-and-conditions" element={<TermsPage />} />
           <Route path="/advertising" element={<AdvertisingPage />} />
           <Route path="/author/:slug" element={<AuthorPage />} />
 
