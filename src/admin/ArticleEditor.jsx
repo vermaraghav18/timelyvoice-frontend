@@ -3,7 +3,6 @@ import { apiJSON, authHeader } from "../lib/api";
 import MediaPickerModal from "./MediaPickerModal";
 import GoogleSnippetPreview from "../components/GoogleSnippetPreview"; // adjust if your path differs
 
-
 // Auto hero image planner: asks backend which hero it would pick for the current draft.
 function usePlanImage(article, headers) {
   const [autoPick, setAutoPick] = useState(null);
@@ -16,7 +15,7 @@ function usePlanImage(article, headers) {
       summary: article?.summary || "",
       category: article?.category || "",
       tags: Array.isArray(article?.tags) ? article.tags : [],
-      slug: article?.slug || ""
+      slug: article?.slug || "",
     };
 
     let cancelled = false;
@@ -28,9 +27,9 @@ function usePlanImage(article, headers) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...(headers || {})        // pass Authorization here
+            ...(headers || {}), // pass Authorization here
           },
-          body: JSON.stringify(draft)
+          body: JSON.stringify(draft),
         });
         const j = await r.json();
         if (!cancelled) setAutoPick(j);
@@ -46,8 +45,6 @@ function usePlanImage(article, headers) {
 
   return { autoPick, autoLoading, autoError };
 }
-// Auto hero image planner: asks backend which hero it would pick for the current draft.
-
 
 // Soft display limits (Google usually truncates around here)
 const TITLE_SOFT_LIMIT = 60;
@@ -66,6 +63,9 @@ export default function ArticleEditor({ article, setArticle, token }) {
   const [metaDesc, setMetaDesc] = useState(article?.metaDesc || "");
   const [ogImage, setOgImage] = useState(article?.ogImage || "");
 
+  // URL to import (Cloudinary or Google Drive)
+  const [importUrl, setImportUrl] = useState("");
+
   // Keep locals in sync when parent article changes (e.g. after PATCH elsewhere)
   useEffect(() => {
     setImageAlt(article?.imageAlt || "");
@@ -77,19 +77,18 @@ export default function ArticleEditor({ article, setArticle, token }) {
   const H = authHeader(token);
 
   // Ask backend for the current auto-picked hero (live preview)
-const { autoPick, autoLoading, autoError } = usePlanImage(article, H);
+  const { autoPick, autoLoading, autoError } = usePlanImage(article, H);
 
-// Decide what to show in the UI: manual override wins, else show auto-pick.
-const heroPublicId = article?.imagePublicId || autoPick?.publicId || null;
-const heroUrl      = article?.imageUrl      || autoPick?.url       || null;
-const heroMode     = article?.imagePublicId ? "Manual" : (autoPick?.publicId ? "Auto" : "None");
+  // Decide what to show in the UI: manual override wins, else show auto-pick.
+  const heroPublicId = article?.imagePublicId || autoPick?.publicId || null;
+  const heroUrl = article?.imageUrl || autoPick?.url || null;
+  const heroMode = article?.imagePublicId ? "Manual" : autoPick?.publicId ? "Auto" : "None";
 
-// Convenience: apply the auto-picked hero as the cover with one click
-async function useAutoPickAsCover() {
-  if (!autoPick?.url || !autoPick?.publicId) return;
-  await setCoverFromMedia({ url: autoPick.url, publicId: autoPick.publicId });
-}
-
+  // Convenience: apply the auto-picked hero as the cover with one click
+  async function useAutoPickAsCover() {
+    if (!autoPick?.url || !autoPick?.publicId) return;
+    await setCoverFromMedia({ url: autoPick.url, publicId: autoPick.publicId });
+  }
 
   // Choose/replace cover image
   async function setCoverFromMedia(m) {
@@ -104,6 +103,36 @@ async function useAutoPickAsCover() {
 
     const updated = await apiJSON("PATCH", `/api/articles/${article.id}`, payload, H);
     setArticle(updated);
+  }
+
+  // Import a cover image from any URL (Google Drive or Cloudinary)
+  async function importCoverFromUrl() {
+    const trimmed = (importUrl || "").trim();
+    if (!trimmed) return;
+
+    try {
+      const res = await apiJSON(
+        "POST",
+        "/api/admin/articles/import-image-from-url",
+        { url: trimmed },
+        H
+      );
+
+      if (!res || res.error) {
+        alert(res?.error || "Failed to import image from URL");
+        return;
+      }
+
+      await setCoverFromMedia({
+        url: res.url,
+        publicId: res.publicId,
+      });
+
+      setImportUrl("");
+    } catch (e) {
+      console.error("importCoverFromUrl error", e);
+      alert("Failed to import image from URL");
+    }
   }
 
   // Persist alt text (on blur)
@@ -163,108 +192,132 @@ async function useAutoPickAsCover() {
     <div className="space-y-8">
       {/* === Your existing fields for Title, Slug, Summary, Body go elsewhere on the page === */}
 
-      {/* ===== Cover Section ===== */}
       {/* ===== Cover Section (Manual + Auto Preview) ===== */}
-<section className="border rounded-xl p-4 space-y-3">
-  <div className="flex items-center justify-between">
-    <h3 className="font-semibold">Cover</h3>
-    <small className="opacity-70">
-      {autoLoading ? "Picking…" : `${heroMode}: ${heroPublicId || "(none)"}`}
-    </small>
-  </div>
-
-  {/* If a manual cover exists, show it; otherwise, show the auto suggestion if available */}
-  {article.imageUrl ? (
-    <div className="flex items-center gap-3">
-      <img
-        src={article.imageUrl}
-        alt={article.imageAlt || article.title || "Cover image"}
-        className="w-32 h-20 object-cover rounded"
-      />
-      <div className="text-sm text-gray-600 break-all">
-        {article.imagePublicId}
-      </div>
-    </div>
-  ) : autoPick?.url ? (
-    <div className="flex items-center gap-3">
-      <img
-        src={autoPick.url}
-        alt={article?.title || "Auto hero preview"}
-        className="w-32 h-20 object-cover rounded"
-      />
-      <div className="text-sm text-gray-600 break-all">
-        {autoPick.publicId}
-        <div className="text-xs text-gray-500">
-          (Auto suggestion from backend)
+      <section className="border rounded-xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold">Cover</h3>
+          <small className="opacity-70">
+            {autoLoading ? "Picking…" : `${heroMode}: ${heroPublicId || "(none)"}`}
+          </small>
         </div>
-        {autoError && (
-          <div className="text-xs text-red-600">{autoError}</div>
+
+        {/* If a manual cover exists, show it; otherwise, show the auto suggestion if available */}
+        {article.imageUrl ? (
+          <div className="flex items-center gap-3">
+            <img
+              src={article.imageUrl}
+              alt={article.imageAlt || article.title || "Cover image"}
+              className="w-32 h-20 object-cover rounded"
+            />
+            <div className="text-sm text-gray-600 break-all">
+              {article.imagePublicId}
+            </div>
+          </div>
+        ) : autoPick?.url ? (
+          <div className="flex items-center gap-3">
+            <img
+              src={autoPick.url}
+              alt={article?.title || "Auto hero preview"}
+              className="w-32 h-20 object-cover rounded"
+            />
+            <div className="text-sm text-gray-600 break-all">
+              {autoPick.publicId}
+              <div className="text-xs text-gray-500">
+                (Auto suggestion from backend)
+              </div>
+              {autoError && (
+                <div className="text-xs text-red-600">{autoError}</div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm text-gray-500">No cover selected</div>
         )}
-      </div>
-    </div>
-  ) : (
-    <div className="text-sm text-gray-500">No cover selected</div>
-  )}
 
-  <div className="flex flex-wrap gap-2">
-    <button
-      className="border rounded px-3 py-1"
-      onClick={() => setPickerOpen(true)}
-    >
-      Choose from Library
-    </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="border rounded px-3 py-1"
+            onClick={() => setPickerOpen(true)}
+          >
+            Choose from Library
+          </button>
 
-    {article.imageUrl ? (
-      <button
-        className="border rounded px-3 py-1"
-        onClick={() => setCoverFromMedia({ url: "", publicId: "" })}
-      >
-        Remove
-      </button>
-    ) : null}
+          {article.imageUrl ? (
+            <button
+              className="border rounded px-3 py-1"
+              onClick={() => setCoverFromMedia({ url: "", publicId: "" })}
+            >
+              Remove
+            </button>
+          ) : null}
 
-    {/* Offer a 1-click apply when we only have an auto suggestion */}
-    {!article.imageUrl && autoPick?.url && autoPick?.publicId ? (
-      <button
-        className="border rounded px-3 py-1"
-        onClick={useAutoPickAsCover}
-        title="Use the auto-selected image as the cover"
-      >
-        Use Auto Pick
-      </button>
-    ) : null}
-  </div>
+          {/* Offer a 1-click apply when we only have an auto suggestion */}
+          {!article.imageUrl && autoPick?.url && autoPick?.publicId ? (
+            <button
+              className="border rounded px-3 py-1"
+              onClick={useAutoPickAsCover}
+              title="Use the auto-selected image as the cover"
+            >
+              Use Auto Pick
+            </button>
+          ) : null}
+        </div>
 
-  {/* Alt text input (kept exactly as before) */}
-  <div className="pt-2">
-    <label className="block text-sm font-medium mb-1" htmlFor="cover-alt">
-      Cover image alt text
-    </label>
-    <input
-      id="cover-alt"
-      type="text"
-      className="w-full border rounded px-3 py-2 text-sm"
-      placeholder='Describe the image for screen readers (e.g., "Sunset over city skyline")'
-      value={imageAlt}
-      onChange={(e) => setImageAlt(e.target.value)}
-      onBlur={() => saveAltText(imageAlt)}
-    />
-    <p className="text-xs text-gray-500 mt-1">
-      Improves accessibility and SEO. Keep it concise and descriptive.
-    </p>
-  </div>
+        {/* NEW: Import from URL (Google Drive / Cloudinary) */}
+        <div className="mt-3 space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Image URL (Cloudinary or Google Drive)
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              className="flex-1 border rounded px-3 py-2 text-sm"
+              placeholder="Paste Google Drive or Cloudinary image URL here"
+              value={importUrl}
+              onChange={(e) => setImportUrl(e.target.value)}
+            />
+            <button
+              type="button"
+              className="border rounded px-3 py-2 text-sm whitespace-nowrap"
+              onClick={importCoverFromUrl}
+            >
+              Import URL
+            </button>
+          </div>
+          <p className="text-xs text-gray-500">
+            You can paste a Google Drive share link (for example
+            {" "}“https://drive.google.com/file/d/.../view”) or a normal Cloudinary URL.
+            The system will upload it to Cloudinary and set it as the cover image.
+          </p>
+        </div>
 
-  {/* Optional hint when OG is set (kept as-is) */}
-  {article.ogImage ? (
-    <p className="text-xs text-gray-500">
-      Social preview image (OG):{" "}
-      <span className="break-all">{article.ogImage}</span>
-    </p>
-  ) : null}
-</section>
+        {/* Alt text input (kept exactly as before) */}
+        <div className="pt-2">
+          <label className="block text-sm font-medium mb-1" htmlFor="cover-alt">
+            Cover image alt text
+          </label>
+          <input
+            id="cover-alt"
+            type="text"
+            className="w-full border rounded px-3 py-2 text-sm"
+            placeholder='Describe the image for screen readers (e.g., "Sunset over city skyline")'
+            value={imageAlt}
+            onChange={(e) => setImageAlt(e.target.value)}
+            onBlur={() => saveAltText(imageAlt)}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Improves accessibility and SEO. Keep it concise and descriptive.
+          </p>
+        </div>
 
-
-
+        {/* Optional hint when OG is set (kept as-is) */}
+        {article.ogImage ? (
+          <p className="text-xs text-gray-500">
+            Social preview image (OG):{" "}
+            <span className="break-all">{article.ogImage}</span>
+          </p>
+        ) : null}
+      </section>
 
       <MediaPickerModal
         open={pickerOpen}

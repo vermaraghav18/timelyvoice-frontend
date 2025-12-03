@@ -563,67 +563,94 @@ export default function ArticlesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, tagsInput, showForm, editingId]);
 
-  async function saveForm(e) {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      // build a clean payload the backend expects
-      const payload = {
-  title: form.title?.trim(),
-  slug:
-    form.slug?.trim() ||
-    form.title
-      ?.trim()
-      ?.toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") ||
-    undefined,
-  summary: form.summary?.trim(),
-  author: form.author?.trim() || "Staff",
-  body: form.body,
-  category: resolveCategoryId(form.category),
-  status: form.status === "published" ? "published" : "draft",
-  publishedAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
-  imageUrl: normalizeCloudinaryUrl(form.imageUrl) || undefined,
-  imagePublicId: form.imagePublicId || undefined,
-  imageAlt: form.imageAlt || undefined,
-  metaTitle: form.metaTitle ? String(form.metaTitle).slice(0, META_TITLE_MAX) : undefined,
-  metaDesc: form.metaDesc ? String(form.metaDesc).slice(0, META_DESC_MAX) : undefined,
-  ogImage: normalizeCloudinaryUrl(form.ogImage) || undefined,
-  tags: parseTags(tagsInput),
-  geo: {
-    mode: form.geoMode || "global",
-    areas: parseGeoAreas(form.geoAreasText),
-  },
-  // ⬇⬇ NEW
-  year: form.year ? Number(form.year) : undefined,
-  era: form.era || "BC",
-};
+ async function saveForm(e) {
+  e.preventDefault();
+  setSaving(true);
+  try {
+    // First normalize the basic fields
+    let imageUrl = normalizeCloudinaryUrl(form.imageUrl) || undefined;
+    let imagePublicId = form.imagePublicId || undefined;
+    let ogImage = normalizeCloudinaryUrl(form.ogImage) || undefined;
 
-      // Soft limits: also enforce on manual Save
-      if (payload.metaTitle) payload.metaTitle = String(payload.metaTitle).slice(0, META_TITLE_MAX);
-      if (payload.metaDesc) payload.metaDesc = String(payload.metaDesc).slice(0, META_DESC_MAX);
-
-      if (editingId) {
-        await api.patch(`/admin/articles/${editingId}`, payload);
-        toast.push({ type: "success", title: "Updated" });
-      } else {
-        await api.post(`/admin/articles`, payload);
-        toast.push({ type: "success", title: "Created" });
+    // If user pasted a Google Drive URL, import it via backend
+    if (imageUrl && imageUrl.includes("drive.google.com")) {
+      try {
+        const res = await api.post("/admin/articles/import-image-from-url", { url: imageUrl });
+        const data = res && res.data ? res.data : res;
+        if (data && data.url && data.publicId) {
+          imageUrl = data.url;           // Cloudinary URL
+          imagePublicId = data.publicId; // Cloudinary publicId
+          if (!ogImage) ogImage = data.url;
+        }
+      } catch (err) {
+        console.error("import-image-from-url failed", err);
+        toast.push({
+          type: "error",
+          title: "Image import failed",
+          message:
+            "Could not import image from Google Drive link. The article will be saved without changing the image.",
+        });
       }
-
-      closeForm();
-      fetchArticles();
-    } catch (e) {
-      const err = e?.response?.data;
-      const msg = err?.message || err?.error || e.message || "Save failed";
-      const details =
-        err?.details ? (typeof err.details === "string" ? err.details : JSON.stringify(err.details)) : "";
-      toast.push({ type: "error", title: "Save failed", message: details ? `${msg}: ${details}` : msg });
-    } finally {
-      setSaving(false);
     }
+
+    // build a clean payload the backend expects
+    const payload = {
+      title: form.title?.trim(),
+      slug:
+        form.slug?.trim() ||
+        form.title
+          ?.trim()
+          ?.toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "") ||
+        undefined,
+      summary: form.summary?.trim(),
+      author: form.author?.trim() || "Staff",
+      body: form.body,
+      category: resolveCategoryId(form.category),
+      status: form.status === "published" ? "published" : "draft",
+      publishedAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
+      imageUrl,           // now Cloudinary if it was Drive
+      imagePublicId,      // now Cloudinary if it was Drive
+      imageAlt: form.imageAlt || undefined,
+      metaTitle: form.metaTitle ? String(form.metaTitle).slice(0, META_TITLE_MAX) : undefined,
+      metaDesc: form.metaDesc ? String(form.metaDesc).slice(0, META_DESC_MAX) : undefined,
+      ogImage,            // will use Cloudinary URL if we just imported
+      tags: parseTags(tagsInput),
+      geo: {
+        mode: form.geoMode || "global",
+        areas: parseGeoAreas(form.geoAreasText),
+      },
+      // ⬇⬇ NEW (from your existing code)
+      year: form.year ? Number(form.year) : undefined,
+      era: form.era || "BC",
+    };
+
+    // Soft limits: also enforce on manual Save
+    if (payload.metaTitle) payload.metaTitle = String(payload.metaTitle).slice(0, META_TITLE_MAX);
+    if (payload.metaDesc) payload.metaDesc = String(payload.metaDesc).slice(0, META_DESC_MAX);
+
+    if (editingId) {
+      await api.patch(`/admin/articles/${editingId}`, payload);
+      toast.push({ type: "success", title: "Updated" });
+    } else {
+      await api.post(`/admin/articles`, payload);
+      toast.push({ type: "success", title: "Created" });
+    }
+
+    closeForm();
+    fetchArticles();
+  } catch (e) {
+    const err = e?.response?.data;
+    const msg = err?.message || err?.error || e.message || "Save failed";
+    const details =
+      err?.details ? (typeof err.details === "string" ? err.details : JSON.stringify(err.details)) : "";
+    toast.push({ type: "error", title: "Save failed", message: details ? `${msg}: ${details}` : msg });
+  } finally {
+    setSaving(false);
   }
+}
+
 
   // -------- GEO Preview (same logic as backend) --------
   function matchGeoToken(token, { country, region, city } = {}) {
@@ -952,7 +979,8 @@ export default function ArticlesPage() {
                     : imgState.saving === "error"
                     ? "#ef4444"
                     : "#d1d5db";
-                const previewUrl = a.ogImage || a.imageUrl || imgState.value || "";
+                const previewUrl = a.imageUrl || a.ogImage || imgState.value || "";
+
                 return (
                   <tr key={a._id} style={{ borderTop: "1px solid #f0f0f0" }}>
                     <td style={td}>
