@@ -6,6 +6,11 @@ import SiteNav from "../../components/SiteNav.jsx";
 import SiteFooter from "../../components/SiteFooter.jsx";
 import "./TopNews.css";
 
+// ✅ use the same helper + fallback as the article page
+import { ensureRenderableImage } from "../../lib/images";
+
+const FALLBACK_HERO_IMAGE = "/tv-default-hero.jpg";
+
 const CAT_COLORS = {
   World: "linear-gradient(135deg, #3B82F6 0%, #0073ff 100%)",
   Politics: "linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)",
@@ -32,7 +37,10 @@ function parseTs(v) {
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
   const s = String(v).trim();
   if (/^\d+$/.test(s)) return Number(s);
-  const withT = s.replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/, "$1T$2");
+  const withT = s.replace(
+    /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/,
+    "$1T$2"
+  );
   const t = Date.parse(withT);
   return Number.isFinite(t) ? t : 0;
 }
@@ -44,7 +52,7 @@ function normalizeTopNews(items = []) {
     .map((i, idx) => {
       const candidates = [
         i.publishedAt,
-        i.publishAt,      // many payloads use this
+        i.publishAt, // many payloads use this
         i.updatedAt,
         i.updated_at,
         i.createdAt,
@@ -55,18 +63,31 @@ function normalizeTopNews(items = []) {
       const best = Math.max(...candidates.map(parseTs), 0);
       return { ...i, _ts: best, _idx: idx };
     })
-    .sort((a, b) => (b._ts === a._ts ? a._idx - b._idx : b._ts - a._ts));
+    .sort((a, b) =>
+      b._ts === a._ts ? a._idx - b._idx : b._ts - a._ts
+    );
 }
 
 /** Case-insensitive category name */
 function getCategoryName(a) {
-  const raw = a?.category?.name ?? (typeof a?.category === "string" ? a.category : "General");
+  const raw =
+    a?.category?.name ??
+    (typeof a?.category === "string" ? a.category : "General");
   const map = {
-    world: "World", politics: "Politics", business: "Business",
-    entertainment: "Entertainment", general: "General", health: "Health",
-    science: "Science", sports: "Sports", tech: "Tech", technology: "Tech",
+    world: "World",
+    politics: "Politics",
+    business: "Business",
+    entertainment: "Entertainment",
+    general: "General",
+    health: "Health",
+    science: "Science",
+    sports: "Sports",
+    tech: "Tech",
+    technology: "Tech",
   };
-  return map[String(raw || "General").trim().toLowerCase()] || "General";
+  return (
+    map[String(raw || "General").trim().toLowerCase()] || "General"
+  );
 }
 
 export default function TopNews() {
@@ -115,7 +136,8 @@ export default function TopNews() {
               sorted.slice(0, 5).map((x) => ({
                 title: x.title,
                 ts: x._ts,
-                published: x.publishedAt ?? x.publishAt ?? x.updatedAt,
+                published:
+                  x.publishedAt ?? x.publishAt ?? x.updatedAt,
               }))
             );
           }
@@ -150,6 +172,10 @@ export default function TopNews() {
               const catName = getCategoryName(a);
               const color = CAT_COLORS[catName] || "#4B5563";
 
+              // ✅ unified hero logic (Cloudinary or default crest)
+              const rawImage = ensureRenderableImage(a);
+              const thumbSrc = rawImage || FALLBACK_HERO_IMAGE;
+
               return (
                 <li className="tn-item" key={a.id || a._id || a.slug}>
                   <div className="tn-left">
@@ -157,36 +183,64 @@ export default function TopNews() {
                       {a.title}
                     </Link>
 
-                    {(a.summary || a.description || a.excerpt) && (
+                    {(a.summary ||
+                      a.description ||
+                      a.excerpt) && (
                       <Link
                         to={href}
                         className="tn-summary"
-                        style={{ display: "block", textDecoration: "none", color: "inherit" }}
+                        style={{
+                          display: "block",
+                          textDecoration: "none",
+                          color: "inherit",
+                        }}
                         aria-label={`Open: ${a.title}`}
                       >
-                        {a.summary || a.description || a.excerpt}
+                        {a.summary ||
+                          a.description ||
+                          a.excerpt}
                       </Link>
                     )}
 
                     <div className="tn-divider"></div>
 
                     <div className="tn-meta">
-                      <span className="tn-source">The Timely Voice</span>
+                      <span className="tn-source">
+                        The Timely Voice
+                      </span>
                     </div>
                   </div>
 
                   <Link to={href} className="tn-thumb">
                     <span className="tn-badge">
-                      <span className="tn-pill" style={{ background: color }}>
+                      <span
+                        className="tn-pill"
+                        style={{ background: color }}
+                      >
                         {catName}
                       </span>
                     </span>
 
-                    {a.imageUrl ? (
-                      <img src={a.imageUrl} alt={a.imageAlt || a.title} loading="lazy" />
-                    ) : (
-                      <div className="tn-thumb ph" />
-                    )}
+                    {/* ✅ always show an image: article → fallback crest */}
+                    <img
+                      src={thumbSrc}
+                      alt={
+                        a.imageAlt ||
+                        a.title ||
+                        "The Timely Voice"
+                      }
+                      loading="lazy"
+                      decoding="async"
+                      onError={(e) => {
+                        // if Cloudinary (or bad URL) fails, force local crest once
+                        if (
+                          e.currentTarget.dataset.fallback !== "1"
+                        ) {
+                          e.currentTarget.dataset.fallback = "1";
+                          e.currentTarget.src = FALLBACK_HERO_IMAGE;
+                        }
+                      }}
+                    />
                   </Link>
                 </li>
               );

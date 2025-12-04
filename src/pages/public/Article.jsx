@@ -34,6 +34,10 @@ const SITE_URL  = typeof window !== 'undefined' ? window.location.origin : 'http
 // Use a square logo that actually exists and is at least 112x112. 512x512 PNG/SVG recommended.
 const SITE_LOGO = `${SITE_URL}/logo-512.png`;
 
+// Local hero fallback (from /public)
+const FALLBACK_HERO_IMAGE = '/tv-default-hero.jpg';
+
+
 /* ---------- helpers ---------- */
 function estimateReadingTime(text = '', wpm = 200) {
   const plain = String(text).replace(/<[^>]*>/g, ' ');
@@ -641,9 +645,17 @@ export default function ReaderArticle() {
   }, [nextSlug]);
 
   /* ---------- derived ---------- */
-  const displayDate = article?.updatedAt || article?.publishedAt || article?.publishAt || article?.createdAt;
-  const imageUrl = ensureRenderableImage(article);
-  const imageAlt = article?.imageAlt || article?.title || '';
+  /* ---------- derived ---------- */
+const displayDate =
+  article?.updatedAt ||
+  article?.publishedAt ||
+  article?.publishAt ||
+  article?.createdAt;
+
+const rawImageUrl = ensureRenderableImage(article);
+const imageAlt = article?.imageAlt || article?.title || '';
+
+const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
 
   // rails: alternate right, left, right, left…
   const rails = homeSections.filter((s) => s.template?.startsWith('rail_'));
@@ -1032,21 +1044,31 @@ export default function ReaderArticle() {
 
               {article.summary && <div style={summaryBox}>{article.summary}</div>}
 
-              {imageUrl && (
-                <figure style={figureWrap}>
-                  <img
-                    src={imageUrl}
-                    alt={imageAlt}
-                    fetchPriority="high"
-                    decoding="async"
-                    loading="eager"
-                    width="1280"
-                    height="720"
-                    style={imgStyle}
-                  />
-                  {article.imageAlt ? <figcaption style={figCap}>{article.imageAlt}</figcaption> : null}
-                </figure>
-              )}
+              {heroSrc && (
+  <figure style={figureWrap}>
+    <img
+      src={heroSrc}
+      alt={imageAlt || 'The Timely Voice'}
+      fetchPriority="high"
+      decoding="async"
+      loading="eager"
+      width="1280"
+      height="720"
+      style={imgStyle}
+      onError={(e) => {
+        // If Cloudinary (or any remote) fails, force local fallback once
+        if (e.currentTarget.dataset.fallback !== '1') {
+          e.currentTarget.dataset.fallback = '1';
+          e.currentTarget.src = FALLBACK_HERO_IMAGE;
+        }
+      }}
+    />
+    {article.imageAlt ? (
+      <figcaption style={figCap}>{article.imageAlt}</figcaption>
+    ) : null}
+  </figure>
+)}
+
 
               {/* Structured body with inline ad after paragraph 2 */}
               <div ref={bodyRef} className="article-body" style={{ ...prose, ...articleBodyWrapper }}>

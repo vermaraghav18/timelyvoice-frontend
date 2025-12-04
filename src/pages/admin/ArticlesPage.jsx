@@ -5,6 +5,10 @@ import PasteImporter from "../../components/PasteImporter.jsx";
 import { useToast } from "../../providers/ToastProvider.jsx";
 import { getToken } from "../../App";
 
+// 🔁 Default Cloudinary fallback hero (admin preview only)
+const DEFAULT_IMAGE_URL =
+  "/tv-default-hero.jpg";
+
 // ——— Cloudinary helpers: strip transforms, version and tracking query ———
 function normalizeCloudinaryUrl(raw = "") {
   try {
@@ -115,12 +119,11 @@ export default function ArticlesPage() {
     // GEO
     geoMode: "global",
     geoAreasText: "",
-
-     year: "",
+    year: "",
     era: "BC",
   });
 
-    // Figure out if the selected category is "History"
+  // Figure out if the selected category is "History"
   const historyCategory = useMemo(
     () =>
       categories.find(
@@ -428,7 +431,7 @@ export default function ArticlesPage() {
       ogImage: "",
       tags: [],
       geoMode: "global",
-     geoAreasText: "",
+      geoAreasText: "",
       year: "",
       era: "BC",
     });
@@ -456,8 +459,7 @@ export default function ArticlesPage() {
         summary: a.summary || "",
         author: a.author || "",
         body: a.body || "",
-          category: resolveCategoryId(a.category?._id || a.category || ""),
-
+        category: resolveCategoryId(a.category?._id || a.category || ""),
         status: a.status || "published",
         publishAt: a.publishedAt ? new Date(a.publishedAt).toISOString().slice(0, 16) : "",
         imageUrl: a.imageUrl || "",
@@ -469,7 +471,7 @@ export default function ArticlesPage() {
         tags: Array.isArray(a.tags) ? a.tags : [],
         geoMode: a.geoMode || "global",
         geoAreasText,
-         year: a.year ?? "",
+        year: a.year ?? "",
         era: a.era || "BC",
       });
       setTagsInput((Array.isArray(a.tags) ? a.tags : []).join(", "));
@@ -524,29 +526,28 @@ export default function ArticlesPage() {
       try {
         setAutoSaving(true);
         const payload = {
-  title: form.title?.trim(),
-  slug: form.slug?.trim() || undefined,
-  summary: form.summary?.trim(),
-  author: form.author?.trim(),
-  body: form.body,
-  category: resolveCategoryId(form.category),
-  status: form.status === "published" ? "published" : "draft",
-  publishedAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
-  imageUrl: normalizeCloudinaryUrl(form.imageUrl) || undefined,
-  imagePublicId: form.imagePublicId || undefined,
-  imageAlt: form.imageAlt || undefined,
-  metaTitle: form.metaTitle ? String(form.metaTitle).slice(0, META_TITLE_MAX) : undefined,
-  metaDesc: form.metaDesc ? String(form.metaDesc).slice(0, META_DESC_MAX) : undefined,
-  ogImage: normalizeCloudinaryUrl(form.ogImage) || undefined,
-  tags: parseTags(tagsInput),
-  geo: {
-    mode: form.geoMode || "global",
-    areas: parseGeoAreas(form.geoAreasText),
-  },
-  // ⬇⬇ NEW
-  year: form.year ? Number(form.year) : undefined,
-  era: form.era || "BC",
-};
+          title: form.title?.trim(),
+          slug: form.slug?.trim() || undefined,
+          summary: form.summary?.trim(),
+          author: form.author?.trim(),
+          body: form.body,
+          category: resolveCategoryId(form.category),
+          status: form.status === "published" ? "published" : "draft",
+          publishedAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
+          imageUrl: normalizeCloudinaryUrl(form.imageUrl) || undefined,
+          imagePublicId: form.imagePublicId || undefined,
+          imageAlt: form.imageAlt || undefined,
+          metaTitle: form.metaTitle ? String(form.metaTitle).slice(0, META_TITLE_MAX) : undefined,
+          metaDesc: form.metaDesc ? String(form.metaDesc).slice(0, META_DESC_MAX) : undefined,
+          ogImage: normalizeCloudinaryUrl(form.ogImage) || undefined,
+          tags: parseTags(tagsInput),
+          geo: {
+            mode: form.geoMode || "global",
+            areas: parseGeoAreas(form.geoAreasText),
+          },
+          year: form.year ? Number(form.year) : undefined,
+          era: form.era || "BC",
+        };
 
         // Enforce soft limits on meta fields before saving
         if (payload.metaTitle) payload.metaTitle = String(payload.metaTitle).slice(0, META_TITLE_MAX);
@@ -563,94 +564,92 @@ export default function ArticlesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, tagsInput, showForm, editingId]);
 
- async function saveForm(e) {
-  e.preventDefault();
-  setSaving(true);
-  try {
-    // First normalize the basic fields
-    let imageUrl = normalizeCloudinaryUrl(form.imageUrl) || undefined;
-    let imagePublicId = form.imagePublicId || undefined;
-    let ogImage = normalizeCloudinaryUrl(form.ogImage) || undefined;
+  async function saveForm(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      // First normalize the basic fields
+      let imageUrl = normalizeCloudinaryUrl(form.imageUrl) || undefined;
+      let imagePublicId = form.imagePublicId || undefined;
+      let ogImage = normalizeCloudinaryUrl(form.ogImage) || undefined;
 
-    // If user pasted a Google Drive URL, import it via backend
-    if (imageUrl && imageUrl.includes("drive.google.com")) {
-      try {
-        const res = await api.post("/admin/articles/import-image-from-url", { url: imageUrl });
-        const data = res && res.data ? res.data : res;
-        if (data && data.url && data.publicId) {
-          imageUrl = data.url;           // Cloudinary URL
-          imagePublicId = data.publicId; // Cloudinary publicId
-          if (!ogImage) ogImage = data.url;
+      // If user pasted a Google Drive URL, import it via backend
+      if (imageUrl && imageUrl.includes("drive.google.com")) {
+        try {
+          const res = await api.post("/admin/articles/import-image-from-url", { url: imageUrl });
+          const data = res && res.data ? res.data : res;
+          if (data && data.url && data.publicId) {
+            imageUrl = data.url; // Cloudinary URL
+            imagePublicId = data.publicId; // Cloudinary publicId
+            if (!ogImage) ogImage = data.url;
+          }
+        } catch (err) {
+          console.error("import-image-from-url failed", err);
+          toast.push({
+            type: "error",
+            title: "Image import failed",
+            message:
+              "Could not import image from Google Drive link. The article will be saved without changing the image.",
+          });
         }
-      } catch (err) {
-        console.error("import-image-from-url failed", err);
-        toast.push({
-          type: "error",
-          title: "Image import failed",
-          message:
-            "Could not import image from Google Drive link. The article will be saved without changing the image.",
-        });
       }
+
+      // build a clean payload the backend expects
+      const payload = {
+        title: form.title?.trim(),
+        slug:
+          form.slug?.trim() ||
+          form.title
+            ?.trim()
+            ?.toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "") ||
+          undefined,
+        summary: form.summary?.trim(),
+        author: form.author?.trim() || "Staff",
+        body: form.body,
+        category: resolveCategoryId(form.category),
+        status: form.status === "published" ? "published" : "draft",
+        publishedAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
+        imageUrl, // now Cloudinary if it was Drive
+        imagePublicId, // now Cloudinary if it was Drive
+        imageAlt: form.imageAlt || undefined,
+        metaTitle: form.metaTitle ? String(form.metaTitle).slice(0, META_TITLE_MAX) : undefined,
+        metaDesc: form.metaDesc ? String(form.metaDesc).slice(0, META_DESC_MAX) : undefined,
+        ogImage, // will use Cloudinary URL if we just imported
+        tags: parseTags(tagsInput),
+        geo: {
+          mode: form.geoMode || "global",
+          areas: parseGeoAreas(form.geoAreasText),
+        },
+        year: form.year ? Number(form.year) : undefined,
+        era: form.era || "BC",
+      };
+
+      // Soft limits: also enforce on manual Save
+      if (payload.metaTitle) payload.metaTitle = String(payload.metaTitle).slice(0, META_TITLE_MAX);
+      if (payload.metaDesc) payload.metaDesc = String(payload.metaDesc).slice(0, META_DESC_MAX);
+
+      if (editingId) {
+        await api.patch(`/admin/articles/${editingId}`, payload);
+        toast.push({ type: "success", title: "Updated" });
+      } else {
+        await api.post(`/admin/articles`, payload);
+        toast.push({ type: "success", title: "Created" });
+      }
+
+      closeForm();
+      fetchArticles();
+    } catch (e) {
+      const err = e?.response?.data;
+      const msg = err?.message || err?.error || e.message || "Save failed";
+      const details =
+        err?.details ? (typeof err.details === "string" ? err.details : JSON.stringify(err.details)) : "";
+      toast.push({ type: "error", title: "Save failed", message: details ? `${msg}: ${details}` : msg });
+    } finally {
+      setSaving(false);
     }
-
-    // build a clean payload the backend expects
-    const payload = {
-      title: form.title?.trim(),
-      slug:
-        form.slug?.trim() ||
-        form.title
-          ?.trim()
-          ?.toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-+|-+$/g, "") ||
-        undefined,
-      summary: form.summary?.trim(),
-      author: form.author?.trim() || "Staff",
-      body: form.body,
-      category: resolveCategoryId(form.category),
-      status: form.status === "published" ? "published" : "draft",
-      publishedAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
-      imageUrl,           // now Cloudinary if it was Drive
-      imagePublicId,      // now Cloudinary if it was Drive
-      imageAlt: form.imageAlt || undefined,
-      metaTitle: form.metaTitle ? String(form.metaTitle).slice(0, META_TITLE_MAX) : undefined,
-      metaDesc: form.metaDesc ? String(form.metaDesc).slice(0, META_DESC_MAX) : undefined,
-      ogImage,            // will use Cloudinary URL if we just imported
-      tags: parseTags(tagsInput),
-      geo: {
-        mode: form.geoMode || "global",
-        areas: parseGeoAreas(form.geoAreasText),
-      },
-      // ⬇⬇ NEW (from your existing code)
-      year: form.year ? Number(form.year) : undefined,
-      era: form.era || "BC",
-    };
-
-    // Soft limits: also enforce on manual Save
-    if (payload.metaTitle) payload.metaTitle = String(payload.metaTitle).slice(0, META_TITLE_MAX);
-    if (payload.metaDesc) payload.metaDesc = String(payload.metaDesc).slice(0, META_DESC_MAX);
-
-    if (editingId) {
-      await api.patch(`/admin/articles/${editingId}`, payload);
-      toast.push({ type: "success", title: "Updated" });
-    } else {
-      await api.post(`/admin/articles`, payload);
-      toast.push({ type: "success", title: "Created" });
-    }
-
-    closeForm();
-    fetchArticles();
-  } catch (e) {
-    const err = e?.response?.data;
-    const msg = err?.message || err?.error || e.message || "Save failed";
-    const details =
-      err?.details ? (typeof err.details === "string" ? err.details : JSON.stringify(err.details)) : "";
-    toast.push({ type: "error", title: "Save failed", message: details ? `${msg}: ${details}` : msg });
-  } finally {
-    setSaving(false);
   }
-}
-
 
   // -------- GEO Preview (same logic as backend) --------
   function matchGeoToken(token, { country, region, city } = {}) {
@@ -744,6 +743,44 @@ export default function ArticlesPage() {
         setImgState(id, { saving: "error" });
       }
     }, 800);
+  }
+
+  // ⬇⬇ NEW: force this article to use the default image from backend
+  async function handleUseDefaultImage(id) {
+    try {
+      setImgState(id, { saving: "saving" });
+
+      const res = await api.post(`/admin/articles/${id}/use-default-image`);
+      const data = res?.data || {};
+
+      const nextImage = data.imageUrl || DEFAULT_IMAGE_URL;
+      const syncOg = !!(imgEdits[id]?.syncOg ?? true);
+      const nextOg = data.ogImage || (syncOg ? nextImage : "");
+
+      updateItemsLocal((a) =>
+        a._id === id
+          ? {
+              ...a,
+              imageUrl: nextImage,
+              ogImage: nextOg,
+              imagePublicId: data.imagePublicId || a.imagePublicId,
+              thumbImage: data.thumbImage || a.thumbImage,
+              updatedAt: new Date().toISOString(),
+            }
+          : a
+      );
+
+      setImgState(id, { value: nextImage, saving: "saved" });
+      setTimeout(() => setImgState(id, { saving: "idle" }), 900);
+    } catch (e) {
+      console.error("default image failed", e?.response?.data || e);
+      setImgState(id, { saving: "error" });
+      toast.push({
+        type: "error",
+        title: "Default image failed",
+        message: String(e?.response?.data?.error || e.message || e),
+      });
+    }
   }
 
   function onChangeQuickImage(id, value) {
@@ -979,7 +1016,8 @@ export default function ArticlesPage() {
                     : imgState.saving === "error"
                     ? "#ef4444"
                     : "#d1d5db";
-                const previewUrl = a.imageUrl || a.ogImage || imgState.value || "";
+                const previewUrlRaw = a.imageUrl || a.ogImage || imgState.value || "";
+                const base = previewUrlRaw || DEFAULT_IMAGE_URL;
 
                 return (
                   <tr key={a._id} style={{ borderTop: "1px solid #f0f0f0" }}>
@@ -994,7 +1032,7 @@ export default function ArticlesPage() {
                       <div style={{ fontWeight: 600 }}>{a.title}</div>
                       <div style={{ color: "#666", fontSize: 12 }}>{a.slug}</div>
 
-                      {/* tags preview (FIX: unique keys, avoid duplicate key warnings) */}
+                      {/* tags preview */}
                       {Array.isArray(a.tags) && a.tags.length > 0 && (
                         <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
                           {a.tags.map((t, idx) => (
@@ -1016,7 +1054,7 @@ export default function ArticlesPage() {
                         </div>
                       )}
 
-                      {/* NEW: Quick Image URL editor */}
+                      {/* Quick Image URL editor */}
                       <div style={{ marginTop: 8 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                           <span style={{ fontSize: 12, color: "#555", fontWeight: 600 }}>Image URL (quick)</span>
@@ -1037,8 +1075,23 @@ export default function ArticlesPage() {
                           placeholder="https://…"
                           style={inp}
                         />
-                        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
-                          <label style={{ display: "inline-flex", gap: 6, alignItems: "center", fontSize: 12 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 8,
+                            alignItems: "center",
+                            marginTop: 6,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <label
+                            style={{
+                              display: "inline-flex",
+                              gap: 6,
+                              alignItems: "center",
+                              fontSize: 12,
+                            }}
+                          >
                             <input
                               type="checkbox"
                               checked={!!imgState.syncOg}
@@ -1069,6 +1122,15 @@ export default function ArticlesPage() {
                           >
                             open article ↗
                           </button>
+                          {/* Force default image for this article */}
+                          <button
+                            type="button"
+                            onClick={() => handleUseDefaultImage(a._id)}
+                            style={{ ...btnSmallGhost, padding: "4px 8px", fontSize: 12 }}
+                            title="Force this article to use the default image"
+                          >
+                            default image
+                          </button>
                         </div>
                       </div>
                     </td>
@@ -1095,12 +1157,11 @@ export default function ArticlesPage() {
                       <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start" }}>
                         <span style={badge}>{a.category?.name || a.category || "General"}</span>
                         {(() => {
-                          const base = previewUrl;
                           const seed =
                             (a.updatedAt ? new Date(a.updatedAt).getTime() : 0) || Date.now();
                           const thumbSrc = withCacheBust(base, seed);
 
-                          return base ? (
+                          return (
                             <img
                               id={`thumb-${a._id}`}
                               src={thumbSrc}
@@ -1117,11 +1178,19 @@ export default function ArticlesPage() {
                               }}
                               onError={(e) => {
                                 const tries = Number(e.currentTarget.dataset.tries || 0);
-                                if (tries < 2 && base) {
-                                  e.currentTarget.dataset.tries = String(tries + 1);
-                                  e.currentTarget.src = withCacheBust(base, Date.now());
+                                // First failure: try switching explicitly to DEFAULT_IMAGE_URL
+                                if (tries === 0 && base !== DEFAULT_IMAGE_URL) {
+                                  e.currentTarget.dataset.tries = "1";
+                                  e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now());
                                   return;
                                 }
+                                // Second failure: one more cache-busted retry
+                                if (tries === 1) {
+                                  e.currentTarget.dataset.tries = "2";
+                                  e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 1);
+                                  return;
+                                }
+                                // Give up: show "Image failed" box
                                 e.currentTarget.replaceWith(
                                   Object.assign(document.createElement("div"), {
                                     style:
@@ -1131,22 +1200,6 @@ export default function ArticlesPage() {
                                 );
                               }}
                             />
-                          ) : (
-                            <div
-                              style={{
-                                width: 200,
-                                height: 120,
-                                display: "grid",
-                                placeItems: "center",
-                                borderRadius: 10,
-                                border: "1px solid #eee",
-                                background: "#f8fafc",
-                                color: "#999",
-                                fontSize: 12,
-                              }}
-                            >
-                              No image
-                            </div>
                           );
                         })()}
                       </div>
@@ -1319,85 +1372,84 @@ export default function ArticlesPage() {
                 />
               </label>
 
-             <div style={grid3}>
-  <label style={lbl}>
-    Category
-    <select
-      value={form.category}
-      onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-      style={inp}
-    >
-      {categories.map((c) => (
-        <option key={c._id} value={c._id}>
-          {c.name}
-        </option>
-      ))}
-      <option value="">General</option>
-    </select>
-  </label>
+              <div style={grid3}>
+                <label style={lbl}>
+                  Category
+                  <select
+                    value={form.category}
+                    onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                    style={inp}
+                  >
+                    {categories.map((c) => (
+                      <option key={c._id} value={c._id}>
+                        {c.name}
+                      </option>
+                    ))}
+                    <option value="">General</option>
+                  </select>
+                </label>
 
-  {/* Year field – only when History category is selected */}
-  {isHistorySelected && (
-    <label style={lbl}>
-      Year (BC)
-      <input
-        type="number"
-        min="0"
-        max="4000"
-        value={form.year}
-        onChange={(e) =>
-          setForm((f) => ({
-            ...f,
-            year: e.target.value,
-          }))
-        }
-        style={inp}
-        placeholder="e.g. 2500"
-      />
-      <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-        Only used for History articles (treated as BC).
-      </div>
-    </label>
-  )}
+                {/* Year field – only when History category is selected */}
+                {isHistorySelected && (
+                  <label style={lbl}>
+                    Year (BC)
+                    <input
+                      type="number"
+                      min="0"
+                      max="4000"
+                      value={form.year}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          year: e.target.value,
+                        }))
+                      }
+                      style={inp}
+                      placeholder="e.g. 2500"
+                    />
+                    <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                      Only used for History articles (treated as BC).
+                    </div>
+                  </label>
+                )}
 
-  <label style={lbl}>
-    Status
-    <select
-      value={form.status}
-      onChange={(e) => {
-        const s = e.target.value;
-        setForm((f) => ({
-          ...f,
-          status: s,
-          // auto-fill publishAt UI field when switching to published
-          publishAt:
-            s === "published"
-              ? f.publishAt || new Date().toISOString().slice(0, 16)
-              : f.publishAt,
-        }));
-      }}
-      style={{ ...inp, opacity: isAdmin ? 1 : 0.6 }}
-      disabled={!isAdmin}
-      title={!isAdmin ? "Only admins can change publish status" : undefined}
-    >
-      <option value="draft">Draft</option>
-      <option value="published">Published</option>
-    </select>
-  </label>
+                <label style={lbl}>
+                  Status
+                  <select
+                    value={form.status}
+                    onChange={(e) => {
+                      const s = e.target.value;
+                      setForm((f) => ({
+                        ...f,
+                        status: s,
+                        // auto-fill publishAt UI field when switching to published
+                        publishAt:
+                          s === "published"
+                            ? f.publishAt || new Date().toISOString().slice(0, 16)
+                            : f.publishAt,
+                      }));
+                    }}
+                    style={{ ...inp, opacity: isAdmin ? 1 : 0.6 }}
+                    disabled={!isAdmin}
+                    title={!isAdmin ? "Only admins can change publish status" : undefined}
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                  </select>
+                </label>
 
-  <label style={lbl}>
-    Publish At
-    <input
-      type="datetime-local"
-      value={form.publishAt}
-      onChange={(e) =>
-        setForm((f) => ({ ...f, publishAt: e.target.value }))
-      }
-      style={inp}
-    />
-  </label>
-</div>
-
+                <label style={lbl}>
+                  Publish At
+                  <input
+                    type="datetime-local"
+                    value={form.publishAt}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, publishAt: e.target.value }))
+                    }
+                    style={inp}
+                  />
+                </label>
+              </div>
 
               <div style={grid2}>
                 <label style={lbl}>
@@ -1563,21 +1615,19 @@ export default function ArticlesPage() {
                 </div>
               )}
 
-             <label style={lbl}>
-              Body
-              <textarea
-                rows={8}
-                value={form.body}
-                onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
-                style={ta}
-              />
+              <label style={lbl}>
+                Body
+                <textarea
+                  rows={8}
+                  value={form.body}
+                  onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+                  style={ta}
+                />
                 <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
-                Supports simple formatting:
-                <br /># Heading, ## Subheading, - bullet, 1. numbered item, **highlighted text**
-              </div>
-
-            </label>
-
+                  Supports simple formatting:
+                  <br /># Heading, ## Subheading, - bullet, 1. numbered item, **highlighted text**
+                </div>
+              </label>
 
               <div
                 style={{
@@ -1707,7 +1757,7 @@ const modalCard = {
   boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
 };
 
-/* RESPONSIVE grid helpers: no logic change, they just stack nicely on small screens */
+/* RESPONSIVE grid helpers */
 const grid2 = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
