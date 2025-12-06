@@ -64,6 +64,16 @@ function withCacheBust(url = "", seed = Date.now()) {
   }
 }
 
+// ——— Helper: convert Date → value for <input type="datetime-local"> in LOCAL time ———
+function toLocalInputValue(date = new Date()) {
+  if (!date) return "";
+  const d = new Date(date);
+  // Make toISOString() output local time instead of UTC for this date
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:mm"
+}
+
+
 export default function ArticlesPage() {
   const toast = useToast();
 
@@ -422,7 +432,7 @@ export default function ArticlesPage() {
       body: "",
       category: categories[0]?._id || "",
       status: "draft",
-      publishAt: new Date().toISOString().slice(0, 16),
+      publishAt: toLocalInputValue(),
       imageUrl: "",
       imagePublicId: "",
       imageAlt: "",
@@ -461,7 +471,7 @@ export default function ArticlesPage() {
         body: a.body || "",
         category: resolveCategoryId(a.category?._id || a.category || ""),
         status: a.status || "published",
-        publishAt: a.publishedAt ? new Date(a.publishedAt).toISOString().slice(0, 16) : "",
+         publishAt: a.publishedAt ? toLocalInputValue(a.publishedAt) : "",
         imageUrl: a.imageUrl || "",
         imagePublicId: a.imagePublicId || "",
         imageAlt: a.imageAlt || "",
@@ -1425,7 +1435,7 @@ export default function ArticlesPage() {
                         // auto-fill publishAt UI field when switching to published
                         publishAt:
                           s === "published"
-                            ? f.publishAt || new Date().toISOString().slice(0, 16)
+                           ? f.publishAt || toLocalInputValue()
                             : f.publishAt,
                       }));
                     }}

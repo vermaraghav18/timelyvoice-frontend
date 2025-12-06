@@ -37,6 +37,9 @@ const TickerAdmin = lazy(() => import('./pages/admin/TickerAdmin.jsx'));
 const SectionsPage = lazy(() => import('./admin/sections/SectionsPage.jsx'));
 const SectionsV2Page = lazy(() => import('./admin/sectionsV2/SectionsV2Page.jsx'));
 
+// ⭐ NEW: Automation Dashboard (lazy)
+const AutomationDashboard = lazy(() => import('./pages/admin/AutomationDashboard.jsx'));
+
 // Autmotion (lazy)
 const AutmotionFeedsPage = lazy(() => import('./pages/admin/autmotion/FeedsPage.jsx'));
 const AutmotionQueuePage = lazy(() => import('./pages/admin/autmotion/QueuePage.jsx'));
@@ -256,7 +259,7 @@ export function buildCanonicalFromLocation() {
   return url.toString();
 }
 
-/* ============ Category route wrapper (Finance/Business special layout) ============ */
+/* ============ Category route wrapper (Finance/Business/History) ============ */
 function AnyCategoryRoute() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -303,7 +306,7 @@ export default function App() {
 
   useEffect(() => {
     notifyRouteChange(loc.pathname, loc.search);
-    track('page_view', { path: `${loc.pathname}{loc.search}` });
+    track('page_view', { path: `${loc.pathname}${loc.search}` });
   }, [loc.pathname, loc.search]);
 
   useEffect(() => {
@@ -361,7 +364,7 @@ export default function App() {
           <Route path="/advertising" element={<AdvertisingPage />} />
           <Route path="/author/:slug" element={<AuthorPage />} />
 
-          {/* 404 */}
+          {/* 404 for public routes */}
           <Route path="*" element={<NotFound />} />
 
           {/* Admin */}
@@ -378,12 +381,16 @@ export default function App() {
           <Route path="/admin/sections" element={<AdminShell><SectionsPage /></AdminShell>} />
           <Route path="/admin/sections-v2" element={<AdminShell><SectionsV2Page /></AdminShell>} />
 
+          {/* ⭐ NEW: Automation Dashboard route */}
+          <Route path="/admin/automation" element={<AdminShell><AutomationDashboard /></AdminShell>} />
+
           {/* Autmotion */}
           <Route path="/admin/autmotion/feeds" element={<AdminShell><AutmotionFeedsPage /></AdminShell>} />
           <Route path="/admin/autmotion/queue" element={<AdminShell><AutmotionQueuePage /></AdminShell>} />
           <Route path="/admin/autmotion/drafts" element={<AdminShell><AutmotionDraftsPage /></AdminShell>} />
           <Route path="/admin/autmotion/x-sources" element={<AdminShell><AutmotionXSourcesPage /></AdminShell>} />
           <Route path="/admin/autmotion/x-queue" element={<AdminShell><AutmotionXQueuePage /></AdminShell>} />
+          {/* Existing extra mapping to XQueue under /admin/automation/x-queue, kept as-is */}
           <Route path="/admin/automation/x-queue" element={<AdminShell><AutmotionXQueuePage /></AdminShell>} />
 
           <Route path="/admin/x" element={<AdminShell><AdminXPage /></AdminShell>} />

@@ -2,6 +2,15 @@
 import { useState } from "react";
 import yaml from "js-yaml";
 
+// Helper: Date → "YYYY-MM-DDTHH:mm" in LOCAL time (for datetime-local input)
+function toLocalInputValue(date = new Date()) {
+  if (!date) return "";
+  const d = new Date(date);
+  // Adjust so that toISOString() reflects local time instead of UTC
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
+
 // Accept both JSON and YAML; return a plain object or throw.
 function parseAny(text) {
   const raw = (text || "").trim();
@@ -13,7 +22,6 @@ function parseAny(text) {
 }
 
 // Normalize pasted data into the shape your ArticlesPage form expects.
-// Your form fields (from ArticlesPage.jsx):
 // { title, slug, summary, author, category, status, publishAt,
 //   imageUrl, imagePublicId, imageAlt, metaTitle, metaDesc, ogImage,
 //   geoMode, geoAreasText, tags[], body }
@@ -24,19 +32,34 @@ function normalize(obj) {
   const seo = d.seo || {};
   const geo = d.geo || {};
 
-  // publishAt: accept ISO, Date, number. Form expects "YYYY-MM-DDTHH:mm"
-  let publishAt = d.publishAt || d.publishedAt || "";
-  if (publishAt) {
+  // ─────────────────────────────────────────────────────────────
+  // publishAt: we NO LONGER override the form's current value.
+  // If JSON has publishAt/publishedAt, we convert it, but leave it
+  // as undefined so ArticlesPage keeps its own default "now".
+  // If you want a specific schedule, change it in the form UI.
+  // ─────────────────────────────────────────────────────────────
+  let publishAt;
+  const rawPublishAt = d.publishAt ?? d.publishedAt;
+  if (rawPublishAt) {
     try {
-      const dt = new Date(publishAt);
-      if (!isNaN(dt)) publishAt = dt.toISOString().slice(0, 16);
-    } catch (_) {}
+      const dt = new Date(rawPublishAt);
+      if (!isNaN(dt)) {
+        // If you ever want to use it, this is the correct local format:
+        publishAt = toLocalInputValue(dt);
+      }
+    } catch (_) {
+      // ignore parse errors, leave publishAt undefined
+    }
   }
+  // NOTE: we deliberately do NOT fall back to "now" here; the form already has it.
 
   // tags: accept string "a,b" or array
   let tags = d.tags;
   if (typeof tags === "string") {
-    tags = tags.split(/[,\s]+/g).map(s => s.trim()).filter(Boolean);
+    tags = tags
+      .split(/[,\s]+/g)
+      .map((s) => s.trim())
+      .filter(Boolean);
   }
   if (!Array.isArray(tags)) tags = [];
 
@@ -55,7 +78,11 @@ function normalize(obj) {
     author: d.author || "",
     category: d.category || "General",
     status: (d.status || "published").toLowerCase(),
-    publishAt: publishAt || new Date().toISOString().slice(0, 16),
+
+    // IMPORTANT: may be undefined. ArticlesPage.onApply uses:
+    // publishAt: d.publishAt ?? f.publishAt
+    // so if this is undefined, it keeps the existing form value (usually "now").
+    publishAt,
 
     imageUrl: d.imageUrl || d.cover?.url || "",
     imagePublicId: d.imagePublicId || "",
@@ -89,20 +116,31 @@ export default function PasteImporter({ onApply }) {
   };
 
   return (
-    <div style={{
-      border: "1px dashed #cbd5e1",
-      borderRadius: 12,
-      padding: 12,
-      background: "#f8fafc",
-      marginBottom: 10
-    }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+    <div
+      style={{
+        border: "1px dashed #cbd5e1",
+        borderRadius: 12,
+        padding: 12,
+        background: "#f8fafc",
+        marginBottom: 10,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
         <div style={{ fontWeight: 600 }}>Paste JSON/YAML</div>
-        <div style={{ fontSize: 12, color: "#64748b" }}>Tip: paste once → auto-fills all fields</div>
+        <div style={{ fontSize: 12, color: "#64748b" }}>
+          Tip: paste once → auto-fills all fields
+        </div>
       </div>
       <textarea
         value={raw}
-        onChange={e=>setRaw(e.target.value)}
+        onChange={(e) => setRaw(e.target.value)}
         rows={6}
         placeholder={`Example:
 title: Shubman Gill becomes India’s top run-scorer in current WTC
@@ -123,12 +161,46 @@ geo:
 tags: ["cricket","WTC","Shubman Gill","India","sports"]
 body: |
   ...`}
-        style={{ width: "100%", padding: 10, borderRadius: 10, border: "1px solid #e2e8f0", marginTop: 8 }}
+        style={{
+          width: "100%",
+          padding: 10,
+          borderRadius: 10,
+          border: "1px solid #e2e8f0",
+          marginTop: 8,
+        }}
       />
-      {err && <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 6 }}>{err}</div>}
+      {err && (
+        <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 6 }}>
+          {err}
+        </div>
+      )}
       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <button onClick={handleApply} style={{ padding: "6px 10px", borderRadius: 8, background: "#1D9A8E", color: "#fff", border: 0 }}>Fill Form</button>
-        <button onClick={()=>{ setRaw(""); setErr(null); }} style={{ padding: "6px 10px", borderRadius: 8, background: "#fff", border: "1px solid #e2e8f0" }}>Clear</button>
+        <button
+          onClick={handleApply}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 8,
+            background: "#1D9A8E",
+            color: "#fff",
+            border: 0,
+          }}
+        >
+          Fill Form
+        </button>
+        <button
+          onClick={() => {
+            setRaw("");
+            setErr(null);
+          }}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 8,
+            background: "#fff",
+            border: "1px solid #e2e8f0",
+          }}
+        >
+          Clear
+        </button>
       </div>
     </div>
   );

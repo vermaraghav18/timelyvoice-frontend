@@ -63,6 +63,9 @@ export default function AdminShell({ children }) {
           <NavItem to="/admin/tags" label="Tags" icon={TagIcon} />
           <NavItem to="/admin/settings" label="Settings" icon={SettingsIcon} />
 
+          {/* ⭐ NEW: Automation dashboard entry */}
+          <NavItem to="/admin/automation" label="Automation" icon={SettingsIcon} />
+
           <NavItem to="/admin/autmotion/feeds" label="Feeds" icon={DocumentIcon} />
           <NavItem to="/admin/autmotion/queue" label="Queue" icon={DocumentIcon} />
           <NavItem to="/admin/autmotion/drafts" label="Drafts" icon={DocumentIcon} />
