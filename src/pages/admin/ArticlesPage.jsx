@@ -1167,7 +1167,11 @@ export default function ArticlesPage() {
                     : badgeGray;
 
                 return (
-                  <tr key={a._id} style={{ borderTop: "1px solid #f0f0f0" }}>
+                  <tr
+                    key={a._id}
+                    className="article-row-card"
+                    style={{ borderTop: "1px solid #f0f0f0" }}
+                  >
                     <td style={td}>
                       <input
                         type="checkbox"
@@ -1175,46 +1179,91 @@ export default function ArticlesPage() {
                         onChange={() => toggleSelect(a._id)}
                       />
                     </td>
-                    <td style={td}>
-                      {/* Title + AI pill + inline status (for mobile) */}
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                          gap: 8,
-                          flexWrap: "wrap",
-                        }}
-                      >
+                    <td className="article-main-cell" style={td}>
+                      {/* Card header: AI pill + title + inline status */}
+                      <div className="article-card-header">
+                        {a.source === "ai-batch" && (
+                          <span className="pill-created-ai" style={aiPill}>
+                            CREATED BY AI
+                          </span>
+                        )}
                         <div
+                          className="article-title-row"
                           style={{
-                            fontWeight: 600,
                             display: "flex",
-                            alignItems: "center",
+                            justifyContent: "space-between",
+                            alignItems: "flex-start",
                             gap: 8,
                             flexWrap: "wrap",
-                            maxWidth: "100%",
                           }}
                         >
-                          <span style={{ wordBreak: "break-word" }}>
-                            {a.title}
+                          <div
+                            style={{
+                              fontWeight: 600,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              flexWrap: "wrap",
+                              maxWidth: "100%",
+                            }}
+                          >
+                            <span
+                              className="article-title-text"
+                              style={{ wordBreak: "break-word" }}
+                            >
+                              {a.title}
+                            </span>
+                          </div>
+                          <span
+                            className="status-inline"
+                            style={{ ...badge, ...statusBadge, fontSize: 11 }}
+                          >
+                            {a.status}
                           </span>
-                          {a.source === "ai-batch" && (
-                            <span style={aiPill}>BY AI</span>
-                          )}
                         </div>
-                        <span
-                          className="status-inline"
-                          style={{ ...badge, ...statusBadge, fontSize: 11 }}
-                        >
-                          {a.status}
-                        </span>
                       </div>
 
-                      {/* Mobile-only preview image just under title */}
+                      {/* slug (just under title on mobile) */}
+                      <div
+                        className="article-slug"
+                        style={{ color: "#666", fontSize: 12, marginTop: 6 }}
+                      >
+                        {a.slug}
+                      </div>
+
+                      {/* tags preview */}
+                      {Array.isArray(a.tags) && a.tags.length > 0 && (
+                        <div
+                          style={{
+                            marginTop: 6,
+                            display: "flex",
+                            gap: 6,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          {a.tags.map((t, idx) => (
+                            <span
+                              key={`${t}-${idx}`}
+                              title={`tag: ${t}`}
+                              style={{
+                                padding: "1px 6px",
+                                fontSize: 11,
+                                borderRadius: 999,
+                                background: "#f1f5f9",
+                                border: "1px solid #e2e8f0",
+                                color: "#475569",
+                              }}
+                            >
+                              #{t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Mobile-only preview image just under slug+tags */}
                       <div
                         className="thumb-mobile-only"
-                        style={{ marginTop: 8 }}
+                        style={{ marginTop: 10 }}
                       >
                         <img
                           src={thumbSrc}
@@ -1261,105 +1310,8 @@ export default function ArticlesPage() {
                         />
                       </div>
 
-                      {/* slug */}
-                      <div style={{ color: "#666", fontSize: 12, marginTop: 6 }}>
-                        {a.slug}
-                      </div>
-
-                      {/* tags preview */}
-                      {Array.isArray(a.tags) && a.tags.length > 0 && (
-                        <div
-                          style={{
-                            marginTop: 6,
-                            display: "flex",
-                            gap: 6,
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          {a.tags.map((t, idx) => (
-                            <span
-                              key={`${t}-${idx}`}
-                              title={`tag: ${t}`}
-                              style={{
-                                padding: "1px 6px",
-                                fontSize: 11,
-                                borderRadius: 999,
-                                background: "#f1f5f9",
-                                border: "1px solid #e2e8f0",
-                                color: "#475569",
-                              }}
-                            >
-                              #{t}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Mobile-only main actions row: Edit / Publish / Delete */}
-                      <div
-                        className="article-actions-mobile"
-                        style={{ display: "none", marginTop: 8 }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => openEdit(a._id)}
-                          style={{
-                            ...btnSmallGhost,
-                            flex: 1,
-                            textAlign: "center",
-                          }}
-                        >
-                          Edit
-                        </button>
-                        {a.status !== "published" && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              patchOne(a._id, { status: "published" })
-                            }
-                            style={{
-                              ...btnSmallPrimary,
-                              flex: 1,
-                              textAlign: "center",
-                              opacity: isAdmin ? 1 : 0.6,
-                              pointerEvents: isAdmin ? "auto" : "none",
-                            }}
-                          >
-                            Publish
-                          </button>
-                        )}
-                        {a.status === "published" && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              patchOne(a._id, { status: "draft" })
-                            }
-                            style={{
-                              ...btnSmallGhost,
-                              flex: 1,
-                              textAlign: "center",
-                              opacity: isAdmin ? 1 : 0.6,
-                              pointerEvents: isAdmin ? "auto" : "none",
-                            }}
-                          >
-                            Unpublish
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => deleteOne(a._id)}
-                          style={{
-                            ...btnSmallDanger,
-                            flex: 1,
-                            textAlign: "center",
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-
                       {/* Quick Image URL editor (with open/default/AI image buttons) */}
-                      <div style={{ marginTop: 8 }}>
+                      <div style={{ marginTop: 10 }}>
                         <div
                           style={{
                             display: "flex",
@@ -1398,6 +1350,7 @@ export default function ArticlesPage() {
                           style={inp}
                         />
                         <div
+                          className="image-tools-desktop"
                           style={{
                             display: "flex",
                             gap: 8,
@@ -1437,9 +1390,7 @@ export default function ArticlesPage() {
                               >
                                 open image ↗
                               </a>
-                              <span
-                                style={{ color: "#999", fontSize: 12 }}
-                              >
+                              <span style={{ color: "#999", fontSize: 12 }}>
                                 |
                               </span>
                             </>
@@ -1487,6 +1438,72 @@ export default function ArticlesPage() {
                             title="Generate an AI hero image for this article"
                           >
                             AI image
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Mobile-only main actions block: default / AI / delete + publish / edit */}
+                      <div className="article-actions-mobile">
+                        <div className="article-actions-row article-actions-row-top">
+                          <button
+                            type="button"
+                            onClick={() => handleUseDefaultImage(a._id)}
+                            style={btnSmallGhost}
+                          >
+                            default image
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateAiImage(a._id)}
+                            style={btnSmallPrimary}
+                          >
+                            AI image
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteOne(a._id)}
+                            style={btnSmallDanger}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                        <div className="article-actions-row article-actions-row-bottom">
+                          {a.status !== "published" && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                patchOne(a._id, { status: "published" })
+                              }
+                              style={{
+                                ...btnSmallPrimary,
+                                opacity: isAdmin ? 1 : 0.6,
+                                pointerEvents: isAdmin ? "auto" : "none",
+                              }}
+                            >
+                              Publish
+                            </button>
+                          )}
+                          {a.status === "published" && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                patchOne(a._id, { status: "draft" })
+                              }
+                              style={{
+                                ...btnSmallGhost,
+                                opacity: isAdmin ? 1 : 0.6,
+                                pointerEvents: isAdmin ? "auto" : "none",
+                              }}
+                            >
+                              Unpublish
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => openEdit(a._id)}
+                            style={btnSmallGhost}
+                          >
+                            Edit
                           </button>
                         </div>
                       </div>
@@ -1918,9 +1935,9 @@ export default function ArticlesPage() {
                     style={inp}
                     maxLength={META_TITLE_MAX}
                   />
-                  <small style={{ color: "#64748b" }}>
-                    {(form.metaTitle || "").length}/{META_TITLE_MAX}
-                  </small>
+                <small style={{ color: "#64748b" }}>
+                  {(form.metaTitle || "").length}/{META_TITLE_MAX}
+                </small>
                 </label>
                 <label style={lbl}>
                   OG Image URL
@@ -2047,7 +2064,10 @@ export default function ArticlesPage() {
                 <div style={{ marginTop: 8, fontSize: 13 }}>
                   Result:&nbsp;
                   <span
-                    style={{ ...badge, ...(geoPreviewAllowed ? badgeGreen : badgeGray) }}
+                    style={{
+                      ...badge,
+                      ...(geoPreviewAllowed ? badgeGreen : badgeGray),
+                    }}
                   >
                     {geoPreviewAllowed ? "Allowed" : "Blocked"}
                   </span>
@@ -2126,7 +2146,7 @@ export default function ArticlesPage() {
         </div>
       )}
 
-      {/* small responsive CSS for this page */}
+      {/* RESPONSIVE CSS for this page */}
       <style>{`
         .admin-articles-root {
           width: 100%;
@@ -2135,10 +2155,6 @@ export default function ArticlesPage() {
         /* Filters row: 4 columns on desktop, stacked on small screens */
         .admin-articles-filters {
           grid-template-columns: 160px 200px 1fr auto;
-        }
-
-        .admin-articles-table {
-          min-width: 720px;
         }
 
         .thumb-mobile-only {
@@ -2170,59 +2186,105 @@ export default function ArticlesPage() {
           .admin-articles-table {
             min-width: 100%;
             border-collapse: separate;
+            border-spacing: 0 12px;
           }
 
-          /* Hide header row on mobile (cards look cleaner) */
+          /* Hide header row on mobile (card look) */
           .admin-articles-table thead {
             display: none;
           }
 
-          .admin-articles-table th,
-          .admin-articles-table td {
-            padding: 8px;
-          }
-
-          /* Hide noisy columns on mobile:
-             3: Status (we show inline),
-             4: Category,
-             5: Publish At,
-             6: Updated,
-             7: Preview,
-             8: Actions (we show mobile actions instead)
-          */
-          .admin-articles-table td:nth-child(3),
-          .admin-articles-table td:nth-child(4),
-          .admin-articles-table td:nth-child(5),
-          .admin-articles-table td:nth-child(6),
-          .admin-articles-table td:nth-child(7),
-          .admin-articles-table td:nth-child(8) {
-            display: none;
-          }
-
-          /* Show mobile thumbnail + action row */
           .thumb-mobile-only {
             display: block;
           }
+
           .thumb-desktop-only {
             display: none;
           }
-          .article-actions-mobile {
-            display: flex;
-            gap: 6px;
-            flex-wrap: nowrap;
+
+          .image-tools-desktop {
+            display: none;
           }
 
-          /* Make row look like a card */
-          .admin-articles-table tbody tr {
+          .article-actions-desktop {
+            display: none;
+          }
+
+          .admin-articles-table tbody tr.article-row-card {
             display: block;
-            border-bottom: 8px solid #f3f4f6;
+            border-radius: 18px;
+            border: 1px solid #e5e7eb;
+            background: #ffffff;
+            box-shadow: 0 10px 22px rgba(15,23,42,0.08);
+            overflow: hidden;
           }
-          .admin-articles-table tbody td:first-child {
-            display: none; /* hide row checkbox on very small screens */
-          }
-          .admin-articles-table tbody td:nth-child(2) {
+
+          .admin-articles-table tbody tr.article-row-card > td {
             display: block;
             width: 100%;
+            padding: 0;
+          }
+
+          .admin-articles-table tbody tr.article-row-card > td:first-child {
+            display: none; /* hide row checkbox on small screens */
+          }
+
+          .admin-articles-table tbody tr.article-row-card > td.article-main-cell {
+            padding: 14px 14px 16px;
+          }
+
+          .article-card-header {
+            align-items: center;
+            gap: 8px;
+          }
+
+          .article-card-header .article-title-row {
+            width: 100%;
+          }
+
+          .article-card-header .article-title-text {
+            font-size: 15px;
+            line-height: 1.4;
+          }
+
+          .article-slug {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+          }
+
+          .article-actions-mobile {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 12px;
+          }
+
+          .article-actions-mobile .article-actions-row {
+            display: grid;
+            gap: 8px;
+          }
+
+          .article-actions-mobile .article-actions-row-top {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+
+          .article-actions-mobile .article-actions-row-bottom {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .article-actions-mobile button {
+            width: 100%;
+          }
+
+          /* Hide numeric/detail columns on mobile */
+          .admin-articles-table tbody tr.article-row-card > td:nth-child(3),
+          .admin-articles-table tbody tr.article-row-card > td:nth-child(4),
+          .admin-articles-table tbody tr.article-row-card > td:nth-child(5),
+          .admin-articles-table tbody tr.article-row-card > td:nth-child(6),
+          .admin-articles-table tbody tr.article-row-card > td:nth-child(7),
+          .admin-articles-table tbody tr.article-row-card > td:nth-child(8) {
+            display: none;
           }
         }
       `}</style>
@@ -2249,7 +2311,12 @@ const inp = {
   width: "100%",
 };
 const ta = { ...inp, minHeight: 72, resize: "vertical" };
-const th = { padding: 10, fontWeight: 600, fontSize: 13, borderBottom: "1px solid #eee" };
+const th = {
+  padding: 10,
+  fontWeight: 600,
+  fontSize: 13,
+  borderBottom: "1px solid #eee",
+};
 const td = { padding: 10, verticalAlign: "top" };
 const lbl = { display: "grid", gap: 6, fontSize: 13, color: "#111827" };
 
@@ -2260,9 +2327,21 @@ const badge = {
   border: "1px solid #e5e7eb",
   background: "#f3f4f6",
 };
-const badgeGreen = { background: "#f0fdf4", color: "#166534", borderColor: "#86efac" };
-const badgeYellow = { background: "#fffbeb", color: "#92400e", borderColor: "#fde68a" };
-const badgeGray = { background: "#f3f4f6", color: "#111827", borderColor: "#e5e7eb" };
+const badgeGreen = {
+  background: "#f0fdf4",
+  color: "#166534",
+  borderColor: "#86efac",
+};
+const badgeYellow = {
+  background: "#fffbeb",
+  color: "#92400e",
+  borderColor: "#fde68a",
+};
+const badgeGray = {
+  background: "#f3f4f6",
+  color: "#111827",
+  borderColor: "#e5e7eb",
+};
 
 const btnBase = {
   padding: "8px 12px",
@@ -2273,8 +2352,18 @@ const btnBase = {
   fontSize: 13,
 };
 const btnGhost = { ...btnBase, background: "#fff" };
-const btnPrimary = { ...btnBase, background: "#1D9A8E", color: "#fff", borderColor: "#1D9A8E" };
-const btnDanger = { ...btnBase, background: "#fef2f2", borderColor: "#fee2e2", color: "#b91c1c" };
+const btnPrimary = {
+  ...btnBase,
+  background: "#1D9A8E",
+  color: "#fff",
+  borderColor: "#1D9A8E",
+};
+const btnDanger = {
+  ...btnBase,
+  background: "#fef2f2",
+  borderColor: "#fee2e2",
+  color: "#b91c1c",
+};
 
 const btnSmallBase = {
   padding: "6px 10px",
@@ -2285,8 +2374,18 @@ const btnSmallBase = {
   fontSize: 12,
 };
 const btnSmallGhost = { ...btnSmallBase, background: "#fff" };
-const btnSmallPrimary = { ...btnSmallBase, background: "#1D9A8E", color: "#fff", borderColor: "#1D9A8E" };
-const btnSmallDanger = { ...btnSmallBase, background: "#fef2f2", borderColor: "#fee2e2", color: "#b91c1c" };
+const btnSmallPrimary = {
+  ...btnSmallBase,
+  background: "#1D9A8E",
+  color: "#fff",
+  borderColor: "#1D9A8E",
+};
+const btnSmallDanger = {
+  ...btnSmallBase,
+  background: "#fef2f2",
+  borderColor: "#fee2e2",
+  color: "#b91c1c",
+};
 
 /* modal-ish */
 const modalBackdrop = {
@@ -2330,14 +2429,15 @@ const chip = {
   background: "#f8fafc",
   color: "#475569",
 };
+
 const aiPill = {
-  padding: "2px 10px",
+  padding: "4px 14px",
   borderRadius: 999,
   fontSize: 11,
   fontWeight: 700,
-  background: "linear-gradient(90deg,#ec4899,#f97316)", // pink → orange shine
+  background: "linear-gradient(90deg,#ec4899,#f97316)",
   color: "#ffffff",
-  boxShadow: "0 0 8px rgba(236,72,153,0.6)",
-  letterSpacing: 0.3,
+  boxShadow: "0 0 10px rgba(236,72,153,0.7)",
+  letterSpacing: 0.4,
   textTransform: "uppercase",
 };
