@@ -6,8 +6,7 @@ import { useToast } from "../../providers/ToastProvider.jsx";
 import { getToken } from "../../App";
 
 // 🔁 Default Cloudinary fallback hero (admin preview only)
-const DEFAULT_IMAGE_URL =
-  "/tv-default-hero.jpg";
+const DEFAULT_IMAGE_URL = "/tv-default-hero.jpg";
 
 // ——— Cloudinary helpers: strip transforms, version and tracking query ———
 function normalizeCloudinaryUrl(raw = "") {
@@ -54,7 +53,10 @@ function withCacheBust(url = "", seed = Date.now()) {
   if (!url) return "";
   try {
     // Support absolute AND relative URLs
-    const u = new URL(url, typeof window !== "undefined" ? window.location.origin : "http://localhost");
+    const u = new URL(
+      url,
+      typeof window !== "undefined" ? window.location.origin : "http://localhost"
+    );
     u.searchParams.set("_cb", String(seed));
     return u.toString();
   } catch {
@@ -72,7 +74,6 @@ function toLocalInputValue(date = new Date()) {
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
   return d.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:mm"
 }
-
 
 export default function ArticlesPage() {
   const toast = useToast();
@@ -199,7 +200,9 @@ export default function ArticlesPage() {
       try {
         const res = await api.get("/categories", { params: { limit: 1000 } });
         const payload = res.data || {};
-        setCategories(Array.isArray(payload) ? payload : (payload.items || payload.data || []));
+        setCategories(
+          Array.isArray(payload) ? payload : payload.items || payload.data || []
+        );
       } catch {
         /* non-fatal */
       }
@@ -220,8 +223,7 @@ export default function ArticlesPage() {
     return { "X-Geo-Preview-Country": cc };
   }
 
-  // ---------- NEW: category resolver (fixes "resolveCategoryId is not defined")
-  // Accepts an _id, slug, or name; returns the category _id string (or empty string).
+  // ---------- NEW: category resolver ----------
   function resolveCategoryId(val) {
     if (!val) return "";
     // If it already looks like a Mongo ObjectId, keep it.
@@ -229,8 +231,14 @@ export default function ArticlesPage() {
     // Try to match by slug or name.
     const match =
       categories.find((c) => c._id === val) ||
-      categories.find((c) => (c.slug || "").toLowerCase() === String(val).toLowerCase()) ||
-      categories.find((c) => (c.name || "").toLowerCase() === String(val).toLowerCase());
+      categories.find(
+        (c) =>
+          (c.slug || "").toLowerCase() === String(val).toLowerCase()
+      ) ||
+      categories.find(
+        (c) =>
+          (c.name || "").toLowerCase() === String(val).toLowerCase()
+      );
     return match?._id || "";
   }
 
@@ -379,10 +387,18 @@ export default function ArticlesPage() {
       setSelectedIds(new Set());
       try {
         await Promise.all(ids.map((id) => api.delete(`/admin/articles/${id}`)));
-        toast.push({ type: "success", title: "Deleted", message: `${ids.length} article(s)` });
+        toast.push({
+          type: "success",
+          title: "Deleted",
+          message: `${ids.length} article(s)`,
+        });
         if (data.items.length === ids.length && page > 1) setPage((p) => p - 1);
       } catch (e) {
-        toast.push({ type: "error", title: "Some deletes failed", message: "Refreshing list…" });
+        toast.push({
+          type: "error",
+          title: "Some deletes failed",
+          message: "Refreshing list…",
+        });
         fetchArticles();
       }
       return;
@@ -398,19 +414,27 @@ export default function ArticlesPage() {
       return;
     }
     const newStatus = action === "publish" ? "published" : "draft";
-    updateItemsLocal((a) => (selectedIds.has(a._id) ? { ...a, status: newStatus } : a));
+    updateItemsLocal((a) =>
+      selectedIds.has(a._id) ? { ...a, status: newStatus } : a
+    );
     const results = await Promise.allSettled(
       ids.map((id) =>
         api.patch(`/admin/articles/${id}`, {
           status: newStatus,
-          ...(newStatus === "published" ? { publishedAt: new Date().toISOString() } : {}),
+          ...(newStatus === "published"
+            ? { publishedAt: new Date().toISOString() }
+            : {}),
         })
       )
     );
     const failed = results.filter((r) => r.status === "rejected").length;
     setSelectedIds(new Set());
     if (failed === 0) {
-      toast.push({ type: "success", title: "Updated", message: `${ids.length} article(s)` });
+      toast.push({
+        type: "success",
+        title: "Updated",
+        message: `${ids.length} article(s)`,
+      });
     } else {
       toast.push({
         type: "warning",
@@ -471,7 +495,7 @@ export default function ArticlesPage() {
         body: a.body || "",
         category: resolveCategoryId(a.category?._id || a.category || ""),
         status: a.status || "published",
-         publishAt: a.publishedAt ? toLocalInputValue(a.publishedAt) : "",
+        publishAt: a.publishedAt ? toLocalInputValue(a.publishedAt) : "",
         imageUrl: a.imageUrl || "",
         imagePublicId: a.imagePublicId || "",
         imageAlt: a.imageAlt || "",
@@ -543,12 +567,18 @@ export default function ArticlesPage() {
           body: form.body,
           category: resolveCategoryId(form.category),
           status: form.status === "published" ? "published" : "draft",
-          publishedAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
+          publishedAt: form.publishAt
+            ? new Date(form.publishAt).toISOString()
+            : undefined,
           imageUrl: normalizeCloudinaryUrl(form.imageUrl) || undefined,
           imagePublicId: form.imagePublicId || undefined,
           imageAlt: form.imageAlt || undefined,
-          metaTitle: form.metaTitle ? String(form.metaTitle).slice(0, META_TITLE_MAX) : undefined,
-          metaDesc: form.metaDesc ? String(form.metaDesc).slice(0, META_DESC_MAX) : undefined,
+          metaTitle: form.metaTitle
+            ? String(form.metaTitle).slice(0, META_TITLE_MAX)
+            : undefined,
+          metaDesc: form.metaDesc
+            ? String(form.metaDesc).slice(0, META_DESC_MAX)
+            : undefined,
           ogImage: normalizeCloudinaryUrl(form.ogImage) || undefined,
           tags: parseTags(tagsInput),
           geo: {
@@ -560,8 +590,13 @@ export default function ArticlesPage() {
         };
 
         // Enforce soft limits on meta fields before saving
-        if (payload.metaTitle) payload.metaTitle = String(payload.metaTitle).slice(0, META_TITLE_MAX);
-        if (payload.metaDesc) payload.metaDesc = String(payload.metaDesc).slice(0, META_DESC_MAX);
+        if (payload.metaTitle)
+          payload.metaTitle = String(payload.metaTitle).slice(
+            0,
+            META_TITLE_MAX
+          );
+        if (payload.metaDesc)
+          payload.metaDesc = String(payload.metaDesc).slice(0, META_DESC_MAX);
         await api.patch(`/admin/articles/${editingId}`, payload);
         setAutoSavedAt(new Date());
       } catch (e) {
@@ -570,7 +605,8 @@ export default function ArticlesPage() {
         setAutoSaving(false);
       }
     }, 1200);
-    return () => autosaveTimerRef.current && clearTimeout(autosaveTimerRef.current);
+    return () =>
+      autosaveTimerRef.current && clearTimeout(autosaveTimerRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, tagsInput, showForm, editingId]);
 
@@ -586,7 +622,10 @@ export default function ArticlesPage() {
       // If user pasted a Google Drive URL, import it via backend
       if (imageUrl && imageUrl.includes("drive.google.com")) {
         try {
-          const res = await api.post("/admin/articles/import-image-from-url", { url: imageUrl });
+          const res = await api.post(
+            "/admin/articles/import-image-from-url",
+            { url: imageUrl }
+          );
           const data = res && res.data ? res.data : res;
           if (data && data.url && data.publicId) {
             imageUrl = data.url; // Cloudinary URL
@@ -620,12 +659,18 @@ export default function ArticlesPage() {
         body: form.body,
         category: resolveCategoryId(form.category),
         status: form.status === "published" ? "published" : "draft",
-        publishedAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
+        publishedAt: form.publishAt
+          ? new Date(form.publishAt).toISOString()
+          : undefined,
         imageUrl, // now Cloudinary if it was Drive
         imagePublicId, // now Cloudinary if it was Drive
         imageAlt: form.imageAlt || undefined,
-        metaTitle: form.metaTitle ? String(form.metaTitle).slice(0, META_TITLE_MAX) : undefined,
-        metaDesc: form.metaDesc ? String(form.metaDesc).slice(0, META_DESC_MAX) : undefined,
+        metaTitle: form.metaTitle
+          ? String(form.metaTitle).slice(0, META_TITLE_MAX)
+          : undefined,
+        metaDesc: form.metaDesc
+          ? String(form.metaDesc).slice(0, META_DESC_MAX)
+          : undefined,
         ogImage, // will use Cloudinary URL if we just imported
         tags: parseTags(tagsInput),
         geo: {
@@ -637,8 +682,13 @@ export default function ArticlesPage() {
       };
 
       // Soft limits: also enforce on manual Save
-      if (payload.metaTitle) payload.metaTitle = String(payload.metaTitle).slice(0, META_TITLE_MAX);
-      if (payload.metaDesc) payload.metaDesc = String(payload.metaDesc).slice(0, META_DESC_MAX);
+      if (payload.metaTitle)
+        payload.metaTitle = String(payload.metaTitle).slice(
+          0,
+          META_TITLE_MAX
+        );
+      if (payload.metaDesc)
+        payload.metaDesc = String(payload.metaDesc).slice(0, META_DESC_MAX);
 
       if (editingId) {
         await api.patch(`/admin/articles/${editingId}`, payload);
@@ -654,8 +704,16 @@ export default function ArticlesPage() {
       const err = e?.response?.data;
       const msg = err?.message || err?.error || e.message || "Save failed";
       const details =
-        err?.details ? (typeof err.details === "string" ? err.details : JSON.stringify(err.details)) : "";
-      toast.push({ type: "error", title: "Save failed", message: details ? `${msg}: ${details}` : msg });
+        err?.details
+          ? typeof err.details === "string"
+            ? err.details
+            : JSON.stringify(err.details)
+          : "";
+      toast.push({
+        type: "error",
+        title: "Save failed",
+        message: details ? `${msg}: ${details}` : msg,
+      });
     } finally {
       setSaving(false);
     }
@@ -687,7 +745,8 @@ export default function ArticlesPage() {
     return false;
   }
   function isAllowedForGeo(geoMode, geoAreas, test) {
-    if (!test || geoMode === "global" || !Array.isArray(geoAreas) || geoAreas.length === 0) return true;
+    if (!test || geoMode === "global" || !Array.isArray(geoAreas) || geoAreas.length === 0)
+      return true;
     const matches = geoAreas.some((t) => matchGeoToken(t, test));
     if (geoMode === "include") return matches;
     if (geoMode === "exclude") return !matches;
@@ -731,7 +790,8 @@ export default function ArticlesPage() {
 
         // Server value (if it returns one) wins; otherwise our cleaned input
         const nextImage = updated.imageUrl ?? cleaned ?? "";
-        const nextOg = updated.ogImage ?? (syncOg ? nextImage : updated.ogImage || "");
+        const nextOg =
+          updated.ogImage ?? (syncOg ? nextImage : updated.ogImage || "");
 
         updateItemsLocal((a) =>
           a._id === id
@@ -753,6 +813,11 @@ export default function ArticlesPage() {
         setImgState(id, { saving: "error" });
       }
     }, 800);
+  }
+
+  function onChangeQuickImage(id, value) {
+    setImgState(id, { value });
+    scheduleSaveImage(id, value);
   }
 
   // ⬇⬇ NEW: force this article to use the default image from backend
@@ -793,16 +858,58 @@ export default function ArticlesPage() {
     }
   }
 
-  function onChangeQuickImage(id, value) {
-    setImgState(id, { value });
-    scheduleSaveImage(id, value);
+  // ⬇⬇ NEW: generate an AI hero image for this article
+  async function handleGenerateAiImage(id) {
+    try {
+      setImgState(id, { saving: "saving" });
+
+      const res = await api.post(`/admin/articles/${id}/ai-image`);
+      const data = res?.data || {};
+
+      // Backend returns these fields from your curl test
+      const nextImage = data.imageUrl || "";
+      const nextOg = data.ogImage || nextImage || "";
+      const nextThumb = data.thumbImage || nextImage || "";
+
+      updateItemsLocal((a) =>
+        a._id === id
+          ? {
+              ...a,
+              imageUrl: nextImage || a.imageUrl,
+              ogImage: nextOg || a.ogImage,
+              thumbImage: nextThumb || a.thumbImage,
+              imagePublicId: data.imagePublicId || a.imagePublicId,
+              updatedAt: new Date().toISOString(),
+            }
+          : a
+      );
+
+      // Keep inline editor in sync
+      setImgState(id, {
+        value: nextImage || imgEdits[id]?.value || "",
+        saving: "saved",
+      });
+
+      setTimeout(() => setImgState(id, { saving: "idle" }), 900);
+
+      toast.push({
+        type: "success",
+        title: "AI image created",
+        message: "Hero image updated from AI generator.",
+      });
+    } catch (e) {
+      console.error("ai image failed", e?.response?.data || e);
+      setImgState(id, { saving: "error" });
+      toast.push({
+        type: "error",
+        title: "AI image failed",
+        message: String(e?.response?.data?.error || e.message || e),
+      });
+    }
   }
 
   return (
-    <div
-      className="admin-articles-root"
-      style={{ display: "grid", gap: 12 }}
-    >
+    <div className="admin-articles-root" style={{ display: "grid", gap: 12 }}>
       <div
         style={{
           display: "flex",
@@ -814,11 +921,12 @@ export default function ArticlesPage() {
       >
         <h1 style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>
           Articles
-          {previewEnabled && /^[A-Z]{2}$/.test((previewCountry || "").toUpperCase()) && (
-            <span style={{ marginLeft: 10, ...badge, ...badgeYellow }}>
-              Previewing as: {(previewCountry || "").toUpperCase()}
-            </span>
-          )}
+          {previewEnabled &&
+            /^[A-Z]{2}$/.test((previewCountry || "").toUpperCase()) && (
+              <span style={{ marginLeft: 10, ...badge, ...badgeYellow }}>
+                Previewing as: {(previewCountry || "").toUpperCase()}
+              </span>
+            )}
         </h1>
         {/* Create button */}
         <button onClick={openCreate} style={btnPrimary}>
@@ -835,13 +943,21 @@ export default function ArticlesPage() {
       >
         <button
           onClick={() => bulkAction("publish")}
-          style={{ ...btnPrimary, opacity: isAdmin ? 1 : 0.6, pointerEvents: isAdmin ? "auto" : "none" }}
+          style={{
+            ...btnPrimary,
+            opacity: isAdmin ? 1 : 0.6,
+            pointerEvents: isAdmin ? "auto" : "none",
+          }}
         >
           Publish
         </button>
         <button
           onClick={() => bulkAction("unpublish")}
-          style={{ ...btnGhost, opacity: isAdmin ? 1 : 0.6, pointerEvents: isAdmin ? "auto" : "none" }}
+          style={{
+            ...btnGhost,
+            opacity: isAdmin ? 1 : 0.6,
+            pointerEvents: isAdmin ? "auto" : "none",
+          }}
         >
           Unpublish
         </button>
@@ -970,11 +1086,11 @@ export default function ArticlesPage() {
         }}
       >
         <table
+          className="admin-articles-table"
           style={{
             width: "100%",
             fontSize: 14,
             borderCollapse: "collapse",
-            minWidth: 720,
           }}
         >
           <thead
@@ -988,7 +1104,10 @@ export default function ArticlesPage() {
                 <input
                   type="checkbox"
                   onChange={toggleSelectAll}
-                  checked={data.items.length > 0 && data.items.every((a) => selectedIds.has(a._id))}
+                  checked={
+                    data.items.length > 0 &&
+                    data.items.every((a) => selectedIds.has(a._id))
+                  }
                 />
               </th>
               <th style={th}>Title</th>
@@ -1017,7 +1136,12 @@ export default function ArticlesPage() {
             )}
             {!loading &&
               data.items.map((a) => {
-                const imgState = imgEdits[a._id] || { value: a.imageUrl || "", saving: "idle", syncOg: true };
+                const imgState =
+                  imgEdits[a._id] || {
+                    value: a.imageUrl || "",
+                    saving: "idle",
+                    syncOg: true,
+                  };
                 const dotColor =
                   imgState.saving === "saving"
                     ? "#f59e0b"
@@ -1026,8 +1150,21 @@ export default function ArticlesPage() {
                     : imgState.saving === "error"
                     ? "#ef4444"
                     : "#d1d5db";
-                const previewUrlRaw = a.imageUrl || a.ogImage || imgState.value || "";
+                const previewUrlRaw =
+                  a.imageUrl || a.ogImage || imgState.value || "";
                 const base = previewUrlRaw || DEFAULT_IMAGE_URL;
+                const seed =
+                  (a.updatedAt ? new Date(a.updatedAt).getTime() : 0) ||
+                  Date.now();
+                const thumbSrc = withCacheBust(base, seed);
+
+                // status badge style
+                const statusBadge =
+                  a.status === "published"
+                    ? badgeGreen
+                    : a.status === "scheduled"
+                    ? badgeYellow
+                    : badgeGray;
 
                 return (
                   <tr key={a._id} style={{ borderTop: "1px solid #f0f0f0" }}>
@@ -1039,12 +1176,106 @@ export default function ArticlesPage() {
                       />
                     </td>
                     <td style={td}>
-                      <div style={{ fontWeight: 600 }}>{a.title}</div>
-                      <div style={{ color: "#666", fontSize: 12 }}>{a.slug}</div>
+                      {/* Title + AI pill + inline status (for mobile) */}
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                          gap: 8,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            flexWrap: "wrap",
+                            maxWidth: "100%",
+                          }}
+                        >
+                          <span style={{ wordBreak: "break-word" }}>
+                            {a.title}
+                          </span>
+                          {a.source === "ai-batch" && (
+                            <span style={aiPill}>BY AI</span>
+                          )}
+                        </div>
+                        <span
+                          className="status-inline"
+                          style={{ ...badge, ...statusBadge, fontSize: 11 }}
+                        >
+                          {a.status}
+                        </span>
+                      </div>
+
+                      {/* Mobile-only preview image just under title */}
+                      <div
+                        className="thumb-mobile-only"
+                        style={{ marginTop: 8 }}
+                      >
+                        <img
+                          src={thumbSrc}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          style={{
+                            width: "100%",
+                            maxWidth: 320,
+                            height: "auto",
+                            borderRadius: 10,
+                            border: "1px solid #eee",
+                            background: "#f8fafc",
+                            objectFit: "cover",
+                          }}
+                          onError={(e) => {
+                            const tries = Number(
+                              e.currentTarget.dataset.tries || 0
+                            );
+                            if (tries === 0 && base !== DEFAULT_IMAGE_URL) {
+                              e.currentTarget.dataset.tries = "1";
+                              e.currentTarget.src = withCacheBust(
+                                DEFAULT_IMAGE_URL,
+                                Date.now()
+                              );
+                              return;
+                            }
+                            if (tries === 1) {
+                              e.currentTarget.dataset.tries = "2";
+                              e.currentTarget.src = withCacheBust(
+                                DEFAULT_IMAGE_URL,
+                                Date.now() + 1
+                              );
+                              return;
+                            }
+                            e.currentTarget.replaceWith(
+                              Object.assign(document.createElement("div"), {
+                                style:
+                                  "width:100%;max-width:320px;height:120px;display:grid;place-items:center;border:1px solid #eee;border-radius:10px;background:#f8fafc;color:#999;font-size:12px",
+                                innerText: "Image failed",
+                              })
+                            );
+                          }}
+                        />
+                      </div>
+
+                      {/* slug */}
+                      <div style={{ color: "#666", fontSize: 12, marginTop: 6 }}>
+                        {a.slug}
+                      </div>
 
                       {/* tags preview */}
                       {Array.isArray(a.tags) && a.tags.length > 0 && (
-                        <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        <div
+                          style={{
+                            marginTop: 6,
+                            display: "flex",
+                            gap: 6,
+                            flexWrap: "wrap",
+                          }}
+                        >
                           {a.tags.map((t, idx) => (
                             <span
                               key={`${t}-${idx}`}
@@ -1064,10 +1295,89 @@ export default function ArticlesPage() {
                         </div>
                       )}
 
-                      {/* Quick Image URL editor */}
+                      {/* Mobile-only main actions row: Edit / Publish / Delete */}
+                      <div
+                        className="article-actions-mobile"
+                        style={{ display: "none", marginTop: 8 }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => openEdit(a._id)}
+                          style={{
+                            ...btnSmallGhost,
+                            flex: 1,
+                            textAlign: "center",
+                          }}
+                        >
+                          Edit
+                        </button>
+                        {a.status !== "published" && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              patchOne(a._id, { status: "published" })
+                            }
+                            style={{
+                              ...btnSmallPrimary,
+                              flex: 1,
+                              textAlign: "center",
+                              opacity: isAdmin ? 1 : 0.6,
+                              pointerEvents: isAdmin ? "auto" : "none",
+                            }}
+                          >
+                            Publish
+                          </button>
+                        )}
+                        {a.status === "published" && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              patchOne(a._id, { status: "draft" })
+                            }
+                            style={{
+                              ...btnSmallGhost,
+                              flex: 1,
+                              textAlign: "center",
+                              opacity: isAdmin ? 1 : 0.6,
+                              pointerEvents: isAdmin ? "auto" : "none",
+                            }}
+                          >
+                            Unpublish
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => deleteOne(a._id)}
+                          style={{
+                            ...btnSmallDanger,
+                            flex: 1,
+                            textAlign: "center",
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+
+                      {/* Quick Image URL editor (with open/default/AI image buttons) */}
                       <div style={{ marginTop: 8 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                          <span style={{ fontSize: 12, color: "#555", fontWeight: 600 }}>Image URL (quick)</span>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            marginBottom: 4,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 12,
+                              color: "#555",
+                              fontWeight: 600,
+                            }}
+                          >
+                            Image URL (quick)
+                          </span>
                           <span
                             title={imgState.saving}
                             style={{
@@ -1081,7 +1391,9 @@ export default function ArticlesPage() {
                         </div>
                         <input
                           value={imgState.value}
-                          onChange={(e) => onChangeQuickImage(a._id, e.target.value)}
+                          onChange={(e) =>
+                            onChangeQuickImage(a._id, e.target.value)
+                          }
                           placeholder="https://…"
                           style={inp}
                         />
@@ -1105,7 +1417,9 @@ export default function ArticlesPage() {
                             <input
                               type="checkbox"
                               checked={!!imgState.syncOg}
-                              onChange={(e) => setImgState(a._id, { syncOg: e.target.checked })}
+                              onChange={(e) =>
+                                setImgState(a._id, { syncOg: e.target.checked })
+                              }
                             />
                             Also set <code>OG Image URL</code>
                           </label>
@@ -1115,19 +1429,35 @@ export default function ArticlesPage() {
                                 href={imgState.value}
                                 target="_blank"
                                 rel="noreferrer"
-                                style={{ textDecoration: "none", color: "#1B4965", fontSize: 12 }}
+                                style={{
+                                  textDecoration: "none",
+                                  color: "#1B4965",
+                                  fontSize: 12,
+                                }}
                               >
                                 open image ↗
                               </a>
-                              <span style={{ color: "#999", fontSize: 12 }}>|</span>
+                              <span
+                                style={{ color: "#999", fontSize: 12 }}
+                              >
+                                |
+                              </span>
                             </>
                           ) : null}
                           <button
                             type="button"
                             onClick={() =>
-                              window.open(`/article/${encodeURIComponent(a.slug)}`, "_blank", "noopener,noreferrer")
+                              window.open(
+                                `/article/${encodeURIComponent(a.slug)}`,
+                                "_blank",
+                                "noopener,noreferrer"
+                              )
                             }
-                            style={{ ...btnSmallGhost, padding: "4px 8px", fontSize: 12 }}
+                            style={{
+                              ...btnSmallGhost,
+                              padding: "4px 8px",
+                              fontSize: 12,
+                            }}
                             title="Open public article page"
                           >
                             open article ↗
@@ -1136,25 +1466,35 @@ export default function ArticlesPage() {
                           <button
                             type="button"
                             onClick={() => handleUseDefaultImage(a._id)}
-                            style={{ ...btnSmallGhost, padding: "4px 8px", fontSize: 12 }}
+                            style={{
+                              ...btnSmallGhost,
+                              padding: "4px 8px",
+                              fontSize: 12,
+                            }}
                             title="Force this article to use the default image"
                           >
                             default image
                           </button>
+                          {/* NEW: AI image button */}
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateAiImage(a._id)}
+                            style={{
+                              ...btnSmallPrimary,
+                              padding: "4px 8px",
+                              fontSize: 12,
+                            }}
+                            title="Generate an AI hero image for this article"
+                          >
+                            AI image
+                          </button>
                         </div>
                       </div>
                     </td>
+
+                    {/* Status column (desktop only; hidden on mobile via CSS) */}
                     <td style={td}>
-                      <span
-                        style={{
-                          ...badge,
-                          ...(a.status === "published"
-                            ? badgeGreen
-                            : a.status === "scheduled"
-                            ? badgeYellow
-                            : badgeGray),
-                        }}
-                      >
+                      <span style={{ ...badge, ...statusBadge }}>
                         {a.status}
                       </span>
                     </td>
@@ -1162,67 +1502,83 @@ export default function ArticlesPage() {
                     <td style={td}>{fmt(a.publishedAt) || "—"}</td>
                     <td style={td}>{fmt(a.updatedAt)}</td>
 
-                    {/* Preview column */}
+                    {/* Preview column – desktop only */}
                     <td style={{ ...td, width: 230 }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start" }}>
-                        <span style={badge}>{a.category?.name || a.category || "General"}</span>
-                        {(() => {
-                          const seed =
-                            (a.updatedAt ? new Date(a.updatedAt).getTime() : 0) || Date.now();
-                          const thumbSrc = withCacheBust(base, seed);
-
-                          return (
-                            <img
-                              id={`thumb-${a._id}`}
-                              src={thumbSrc}
-                              alt=""
-                              loading="lazy"
-                              decoding="async"
-                              style={{
-                                width: 200,
-                                height: 120,
-                                objectFit: "cover",
-                                borderRadius: 10,
-                                border: "1px solid #eee",
-                                background: "#f8fafc",
-                              }}
-                              onError={(e) => {
-                                const tries = Number(e.currentTarget.dataset.tries || 0);
-                                // First failure: try switching explicitly to DEFAULT_IMAGE_URL
-                                if (tries === 0 && base !== DEFAULT_IMAGE_URL) {
-                                  e.currentTarget.dataset.tries = "1";
-                                  e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now());
-                                  return;
-                                }
-                                // Second failure: one more cache-busted retry
-                                if (tries === 1) {
-                                  e.currentTarget.dataset.tries = "2";
-                                  e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 1);
-                                  return;
-                                }
-                                // Give up: show "Image failed" box
-                                e.currentTarget.replaceWith(
-                                  Object.assign(document.createElement("div"), {
-                                    style:
-                                      "width:200px;height:120px;display:grid;place-items:center;border:1px solid #eee;border-radius:10px;background:#f8fafc;color:#999;font-size:12px",
-                                    innerText: "Image failed",
-                                  })
-                                );
-                              }}
-                            />
-                          );
-                        })()}
+                      <div
+                        className="thumb-desktop-only"
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 8,
+                          alignItems: "flex-start",
+                        }}
+                      >
+                        <span style={badge}>
+                          {a.category?.name || a.category || "General"}
+                        </span>
+                        <img
+                          id={`thumb-${a._id}`}
+                          src={thumbSrc}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          style={{
+                            width: 200,
+                            height: 120,
+                            objectFit: "cover",
+                            borderRadius: 10,
+                            border: "1px solid #eee",
+                            background: "#f8fafc",
+                          }}
+                          onError={(e) => {
+                            const tries = Number(
+                              e.currentTarget.dataset.tries || 0
+                            );
+                            if (tries === 0 && base !== DEFAULT_IMAGE_URL) {
+                              e.currentTarget.dataset.tries = "1";
+                              e.currentTarget.src = withCacheBust(
+                                DEFAULT_IMAGE_URL,
+                                Date.now()
+                              );
+                              return;
+                            }
+                            if (tries === 1) {
+                              e.currentTarget.dataset.tries = "2";
+                              e.currentTarget.src = withCacheBust(
+                                DEFAULT_IMAGE_URL,
+                                Date.now() + 1
+                              );
+                              return;
+                            }
+                            e.currentTarget.replaceWith(
+                              Object.assign(document.createElement("div"), {
+                                style:
+                                  "width:200px;height:120px;display:grid;place-items:center;border:1px solid #eee;border-radius:10px;background:#f8fafc;color:#999;font-size:12px",
+                                innerText: "Image failed",
+                              })
+                            );
+                          }}
+                        />
                       </div>
                     </td>
 
+                    {/* Actions column – desktop only */}
                     <td style={td}>
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        <button onClick={() => openEdit(a._id)} style={btnSmallGhost}>
+                      <div
+                        className="article-actions-desktop"
+                        style={{ display: "flex", gap: 6, flexWrap: "wrap" }}
+                      >
+                        <button
+                          onClick={() => openEdit(a._id)}
+                          style={btnSmallGhost}
+                        >
                           Edit
                         </button>
                         {a.status !== "published" && (
                           <button
-                            onClick={() => patchOne(a._id, { status: "published" })}
+                            onClick={() =>
+                              patchOne(a._id, { status: "published" })
+                            }
                             style={{
                               ...btnSmallPrimary,
                               opacity: isAdmin ? 1 : 0.6,
@@ -1234,7 +1590,9 @@ export default function ArticlesPage() {
                         )}
                         {a.status === "published" && (
                           <button
-                            onClick={() => patchOne(a._id, { status: "draft" })}
+                            onClick={() =>
+                              patchOne(a._id, { status: "draft" })
+                            }
                             style={{
                               ...btnSmallGhost,
                               opacity: isAdmin ? 1 : 0.6,
@@ -1244,7 +1602,10 @@ export default function ArticlesPage() {
                             Unpublish
                           </button>
                         )}
-                        <button onClick={() => deleteOne(a._id)} style={btnSmallDanger}>
+                        <button
+                          onClick={() => deleteOne(a._id)}
+                          style={btnSmallDanger}
+                        >
                           Delete
                         </button>
                       </div>
@@ -1267,7 +1628,11 @@ export default function ArticlesPage() {
       >
         <div style={{ fontSize: 12, color: "#666" }}>Total: {data.total}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} style={btnGhost}>
+          <button
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            style={btnGhost}
+          >
             Prev
           </button>
           <span style={{ fontSize: 13 }}>
@@ -1300,10 +1665,26 @@ export default function ArticlesPage() {
               <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
                 {editingId ? "Edit Article" : "Create Article"}
               </h2>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  flexWrap: "wrap",
+                }}
+              >
                 {editingId && (
-                  <span style={{ fontSize: 12, color: autoSaving ? "#92400e" : "#16a34a" }}>
-                    {autoSaving ? "Saving…" : autoSavedAt ? `Saved ${autoSavedAt.toLocaleTimeString()}` : "Autosave on"}
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: autoSaving ? "#92400e" : "#16a34a",
+                    }}
+                  >
+                    {autoSaving
+                      ? "Saving…"
+                      : autoSavedAt
+                      ? `Saved ${autoSavedAt.toLocaleTimeString()}`
+                      : "Autosave on"}
                   </span>
                 )}
                 <button onClick={closeForm} style={btnGhost}>
@@ -1327,8 +1708,14 @@ export default function ArticlesPage() {
                   imageUrl: d.imageUrl ?? f.imageUrl,
                   imagePublicId: d.imagePublicId ?? f.imagePublicId,
                   imageAlt: d.imageAlt ?? f.imageAlt,
-                  metaTitle: (d.metaTitle ?? f.metaTitle)?.slice(0, META_TITLE_MAX),
-                  metaDesc: (d.metaDesc ?? f.metaDesc)?.slice(0, META_DESC_MAX),
+                  metaTitle: (d.metaTitle ?? f.metaTitle)?.slice(
+                    0,
+                    META_TITLE_MAX
+                  ),
+                  metaDesc: (d.metaDesc ?? f.metaDesc)?.slice(
+                    0,
+                    META_DESC_MAX
+                  ),
                   ogImage: d.ogImage ?? f.ogImage,
                   geoMode: d.geoMode ?? f.geoMode,
                   geoAreasText: d.geoAreasText ?? f.geoAreasText,
@@ -1345,7 +1732,9 @@ export default function ArticlesPage() {
                   <input
                     required
                     value={form.title}
-                    onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, title: e.target.value }))
+                    }
                     style={inp}
                   />
                 </label>
@@ -1354,7 +1743,9 @@ export default function ArticlesPage() {
                   <input
                     required
                     value={form.author}
-                    onChange={(e) => setForm((f) => ({ ...f, author: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, author: e.target.value }))
+                    }
                     style={inp}
                   />
                 </label>
@@ -1365,7 +1756,9 @@ export default function ArticlesPage() {
                 Slug
                 <input
                   value={form.slug}
-                  onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, slug: e.target.value }))
+                  }
                   placeholder="leave blank to auto-generate from title"
                   style={inp}
                 />
@@ -1377,7 +1770,9 @@ export default function ArticlesPage() {
                   required
                   rows={2}
                   value={form.summary}
-                  onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, summary: e.target.value }))
+                  }
                   style={ta}
                 />
               </label>
@@ -1387,7 +1782,9 @@ export default function ArticlesPage() {
                   Category
                   <select
                     value={form.category}
-                    onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, category: e.target.value }))
+                    }
                     style={inp}
                   >
                     {categories.map((c) => (
@@ -1417,7 +1814,13 @@ export default function ArticlesPage() {
                       style={inp}
                       placeholder="e.g. 2500"
                     />
-                    <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "#666",
+                        marginTop: 4,
+                      }}
+                    >
                       Only used for History articles (treated as BC).
                     </div>
                   </label>
@@ -1435,13 +1838,17 @@ export default function ArticlesPage() {
                         // auto-fill publishAt UI field when switching to published
                         publishAt:
                           s === "published"
-                           ? f.publishAt || toLocalInputValue()
+                            ? f.publishAt || toLocalInputValue()
                             : f.publishAt,
                       }));
                     }}
                     style={{ ...inp, opacity: isAdmin ? 1 : 0.6 }}
                     disabled={!isAdmin}
-                    title={!isAdmin ? "Only admins can change publish status" : undefined}
+                    title={
+                      !isAdmin
+                        ? "Only admins can change publish status"
+                        : undefined
+                    }
                   >
                     <option value="draft">Draft</option>
                     <option value="published">Published</option>
@@ -1466,7 +1873,9 @@ export default function ArticlesPage() {
                   Image URL
                   <input
                     value={form.imageUrl}
-                    onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, imageUrl: e.target.value }))
+                    }
                     style={inp}
                   />
                 </label>
@@ -1474,7 +1883,9 @@ export default function ArticlesPage() {
                   Image Public ID
                   <input
                     value={form.imagePublicId}
-                    onChange={(e) => setForm((f) => ({ ...f, imagePublicId: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, imagePublicId: e.target.value }))
+                    }
                     style={inp}
                   />
                 </label>
@@ -1487,7 +1898,9 @@ export default function ArticlesPage() {
                   Image Alt
                   <input
                     value={form.imageAlt}
-                    onChange={(e) => setForm((f) => ({ ...f, imageAlt: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, imageAlt: e.target.value }))
+                    }
                     placeholder="Describe the image (e.g. ‘Solar panels on a rooftop at sunset’)"
                     style={inp}
                   />
@@ -1497,7 +1910,10 @@ export default function ArticlesPage() {
                   <input
                     value={form.metaTitle}
                     onChange={(e) =>
-                      setForm((f) => ({ ...f, metaTitle: e.target.value.slice(0, META_TITLE_MAX) }))
+                      setForm((f) => ({
+                        ...f,
+                        metaTitle: e.target.value.slice(0, META_TITLE_MAX),
+                      }))
                     }
                     style={inp}
                     maxLength={META_TITLE_MAX}
@@ -1510,14 +1926,23 @@ export default function ArticlesPage() {
                   OG Image URL
                   <input
                     value={form.ogImage}
-                    onChange={(e) => setForm((f) => ({ ...f, ogImage: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, ogImage: e.target.value }))
+                    }
                     style={inp}
                   />
                 </label>
               </div>
               {form.imageUrl && !form.imageAlt && (
-                <div style={{ color: "var(--color-warning, #b45309)", fontSize: 12, marginTop: -4 }}>
-                  Tip: Add a short, meaningful alt description so screen readers and SEO can understand the image.
+                <div
+                  style={{
+                    color: "var(--color-warning, #b45309)",
+                    fontSize: 12,
+                    marginTop: -4,
+                  }}
+                >
+                  Tip: Add a short, meaningful alt description so screen
+                  readers and SEO can understand the image.
                 </div>
               )}
               <label style={lbl}>
@@ -1526,7 +1951,10 @@ export default function ArticlesPage() {
                   rows={2}
                   value={form.metaDesc}
                   onChange={(e) =>
-                    setForm((f) => ({ ...f, metaDesc: e.target.value.slice(0, META_DESC_MAX) }))
+                    setForm((f) => ({
+                      ...f,
+                      metaDesc: e.target.value.slice(0, META_DESC_MAX),
+                    }))
                   }
                   style={ta}
                   maxLength={META_DESC_MAX}
@@ -1543,7 +1971,9 @@ export default function ArticlesPage() {
                   Mode
                   <select
                     value={form.geoMode}
-                    onChange={(e) => setForm((f) => ({ ...f, geoMode: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, geoMode: e.target.value }))
+                    }
                     style={inp}
                   >
                     <option value="global">Global</option>
@@ -1555,7 +1985,9 @@ export default function ArticlesPage() {
                   Areas (comma separated)
                   <input
                     value={form.geoAreasText}
-                    onChange={(e) => setForm((f) => ({ ...f, geoAreasText: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, geoAreasText: e.target.value }))
+                    }
                     placeholder="Examples: country:IN, state:US:CA, city:IN:Bengaluru"
                     style={inp}
                   />
@@ -1563,14 +1995,30 @@ export default function ArticlesPage() {
               </div>
 
               {/* GEO Preview */}
-              <div style={{ border: "1px dashed #e5e7eb", borderRadius: 12, padding: 10 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>GEO Preview</div>
+              <div
+                style={{
+                  border: "1px dashed #e5e7eb",
+                  borderRadius: 12,
+                  padding: 10,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    marginBottom: 6,
+                  }}
+                >
+                  GEO Preview
+                </div>
                 <div style={grid3}>
                   <label style={lbl}>
                     Country (2-letter)
                     <input
                       value={testCountry}
-                      onChange={(e) => setTestCountry(e.target.value.toUpperCase())}
+                      onChange={(e) =>
+                        setTestCountry(e.target.value.toUpperCase())
+                      }
                       style={inp}
                       placeholder="e.g. IN"
                     />
@@ -1579,7 +2027,9 @@ export default function ArticlesPage() {
                     Region / State
                     <input
                       value={testRegion}
-                      onChange={(e) => setTestRegion(e.target.value.toUpperCase())}
+                      onChange={(e) =>
+                        setTestRegion(e.target.value.toUpperCase())
+                      }
                       style={inp}
                       placeholder="e.g. KA or CA"
                     />
@@ -1596,11 +2046,14 @@ export default function ArticlesPage() {
                 </div>
                 <div style={{ marginTop: 8, fontSize: 13 }}>
                   Result:&nbsp;
-                  <span style={{ ...badge, ...(geoPreviewAllowed ? badgeGreen : badgeGray) }}>
+                  <span
+                    style={{ ...badge, ...(geoPreviewAllowed ? badgeGreen : badgeGray) }}
+                  >
                     {geoPreviewAllowed ? "Allowed" : "Blocked"}
                   </span>
                   <span style={{ marginLeft: 8, color: "#64748b" }}>
-                    mode = <code>{form.geoMode}</code>, areas = <code>{form.geoAreasText || "—"}</code>
+                    mode = <code>{form.geoMode}</code>, areas ={" "}
+                    <code>{form.geoAreasText || "—"}</code>
                   </span>
                 </div>
               </div>
@@ -1630,12 +2083,21 @@ export default function ArticlesPage() {
                 <textarea
                   rows={8}
                   value={form.body}
-                  onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, body: e.target.value }))
+                  }
                   style={ta}
                 />
-                <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "#64748b",
+                    marginTop: 4,
+                  }}
+                >
                   Supports simple formatting:
-                  <br /># Heading, ## Subheading, - bullet, 1. numbered item, **highlighted text**
+                  <br /># Heading, ## Subheading, - bullet, 1. numbered item,
+                  **highlighted text**
                 </div>
               </label>
 
@@ -1648,7 +2110,11 @@ export default function ArticlesPage() {
                   flexWrap: "wrap",
                 }}
               >
-                <button type="button" onClick={closeForm} style={btnGhost}>
+                <button
+                  type="button"
+                  onClick={closeForm}
+                  style={btnGhost}
+                >
                   Cancel
                 </button>
                 <button type="submit" disabled={saving} style={btnPrimary}>
@@ -1671,6 +2137,22 @@ export default function ArticlesPage() {
           grid-template-columns: 160px 200px 1fr auto;
         }
 
+        .admin-articles-table {
+          min-width: 720px;
+        }
+
+        .thumb-mobile-only {
+          display: none;
+        }
+
+        .thumb-desktop-only {
+          display: flex;
+        }
+
+        .article-actions-mobile {
+          display: none;
+        }
+
         @media (max-width: 900px) {
           .admin-articles-filters {
             grid-template-columns: 1fr 1fr;
@@ -1680,6 +2162,67 @@ export default function ArticlesPage() {
         @media (max-width: 640px) {
           .admin-articles-filters {
             grid-template-columns: 1fr;
+          }
+        }
+
+        /* ---------- Mobile layout for articles table ---------- */
+        @media (max-width: 768px) {
+          .admin-articles-table {
+            min-width: 100%;
+            border-collapse: separate;
+          }
+
+          /* Hide header row on mobile (cards look cleaner) */
+          .admin-articles-table thead {
+            display: none;
+          }
+
+          .admin-articles-table th,
+          .admin-articles-table td {
+            padding: 8px;
+          }
+
+          /* Hide noisy columns on mobile:
+             3: Status (we show inline),
+             4: Category,
+             5: Publish At,
+             6: Updated,
+             7: Preview,
+             8: Actions (we show mobile actions instead)
+          */
+          .admin-articles-table td:nth-child(3),
+          .admin-articles-table td:nth-child(4),
+          .admin-articles-table td:nth-child(5),
+          .admin-articles-table td:nth-child(6),
+          .admin-articles-table td:nth-child(7),
+          .admin-articles-table td:nth-child(8) {
+            display: none;
+          }
+
+          /* Show mobile thumbnail + action row */
+          .thumb-mobile-only {
+            display: block;
+          }
+          .thumb-desktop-only {
+            display: none;
+          }
+          .article-actions-mobile {
+            display: flex;
+            gap: 6px;
+            flex-wrap: nowrap;
+          }
+
+          /* Make row look like a card */
+          .admin-articles-table tbody tr {
+            display: block;
+            border-bottom: 8px solid #f3f4f6;
+          }
+          .admin-articles-table tbody td:first-child {
+            display: none; /* hide row checkbox on very small screens */
+          }
+          .admin-articles-table tbody td:nth-child(2) {
+            display: block;
+            width: 100%;
           }
         }
       `}</style>
@@ -1786,4 +2329,15 @@ const chip = {
   border: "1px solid #e2e8f0",
   background: "#f8fafc",
   color: "#475569",
+};
+const aiPill = {
+  padding: "2px 10px",
+  borderRadius: 999,
+  fontSize: 11,
+  fontWeight: 700,
+  background: "linear-gradient(90deg,#ec4899,#f97316)", // pink → orange shine
+  color: "#ffffff",
+  boxShadow: "0 0 8px rgba(236,72,153,0.6)",
+  letterSpacing: 0.3,
+  textTransform: "uppercase",
 };
