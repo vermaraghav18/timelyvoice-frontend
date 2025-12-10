@@ -233,9 +233,7 @@ function AuthorBox({ article }) {
   if (!article) return null;
 
   const byline = pickByline(article);
-  const isBrand =
-    byline.toLowerCase().includes('timely voice');
-
+  const isBrand = byline.toLowerCase().includes('timely voice');
   const displayName = isBrand ? 'Timely Voice News' : byline;
 
   return (
@@ -243,75 +241,50 @@ function AuthorBox({ article }) {
       style={{
         marginTop: 24,
         marginBottom: 16,
-        padding: 12,
+        padding: 16,
         borderRadius: 0,
-        border: '1px solid rgba(148, 163, 184, 0.6)',
+        border: '1px solid rgba(148,163,184,0.6)',
         background:
           'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,64,175,0.9))',
         boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
       }}
     >
-      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-        {/* Initial / logo circle */}
-        <div
-          style={{
-            flexShrink: 0,
-            width: 40,
-            height: 40,
-            borderRadius: '50%',
-            background:
-              'radial-gradient(circle at 30% 30%, #facc15, #f97316 55%, #7c2d12)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 800,
-            fontSize: 18,
-            color: '#000',
-            boxShadow: '0 0 0 2px rgba(15,23,42,0.9)',
-          }}
-        >
-          {displayName.charAt(0).toUpperCase()}
-        </div>
-
-        {/* Text block */}
-        <div style={{ flex: 1 }}>
-          <div
-            style={{
-              fontSize: 14,
-              textTransform: 'uppercase',
-              letterSpacing: 1.2,
-              color: '#93c5fd',
-              marginBottom: 2,
-              fontWeight: 600,
-            }}
-          >
-            Reported by
-          </div>
-          <div
-            style={{
-              fontSize: 17,
-              fontWeight: 700,
-              color: '#e5f0ff',
-              marginBottom: 6,
-            }}
-          >
-            {displayName}
-          </div>
-          <p
-            style={{
-              margin: 0,
-              fontSize: 14,
-              lineHeight: 1.6,
-              color: '#cbd5f5',
-            }}
-          >
-            Timely Voice News monitors verified government releases, reputable
-            publications and agency wires to compile clear, exam-friendly news
-            reports. Stories are edited for accuracy, clarity and neutrality
-            before publishing.
-          </p>
-        </div>
+      {/* 🔥 SINGLE LINE TITLE "Reported by Desk" */}
+      <div
+        style={{
+          fontFamily: 'Arial, sans-serif',
+          fontWeight: 'bold',
+          fontSize: 16,
+          color: '#e5f0ff',
+          marginBottom: 10,
+        }}
+      >
+        Reported by {displayName}
       </div>
+
+      {/* Disclaimer text */}
+      <p
+        style={{
+          margin: 0,
+          fontSize: 14,
+          lineHeight: 1.7,
+          color: '#cbd5f5',
+         fontFamily: 'Arial, sans-serif',
+        }}
+      >
+        Timely Voice News relies on information from government releases,
+        regulators, courts, accredited media and other publicly available
+        sources. While editorial checks are applied for accuracy, clarity and
+        neutrality, all content is provided strictly on an “as is” basis for
+        general information and educational purposes only. It does not
+        constitute financial, legal, medical or any other professional advice.
+        The Timely Voice, its editors and contributors make no representation
+        or warranty as to the completeness, timeliness or reliability of the
+        information and accept no liability for any loss arising from reliance
+        on it. Readers are advised to verify facts with original documents or
+        consult a qualified professional before acting on any information
+        contained herein.
+      </p>
     </section>
   );
 }

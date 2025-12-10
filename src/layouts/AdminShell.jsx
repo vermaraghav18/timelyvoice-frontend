@@ -69,8 +69,16 @@ export default function AdminShell({ children }) {
           <NavItem to="/admin/autmotion/feeds" label="Feeds" icon={DocumentIcon} />
           <NavItem to="/admin/autmotion/queue" label="Queue" icon={DocumentIcon} />
           <NavItem to="/admin/autmotion/drafts" label="Drafts" icon={DocumentIcon} />
-          <NavItem to="/admin/autmotion/x-sources" label="X Sources" icon={DocumentIcon} />
-          <NavItem to="/admin/autmotion/x-queue" label="X Queue" icon={DocumentIcon} />
+          <NavItem
+            to="/admin/autmotion/x-sources"
+            label="X Sources"
+            icon={DocumentIcon}
+          />
+          <NavItem
+            to="/admin/autmotion/x-queue"
+            label="X Queue"
+            icon={DocumentIcon}
+          />
         </nav>
       </aside>
 
@@ -112,6 +120,7 @@ export default function AdminShell({ children }) {
             <div style={{ fontWeight: 600 }}>CMS</div>
           </div>
 
+          {/* RIGHT SIDE: View site + Logout + Profile */}
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <a
               href="/"
@@ -121,6 +130,35 @@ export default function AdminShell({ children }) {
             >
               View site
             </a>
+
+            <button
+              type="button"
+              onClick={() => {
+                // Clear any stored admin-related auth info
+                localStorage.removeItem("adminEmail");
+                localStorage.removeItem("news_admin_token");
+                localStorage.removeItem("adminToken");
+                localStorage.removeItem("token");
+                sessionStorage.removeItem("news_admin_token");
+                sessionStorage.removeItem("adminToken");
+
+                // Redirect to admin login screen (route is /admin)
+                window.location.href = "/admin";
+              }}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 4,
+                border: `1px solid ${colors.border}`,
+                background: "#ef4444",
+                color: "#ffffff",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Logout
+            </button>
+
             <ProfileBadge />
           </div>
         </header>

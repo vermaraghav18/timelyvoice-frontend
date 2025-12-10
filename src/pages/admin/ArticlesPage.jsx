@@ -1222,43 +1222,53 @@ export default function ArticlesPage() {
                           </span>
                         </div>
                       </div>
+{/* slug (just under title on mobile) */}
+<div
+  className="article-slug"
+  style={{ color: "#666", fontSize: 12, marginTop: 6 }}
+>
+  {a.slug}
+</div>
 
-                      {/* slug (just under title on mobile) */}
-                      <div
-                        className="article-slug"
-                        style={{ color: "#666", fontSize: 12, marginTop: 6 }}
-                      >
-                        {a.slug}
-                      </div>
+{/* image alt (visible under slug) – uses top-level OR seo.imageAlt */}
+{(a.imageAlt || a.seo?.imageAlt) && (
+  <div
+    className="article-image-alt"
+    style={{ color: "#dc2626", fontSize: 11, marginTop: 2 }}
+  >
+    {a.imageAlt || a.seo?.imageAlt}
+  </div>
+)}
 
-                      {/* tags preview */}
-                      {Array.isArray(a.tags) && a.tags.length > 0 && (
-                        <div
-                          style={{
-                            marginTop: 6,
-                            display: "flex",
-                            gap: 6,
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          {a.tags.map((t, idx) => (
-                            <span
-                              key={`${t}-${idx}`}
-                              title={`tag: ${t}`}
-                              style={{
-                                padding: "1px 6px",
-                                fontSize: 11,
-                                borderRadius: 999,
-                                background: "#f1f5f9",
-                                border: "1px solid #e2e8f0",
-                                color: "#475569",
-                              }}
-                            >
-                              #{t}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+{/* tags preview */}
+{Array.isArray(a.tags) && a.tags.length > 0 && (
+  <div
+    style={{
+      marginTop: 6,
+      display: "flex",
+      gap: 6,
+      flexWrap: "wrap",
+    }}
+  >
+    {a.tags.map((t, idx) => (
+      <span
+        key={`${t}-${idx}`}
+        title={`tag: ${t}`}
+        style={{
+          padding: "1px 6px",
+          fontSize: 11,
+          borderRadius: 999,
+          background: "#f1f5f9",
+          border: "1px solid #e2e8f0",
+          color: "#475569",
+        }}
+      >
+        #{t}
+      </span>
+    ))}
+  </div>
+)}
+
 
                       {/* Mobile-only preview image just under slug+tags */}
                       <div
