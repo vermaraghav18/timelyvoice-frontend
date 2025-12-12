@@ -1,18 +1,15 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true,                 // allow external access (needed for ngrok)
+    host: true,
     port: 5173,
-    allowedHosts: [
-      '.ngrok-free.app',        // allow any *.ngrok-free.app URL
-    ],
+    allowedHosts: [".ngrok-free.app"],
     proxy: {
-      // dev: forward /api/* to your backend (no CORS errors in the browser)
-      '/api': {
-        target: 'http://localhost:4000',
+      "/api": {
+        target: "http://localhost:4000",
         changeOrigin: true,
         secure: false,
       },
@@ -21,8 +18,19 @@ export default defineConfig({
   preview: {
     host: true,
     port: 5173,
-    allowedHosts: [
-      '.ngrok-free.app',
-    ],
+    allowedHosts: [".ngrok-free.app"],
   },
-})
+  build: {
+    cssCodeSplit: true,
+    sourcemap: false,
+    minify: "esbuild",
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom", "react-router-dom"],
+          motion: ["framer-motion"],
+        },
+      },
+    },
+  },
+});

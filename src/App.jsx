@@ -1,273 +1,164 @@
-// src/App.jsx
-import { useEffect, useState, lazy, Suspense } from 'react';
-import { Routes, Route, useLocation, useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+// frontend/src/App.jsx
+import { useEffect, useState, lazy, Suspense } from "react";
+import { Routes, Route, useLocation, useParams, useNavigate } from "react-router-dom";
+import axios from "axios";
 
-// Import global CSS helpers
-import './styles/home.css';
-import './styles/aspectRatio.css';
-import './styles/typography.css';
-import './styles/scroll-optimizations.css';
+/* ===================== Global CSS ===================== */
+import "./styles/home.css";
+import "./styles/aspectRatio.css";
+import "./styles/typography.css";
+import "./styles/scroll-optimizations.css";
 
-// Public pages (lazy)
-const NotFound = lazy(() => import('./pages/public/NotFound.jsx'));
-const SearchPage = lazy(() => import('./pages/public/SearchPage.jsx'));
-const PublicHome = lazy(() => import('./pages/public/PublicHome.jsx'));
-const CategoryPage = lazy(() => import('./pages/public/CategoryPage.jsx'));
-const TagPage = lazy(() => import('./pages/public/TagPage.jsx'));
-const ReaderArticle = lazy(() => import('./pages/public/Article.jsx'));
-const TopNews = lazy(() => import('./pages/public/TopNews.jsx'));
-const FinanceCategoryPage = lazy(() => import('./pages/public/FinanceCategoryPage.jsx'));
-const HealthPage = lazy(() => import('./pages/public/HealthPage.jsx'));   // NEW lazy import
+/* ===================== SEO helpers (re-exported) ===================== */
+import { upsertTag, buildCanonicalFromLocation, addJsonLd } from "./lib/seoHead.js";
+export { upsertTag, buildCanonicalFromLocation, addJsonLd };
 
-// ⭐⭐⭐ NEW: History Page (lazy import)
-const HistoryPage = lazy(() => import('./pages/history/HistoryPage.jsx'));
-
-// Admin pages (lazy)
-const AdminShell = lazy(() => import('./layouts/AdminShell.jsx'));
-const AdminDashboard = lazy(() => import('./pages/admin/Dashboard.jsx'));
-const AdminMedia = lazy(() => import('./pages/admin/MediaLibrary.jsx'));
-const ArticlesPage = lazy(() => import('./pages/admin/ArticlesPage.jsx'));
-const CategoriesPage = lazy(() => import('./pages/admin/CategoriesPage.jsx'));
-const TagsPage = lazy(() => import('./pages/admin/TagsPage.jsx'));
-const SettingsPage = lazy(() => import('./pages/admin/SettingsPage.jsx'));
-const CommentsPage = lazy(() => import('./pages/admin/CommentsPage.jsx'));
-const BreakingNewsAdmin = lazy(() => import('./pages/admin/BreakingNewsAdmin.jsx'));
-const TickerAdmin = lazy(() => import('./pages/admin/TickerAdmin.jsx'));
-const SectionsPage = lazy(() => import('./admin/sections/SectionsPage.jsx'));
-const SectionsV2Page = lazy(() => import('./admin/sectionsV2/SectionsV2Page.jsx'));
-
-// ⭐ NEW: Automation Dashboard (lazy)
-const AutomationDashboard = lazy(() => import('./pages/admin/AutomationDashboard.jsx'));
-
-// Autmotion (lazy)
-const AutmotionFeedsPage = lazy(() => import('./pages/admin/autmotion/FeedsPage.jsx'));
-const AutmotionQueuePage = lazy(() => import('./pages/admin/autmotion/QueuePage.jsx'));
-const AutmotionDraftsPage = lazy(() => import('./pages/admin/autmotion/DraftsPage.jsx'));
-const AutmotionXSourcesPage = lazy(() => import('./pages/admin/autmotion/XSourcesPage.jsx'));
-const AutmotionXQueuePage = lazy(() => import('./pages/admin/autmotion/XQueuePage.jsx'));
-
-// NEW: Bulk import page (non-lazy)
-import ArticlesBulkImport from './admin/ArticlesBulkImport.jsx';
-
-// Admin Drafts (review/publish UI)
-import AdminDrafts from './admin/articles/AdminDrafts.jsx';
-
-// Analytics
-import { initAnalytics, notifyRouteChange, track } from './lib/analytics';
-
-// Error boundary
-import ErrorBoundary from './components/ErrorBoundary.jsx';
-
-import AdsPage from "./admin/AdsPage";
-
-// NEW: X Admin page
-const AdminXPage = lazy(() => import('./pages/AdminX.jsx'));
-
-/* ========= NEW: E-E-A-T static pages (lazy) ========= */
-const AboutPage = lazy(() => import('./pages/static/About.jsx'));
-const ContactPage = lazy(() => import('./pages/static/Contact.jsx'));
-const EditorialPolicyPage = lazy(() => import('./pages/static/EditorialPolicy.jsx'));
-const CorrectionsPage = lazy(() => import('./pages/static/Corrections.jsx'));
-const PrivacyPolicyPage = lazy(() => import('./pages/static/PrivacyPolicy.jsx'));
-const TermsPage = lazy(() => import('./pages/static/Terms.jsx'));
-const AdvertisingPage = lazy(() => import('./pages/static/Advertising.jsx'));
-const AuthorPage = lazy(() => import('./pages/static/Author.jsx'));
-const EditorialDisclaimerPage = lazy(() => import('./pages/static/EditorialDisclaimer.jsx'));
-
-/* ============ API base (proxy-friendly) ============ */
-/**
- * Keep baseURL RELATIVE so Vite dev proxy handles /api → http://localhost:4000
- */
-export const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
-
+/* ===================== Shared API ===================== */
 export const api = axios.create({
-  baseURL: API_BASE,
-  timeout: 15000,
+  baseURL: import.meta?.env?.VITE_API_BASE_URL || "",
+  withCredentials: false,
 });
 
-/* ============ Auth token helpers ============ */
-const tokenKey = 'news_admin_token';
-export function getToken() { return localStorage.getItem(tokenKey) || ''; }
-export function setToken(t) { localStorage.setItem(tokenKey, t); }
-export function clearToken() { localStorage.removeItem(tokenKey); }
-
-/* ============ Admin preview helpers ============ */
-const previewKey = 'geoPreviewCountry';
-export function getPreviewCountry() { return localStorage.getItem(previewKey) || ''; }
-export function setPreviewCountry(val) {
-  if (val) localStorage.setItem(previewKey, val.toUpperCase());
-  else localStorage.removeItem(previewKey);
+export function getToken() {
+  try {
+    return localStorage.getItem("token") || "";
+  } catch {
+    return "";
+  }
 }
 
-/**
- * NORMALIZE + ATTACH HEADERS
- */
+export function setToken(t) {
+  try {
+    localStorage.setItem("token", String(t || ""));
+  } catch {}
+}
+
 api.interceptors.request.use((config) => {
-  const url = config.url || '';
-  if (typeof url === 'string') {
-    if (url.startsWith('/api/')) config.url = url.slice(4);
-    else if (url === '/api') config.url = '/';
-  }
-
   const t = getToken();
-  if (t) config.headers['Authorization'] = `Bearer ${t}`;
-
-  const preview = getPreviewCountry();
-  if (preview) config.headers['X-Geo-Preview-Country'] = preview.toUpperCase();
-
+  if (t) config.headers.Authorization = `Bearer ${t}`;
   return config;
 });
 
-/* ============ UI tokens ============ */
+/* ===================== Shared constants ===================== */
+export const CATEGORIES = [
+  "All",
+  "General",
+  "World",
+  "Politics",
+  "Business",
+  "Entertainment",
+  "Health",
+  "Science",
+  "Sports",
+  "Tech",
+  "History",
+  "Finance",
+];
+
 export const styles = {
-  page: { maxWidth: 980, margin: '0 auto', padding: 24, fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto' },
-  nav: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12, flexWrap: 'wrap' },
-  link: { textDecoration: 'none', color: '#1B4965', fontWeight: 600 },
-  button: { padding: '10px 14px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#f8fafc', cursor: 'pointer' },
-  danger: { padding: '10px 14px', borderRadius: 10, border: '1px solid #fee2e2', background: '#fef2f2', cursor: 'pointer' },
-  badge: { marginLeft: 8, padding: '2px 8px', borderRadius: 999, fontSize: 12, background: '#eef2ff', border: '1px solid #e5e7eb' },
-  card: { border: '1px solid #eee', borderRadius: 12, padding: 16, background: '#fff', boxShadow: '0 1px 1px rgba(0,0,0,0.02)', marginBottom: 12 },
-  h3: { margin: '0 0 6px' },
-  p: { margin: '8px 0 0' },
-  muted: { color: '#666' },
-  hr: { border: 0, height: 1, background: '1px solid #f0f0f0', margin: '12px 0' },
-  input: { width: '100%', padding: 10, borderRadius: 10, border: '1px solid #e5e7eb', outline: 'none', marginBottom: 8 },
+  page: { padding: 16, maxWidth: 1120, margin: "0 auto" },
+  nav: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 },
+  card: {
+    background: "#0c1b3a",
+    border: "1px solid rgba(255,255,255,0.10)",
+    borderRadius: 12,
+    padding: 16,
+    color: "#E6EDF3",
+  },
+  button: {
+    background: "#10284e",
+    color: "#E6EDF3",
+    border: "1px solid rgba(255,255,255,0.10)",
+    borderRadius: 10,
+    padding: "8px 12px",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  input: {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: "1px solid rgba(255,255,255,0.12)",
+    background: "#0c1b3a",
+    color: "#E6EDF3",
+    outline: "none",
+  },
+  hr: { border: "none", borderTop: "1px solid rgba(255,255,255,0.10)", margin: "14px 0" },
+  p: { margin: "8px 0", color: "#E6EDF3" },
+  muted: { color: "rgba(255,255,255,0.65)" },
+  badge: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "4px 8px",
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.10)",
+    fontSize: 12,
+    fontWeight: 800,
+    marginLeft: 8,
+  },
 };
 
-export const CATEGORIES = ['All','General','Politics','Business','Finance','Tech','Sports','Entertainment','World'];
+/* ===================== Public pages (lazy) ===================== */
+const NotFound = lazy(() => import("./pages/public/NotFound.jsx"));
+const SearchPage = lazy(() => import("./pages/public/SearchPage.jsx"));
+const PublicHome = lazy(() => import("./pages/public/PublicHome.jsx"));
+const CategoryPage = lazy(() => import("./pages/public/CategoryPage.jsx"));
+const TagPage = lazy(() => import("./pages/public/TagPage.jsx"));
+const ReaderArticle = lazy(() => import("./pages/public/Article.jsx"));
+const TopNews = lazy(() => import("./pages/public/TopNews.jsx"));
+const FinanceCategoryPage = lazy(() => import("./pages/public/FinanceCategoryPage.jsx"));
+const HealthPage = lazy(() => import("./pages/public/HealthPage.jsx"));
+const HistoryPage = lazy(() => import("./pages/history/HistoryPage.jsx"));
 
-/* ============ Cloudinary upload helper ============ */
-export async function uploadImageViaCloudinary(file) {
-  if (!file) return { url: '', publicId: '' };
+/* ===================== Admin pages (ALL lazy) ===================== */
+const AdminShell = lazy(() => import("./layouts/AdminShell.jsx"));
+const AdminDashboard = lazy(() => import("./pages/admin/Dashboard.jsx"));
+const AdminMedia = lazy(() => import("./pages/admin/MediaLibrary.jsx"));
+const ArticlesPage = lazy(() => import("./pages/admin/ArticlesPage.jsx"));
+const CategoriesPage = lazy(() => import("./pages/admin/CategoriesPage.jsx"));
+const TagsPage = lazy(() => import("./pages/admin/TagsPage.jsx"));
+const SettingsPage = lazy(() => import("./pages/admin/SettingsPage.jsx"));
+const CommentsPage = lazy(() => import("./pages/admin/CommentsPage.jsx"));
+const BreakingNewsAdmin = lazy(() => import("./pages/admin/BreakingNewsAdmin.jsx"));
+const TickerAdmin = lazy(() => import("./pages/admin/TickerAdmin.jsx"));
+const SectionsPage = lazy(() => import("./admin/sections/SectionsPage.jsx"));
+const SectionsV2Page = lazy(() => import("./admin/sectionsV2/SectionsV2Page.jsx"));
+const AutomationDashboard = lazy(() => import("./pages/admin/AutomationDashboard.jsx"));
 
-  const sig = await api.post('/uploads/sign');
-  const { signature, timestamp, apiKey, cloudName, folder } = sig.data;
+const AutmotionFeedsPage = lazy(() => import("./pages/admin/autmotion/FeedsPage.jsx"));
+const AutmotionQueuePage = lazy(() => import("./pages/admin/autmotion/QueuePage.jsx"));
+const AutmotionDraftsPage = lazy(() => import("./pages/admin/autmotion/DraftsPage.jsx"));
+const AutmotionXSourcesPage = lazy(() => import("./pages/admin/autmotion/XSourcesPage.jsx"));
+const AutmotionXQueuePage = lazy(() => import("./pages/admin/autmotion/XQueuePage.jsx"));
 
-  const form = new FormData();
-  form.append('file', file);
-  form.append('timestamp', timestamp);
-  form.append('api_key', apiKey);
-  form.append('signature', signature);
-  form.append('folder', folder);
+const ArticlesBulkImport = lazy(() => import("./admin/ArticlesBulkImport.jsx"));
+const AdminDrafts = lazy(() => import("./admin/articles/AdminDrafts.jsx"));
+const AdsPage = lazy(() => import("./admin/AdsPage.jsx"));
+const AdminXPage = lazy(() => import("./pages/AdminX.jsx"));
 
-  const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
-  const res = await fetch(uploadUrl, { method: 'POST', body: form });
-  if (!res.ok) throw new Error('Cloudinary upload failed');
-  const json = await res.json();
-  return { url: json.secure_url, publicId: json.public_id };
-}
+/* ===================== Static pages ===================== */
+const AboutPage = lazy(() => import("./pages/static/About.jsx"));
+const ContactPage = lazy(() => import("./pages/static/Contact.jsx"));
+const EditorialPolicyPage = lazy(() => import("./pages/static/EditorialPolicy.jsx"));
+const CorrectionsPage = lazy(() => import("./pages/static/Corrections.jsx"));
+const PrivacyPolicyPage = lazy(() => import("./pages/static/PrivacyPolicy.jsx"));
+const TermsPage = lazy(() => import("./pages/static/Terms.jsx"));
+const AdvertisingPage = lazy(() => import("./pages/static/Advertising.jsx"));
+const AuthorPage = lazy(() => import("./pages/static/Author.jsx"));
+const EditorialDisclaimerPage = lazy(() => import("./pages/static/EditorialDisclaimer.jsx"));
 
-/* ============ SEO helpers (SAFE) ============ */
-export function upsertTag(tagName, attrs = {}, { textContent } = {}) {
-  if (!tagName || /[\[\]#.:]/.test(tagName)) {
-    throw new Error(`upsertTag: tagName must be a bare tag (received "${tagName}")`);
-  }
-  const attrSelector = Object.entries(attrs).map(([k, v]) => `[${k}="${String(v)}"]`).join('');
-  const selector = `${tagName}${attrSelector}`;
-  let el = document.head.querySelector(selector);
+/* ===================== Analytics ===================== */
+import { notifyRouteChange, track } from "./lib/analytics";
 
-  if (!el) {
-    el = document.createElement(tagName);
-    el.setAttribute('data-managed', 'seo');
-    document.head.appendChild(el);
-  }
+/* ===================== Error Boundary ===================== */
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
-  Object.entries(attrs).forEach(([k, v]) => {
-    if (v === null || v === undefined) el.removeAttribute(k);
-    else el.setAttribute(k, String(v));
-  });
-
-  if (typeof textContent === 'string') el.textContent = textContent;
-  return el;
-}
-
-export function removeManagedHeadTags() {
-  document.querySelectorAll('head [data-managed="seo"]').forEach((n) => n.remove());
-}
-
-export function setJsonLd(obj) {
-  document
-    .querySelectorAll('script[type="application/ld+json"][data-managed="seo"]:not([data-jsonld-id])')
-    .forEach((n) => n.remove());
-  const s = document.createElement('script');
-  s.type = 'application/ld+json';
-  s.setAttribute('data-managed', 'seo');
-  s.text = JSON.stringify(obj);
-  document.head.appendChild(s);
-}
-
-export function addJsonLd(id, obj) {
-  const head = document.head;
-  let s = head.querySelector(
-    `script[type="application/ld+json"][data-managed="seo"][data-jsonld-id="${id}"]`
-  );
-  if (!s) {
-    s = document.createElement('script');
-    s.type = 'application/ld+json';
-    s.setAttribute('data-managed', 'seo');
-    s.setAttribute('data-jsonld-id', id);
-    head.appendChild(s);
-  }
-  s.text = JSON.stringify(obj);
-}
-
-export function stripHtmlClient(s = '') {
-  return String(s).replace(/<[^>]*>/g, '');
-}
-
-export function buildDescriptionClient(doc = {}) {
-  const raw =
-    (doc.summary && doc.summary.trim()) ||
-    stripHtmlClient(doc.body || doc.bodyHtml || '').slice(0, 200);
-  return String(raw).replace(/\s+/g, ' ').slice(0, 160);
-}
-
-export function emitBreadcrumbs(trail = []) {
-  const itemListElement = trail.map((c, i) => ({
-    '@type': 'ListItem',
-    position: i + 1,
-    name: c.name,
-    item: c.url,
-  }));
-
-  addJsonLd('breadcrumbs', {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement,
-  });
-}
-
-export function buildCanonicalFromLocation() {
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const url = new URL(origin + window.location.pathname + window.location.search);
-
-  ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','fbclid','gclid']
-    .forEach(p => url.searchParams.delete(p));
-
-  if (url.pathname !== '/' && url.pathname.endsWith('/')) {
-    url.pathname = url.pathname.replace(/\/+$/, '');
-  }
-
-  url.pathname = url.pathname.replace(
-    /^\/(category|tag|author)\/([^\/]+)(.*)$/i,
-    (_m, seg, slug, rest) => `/${seg.toLowerCase()}/${slug.toLowerCase()}${rest || ''}`
-  );
-
-  const q = url.searchParams.toString();
-  url.search = q ? `?${q}` : '';
-  return url.toString();
-}
-
-/* ============ Category route wrapper (Finance/Business/History) ============ */
+/* ===================== Category Route Wrapper ===================== */
 function AnyCategoryRoute() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const loc = useLocation();
-
-  const raw = String(slug || '');
-  const normalized = raw.toLowerCase();
-
+  const normalized = String(slug || "").toLowerCase();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -281,16 +172,13 @@ function AnyCategoryRoute() {
 
   if (!ready) return null;
 
-  // ⭐⭐⭐ NEW: History category override
-  if (normalized === 'history') {
-    return <HistoryPage />;
-  }
+  if (normalized === "history") return <HistoryPage />;
 
-  if (normalized === 'finance' || normalized === 'business') {
+  if (normalized === "finance" || normalized === "business") {
     return (
       <FinanceCategoryPage
         categorySlug={normalized}
-        displayName={normalized === 'business' ? 'Business' : 'Finance'}
+        displayName={normalized === "business" ? "Business" : "Finance"}
       />
     );
   }
@@ -298,61 +186,52 @@ function AnyCategoryRoute() {
   return <CategoryPage />;
 }
 
-/* ============ Router ============ */
+/* ===================== App ===================== */
 export default function App() {
   const loc = useLocation();
 
-  useEffect(() => { initAnalytics(); }, []);
-
   useEffect(() => {
     notifyRouteChange(loc.pathname, loc.search);
-    track('page_view', { path: `${loc.pathname}${loc.search}` });
+    track("page_view", { path: `${loc.pathname}${loc.search}` });
   }, [loc.pathname, loc.search]);
 
   useEffect(() => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const siteName = 'My News';
-    const searchTarget = `${origin}/search?q={search_term_string}`;
-
-    addJsonLd('site', {
-      '@context': 'https://schema.org',
-      '@type': 'WebSite',
-      name: siteName,
-      url: origin || 'https://example.com',
+    const origin = window.location.origin;
+    addJsonLd("site", {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: "My News",
+      url: origin,
       potentialAction: {
-        '@type': 'SearchAction',
-        target: searchTarget,
-        'query-input': 'required name=search_term_string',
+        "@type": "SearchAction",
+        target: `${origin}/search?q={search_term_string}`,
+        "query-input": "required name=search_term_string",
       },
     });
-  }, [loc.pathname, loc.search]);
+  }, []);
 
   useEffect(() => {
-    const href = buildCanonicalFromLocation();
-    upsertTag('link', { rel: 'canonical', href });
+    upsertTag("link", {
+      rel: "canonical",
+      href: buildCanonicalFromLocation(),
+    });
   }, [loc.pathname, loc.search]);
 
   return (
     <ErrorBoundary>
       <Suspense fallback={<div style={{ padding: 16 }}>Loading…</div>}>
         <Routes>
-          {/* Public */}
           <Route path="/" element={<PublicHome />} />
           <Route path="/top-news" element={<TopNews />} />
           <Route path="/health" element={<HealthPage />} />
 
-          <Route path="/admin/ads" element={<AdminShell><AdsPage /></AdminShell>} />
-
-          {/* Category routes */}
           <Route path="/category/:slug" element={<AnyCategoryRoute />} />
 
           <Route path="/tag/:slug" element={<TagPage />} />
           <Route path="/article/:slug" element={<ReaderArticle />} />
           <Route path="/news/:slug" element={<ReaderArticle />} />
-
           <Route path="/search" element={<SearchPage />} />
 
-          {/* Static pages */}
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/editorial-policy" element={<EditorialPolicyPage />} />
@@ -364,10 +243,6 @@ export default function App() {
           <Route path="/advertising" element={<AdvertisingPage />} />
           <Route path="/author/:slug" element={<AuthorPage />} />
 
-          {/* 404 for public routes */}
-          <Route path="*" element={<NotFound />} />
-
-          {/* Admin */}
           <Route path="/admin" element={<AdminShell><AdminDashboard /></AdminShell>} />
           <Route path="/admin/articles" element={<AdminShell><ArticlesPage /></AdminShell>} />
           <Route path="/admin/articles/bulk" element={<AdminShell><ArticlesBulkImport /></AdminShell>} />
@@ -380,21 +255,20 @@ export default function App() {
           <Route path="/admin/ticker" element={<AdminShell><TickerAdmin /></AdminShell>} />
           <Route path="/admin/sections" element={<AdminShell><SectionsPage /></AdminShell>} />
           <Route path="/admin/sections-v2" element={<AdminShell><SectionsV2Page /></AdminShell>} />
-
-          {/* ⭐ NEW: Automation Dashboard route */}
           <Route path="/admin/automation" element={<AdminShell><AutomationDashboard /></AdminShell>} />
 
-          {/* Autmotion */}
           <Route path="/admin/autmotion/feeds" element={<AdminShell><AutmotionFeedsPage /></AdminShell>} />
           <Route path="/admin/autmotion/queue" element={<AdminShell><AutmotionQueuePage /></AdminShell>} />
           <Route path="/admin/autmotion/drafts" element={<AdminShell><AutmotionDraftsPage /></AdminShell>} />
           <Route path="/admin/autmotion/x-sources" element={<AdminShell><AutmotionXSourcesPage /></AdminShell>} />
           <Route path="/admin/autmotion/x-queue" element={<AdminShell><AutmotionXQueuePage /></AdminShell>} />
-          {/* Existing extra mapping to XQueue under /admin/automation/x-queue, kept as-is */}
           <Route path="/admin/automation/x-queue" element={<AdminShell><AutmotionXQueuePage /></AdminShell>} />
 
           <Route path="/admin/x" element={<AdminShell><AdminXPage /></AdminShell>} />
           <Route path="/admin/drafts" element={<AdminShell><AdminDrafts /></AdminShell>} />
+          <Route path="/admin/ads" element={<AdminShell><AdsPage /></AdminShell>} />
+
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
     </ErrorBoundary>

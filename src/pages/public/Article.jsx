@@ -26,17 +26,16 @@ import '../../styles/rails.css';
 import { buildCanonicalFromLocation } from '../../App.jsx';
 import { ensureRenderableImage } from '../../lib/images';
 
-
 // --- Publisher/site constants (used in JSON-LD) ---
 const SITE_NAME = 'The Timely Voice';
 
-const SITE_URL  = typeof window !== 'undefined' ? window.location.origin : 'https://example.com';
+const SITE_URL =
+  typeof window !== 'undefined' ? window.location.origin : 'https://example.com';
 // Use a square logo that actually exists and is at least 112x112. 512x512 PNG/SVG recommended.
 const SITE_LOGO = `${SITE_URL}/logo-512.png`;
 
 // Local hero fallback (from /public)
 const FALLBACK_HERO_IMAGE = '/tv-default-hero.jpg';
-
 
 /* ---------- helpers ---------- */
 function estimateReadingTime(text = '', wpm = 200) {
@@ -59,6 +58,25 @@ function useIsMobile(breakpoint = 768) {
   return isMobile;
 }
 
+/* ===================== FIX 2 helpers: Video URL rendering ===================== */
+function normalizeVideoUrl(url) {
+  const u = String(url || '').trim();
+  if (!u) return '';
+
+  // Google Drive share link -> embed preview (more reliable than <video>)
+  // Example: https://drive.google.com/file/d/FILE_ID/view?usp=sharing
+  const m = u.match(/drive\.google\.com\/file\/d\/([^/]+)/i);
+  if (m && m[1]) {
+    return `https://drive.google.com/file/d/${m[1]}/preview`;
+  }
+
+  return u;
+}
+function isDrivePreview(url) {
+  return /drive\.google\.com\/file\/d\/[^/]+\/preview/i.test(url || '');
+}
+/* ============================================================================ */
+
 /** Normalize article body:
  * - If it already contains HTML (<p>, <h2>, <ul>…), keep it as-is.
  * - Otherwise interpret simple markdown-like syntax:
@@ -68,28 +86,24 @@ function useIsMobile(breakpoint = 768) {
  *   1. item       → <ol><li>item</li>…>
  *   Blank lines   → paragraphs (<p>…</p>)
  */
-function normalizeBody(htmlOrText = "") {
-  let s = String(htmlOrText || "").trim();
-  if (!s) return "";
+function normalizeBody(htmlOrText = '') {
+  let s = String(htmlOrText || '').trim();
+  if (!s) return '';
 
   // 1) Strip markdown-style heading hashes at the start of lines.
-  //    "#### Heading" -> "Heading"
-  s = s.replace(/^#{1,6}\s*/gm, "");
+  s = s.replace(/^#{1,6}\s*/gm, '');
 
   // 2) Strip markdown bold/italic markers but keep the inner text.
-  //    "**word**" -> "word", "*word*" -> "word"
-  s = s.replace(/\*\*(.+?)\*\*/g, "$1");
-  s = s.replace(/\*(.+?)\*/g, "$1");
+  s = s.replace(/\*\*(.+?)\*\*/g, '$1');
+  s = s.replace(/\*(.+?)\*/g, '$1');
 
   // 3) If it already looks like HTML, return cleaned string directly.
-  //    This means your inline colors from admin (style="background-color:#5D8AA8")
-  //    are used exactly as you write them.
   if (/(<(p|h1|h2|h3|h4|h5|ul|ol|li|blockquote|br|span|div|mark)[\s>])/i.test(s)) {
     return s;
   }
 
   // 4) Otherwise, treat it as simple markdown-ish text and build HTML
-  const lines = s.replace(/\r\n?/g, "\n").split("\n");
+  const lines = s.replace(/\r\n?/g, '\n').split('\n');
 
   const blocks = [];
   let paraLines = [];
@@ -98,15 +112,15 @@ function normalizeBody(htmlOrText = "") {
 
   const flushParagraph = () => {
     if (!paraLines.length) return;
-    const text = paraLines.join(" ").trim();
+    const text = paraLines.join(' ').trim();
     if (text) blocks.push(`<p>${text}</p>`);
     paraLines = [];
   };
 
   const flushList = () => {
     if (!listItems.length) return;
-    const tag = listType === "ol" ? "ol" : "ul";
-    const inner = listItems.map((li) => `<li>${li}</li>`).join("");
+    const tag = listType === 'ol' ? 'ol' : 'ul';
+    const inner = listItems.map((li) => `<li>${li}</li>`).join('');
     blocks.push(`<${tag}>${inner}</${tag}>`);
     listItems = [];
     listType = null;
@@ -141,7 +155,7 @@ function normalizeBody(htmlOrText = "") {
     if (bulletMatch || orderedMatch) {
       flushParagraph();
       const text = (bulletMatch ? bulletMatch[2] : orderedMatch[2]).trim();
-      const nextType = orderedMatch ? "ol" : "ul";
+      const nextType = orderedMatch ? 'ol' : 'ul';
 
       if (!listType) {
         listType = nextType;
@@ -165,10 +179,10 @@ function normalizeBody(htmlOrText = "") {
   flushParagraph();
   flushList();
 
-  let html = blocks.join("");
-  html = html.replace(/<p>\s*<\/p>/gi, "");
+  let html = blocks.join('');
+  html = html.replace(/<p>\s*<\/p>/gi, '');
   if (!html) {
-    return s ? `<p>${s}</p>` : "";
+    return s ? `<p>${s}</p>` : '';
   }
   return html;
 }
@@ -178,13 +192,17 @@ function splitParagraphs(normalizedHtml = '') {
   if (!normalizedHtml) return [];
   return normalizedHtml
     .split(/<\/p>/i)
-    .map(chunk => chunk.trim())
+    .map((chunk) => chunk.trim())
     .filter(Boolean)
-    .map(chunk => (chunk.endsWith('</p>') ? chunk : `${chunk}</p>`));
+    .map((chunk) => (chunk.endsWith('</p>') ? chunk : `${chunk}</p>`));
 }
 
 /** Simple in-article AdSense slot */
-function AdSlot({ slotId = 'in-article-1', client = 'ca-pub-XXXXXXXXXXXXXXX', slot = '1234567890' }) {
+function AdSlot({
+  slotId = 'in-article-1',
+  client = 'ca-pub-XXXXXXXXXXXXXXX',
+  slot = '1234567890',
+}) {
   useEffect(() => {
     try {
       (window.adsbygoogle = window.adsbygoogle || []).push({});
@@ -199,7 +217,7 @@ function AdSlot({ slotId = 'in-article-1', client = 'ca-pub-XXXXXXXXXXXXXXX', sl
         data-ad-slot={slot}
         data-ad-format="auto"
         data-full-width-responsive="true"
-        data-adtest="on"   /* remove when live */
+        data-adtest="on" /* remove when live */
         id={slotId}
       />
     </div>
@@ -217,15 +235,10 @@ function pickByline(doc = {}) {
   const author = (doc.author ?? '').toString().trim();
   const source = (doc.source ?? '').toString().trim();
 
-  // If you ever add a real author later, this will show their name
   if (author) return author;
-
-  // If there's a meaningful source and it's not just "Automation"
   if (source && source.toLowerCase() !== 'automation') {
     return source;
   }
-
-  // Default: your branded news desk
   return BRAND_NEWS_DESK;
 }
 
@@ -249,7 +262,6 @@ function AuthorBox({ article }) {
         boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
       }}
     >
-      {/* 🔥 SINGLE LINE TITLE "Reported by Desk" */}
       <div
         style={{
           fontFamily: 'Arial, sans-serif',
@@ -262,14 +274,13 @@ function AuthorBox({ article }) {
         Reported by {displayName}
       </div>
 
-      {/* Disclaimer text */}
       <p
         style={{
           margin: 0,
           fontSize: 14,
           lineHeight: 1.7,
           color: '#cbd5f5',
-         fontFamily: 'Arial, sans-serif',
+          fontFamily: 'Arial, sans-serif',
         }}
       >
         Timely Voice News relies on information from government releases,
@@ -278,8 +289,8 @@ function AuthorBox({ article }) {
         neutrality, all content is provided strictly on an “as is” basis for
         general information and educational purposes only. It does not
         constitute financial, legal, medical or any other professional advice.
-        The Timely Voice, its editors and contributors make no representation
-        or warranty as to the completeness, timeliness or reliability of the
+        The Timely Voice, its editors and contributors make no representation or
+        warranty as to the completeness, timeliness or reliability of the
         information and accept no liability for any loss arising from reliance
         on it. Readers are advised to verify facts with original documents or
         consult a qualified professional before acting on any information
@@ -288,8 +299,6 @@ function AuthorBox({ article }) {
     </section>
   );
 }
-
-
 
 /* ----------------------------------- */
 
@@ -324,10 +333,15 @@ export default function ReaderArticle() {
   }
 
   const bodyRef = useRef(null);
-  useReadComplete({ id: article?.id || article?._id, slug: article?.slug, title: article?.title });
+  useReadComplete({
+    id: article?.id || article?._id,
+    slug: article?.slug,
+    title: article?.title,
+  });
 
   const canonical = useMemo(
-    () => buildCanonicalFromLocation(['article', String(slug || '').toLowerCase()]),
+    () =>
+      buildCanonicalFromLocation(['article', String(slug || '').toLowerCase()]),
     [slug]
   );
 
@@ -362,7 +376,9 @@ export default function ReaderArticle() {
         if (!cancel) setRailsLoading(false);
       }
     })();
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, []);
 
   /* ---------- fetch article ---------- */
@@ -373,10 +389,13 @@ export default function ReaderArticle() {
       try {
         setStatus('loading');
 
-        const res = await api.get(`/articles/slug/${encodeURIComponent(slug)}`, {
-          validateStatus: (s) => (s >= 200 && s < 300) || s === 308,
-          headers: { 'Cache-Control': 'no-cache' },
-        });
+        const res = await api.get(
+          `/articles/slug/${encodeURIComponent(slug)}`,
+          {
+            validateStatus: (s) => (s >= 200 && s < 300) || s === 308,
+            headers: { 'Cache-Control': 'no-cache' },
+          }
+        );
         if (!alive) return;
 
         if (res.status === 308 && res.data?.redirectTo) {
@@ -395,13 +414,17 @@ export default function ReaderArticle() {
         // ---- SEO
         removeManagedHeadTags();
 
-        const title = (doc.metaTitle && doc.metaTitle.trim()) || doc.title || 'Article';
+        const title =
+          (doc.metaTitle && doc.metaTitle.trim()) || doc.title || 'Article';
         const desc =
           (doc.metaDesc && doc.metaDesc.trim()) ||
           buildDescriptionClient({ bodyHtml, summary: doc.summary });
 
         upsertTag('title', {}, { textContent: `${title} — ${SITE_NAME}` });
-        upsertTag('meta', { name: 'description', content: String(desc).slice(0, 155) });
+        upsertTag('meta', {
+          name: 'description',
+          content: String(desc).slice(0, 155),
+        });
         upsertTag('link', { rel: 'canonical', href: canonical });
 
         // Article date metas for FB/OG/SEO
@@ -409,10 +432,20 @@ export default function ReaderArticle() {
           doc.publishedAt || doc.publishAt || doc.createdAt || Date.now()
         ).toISOString();
         const modifiedIso = new Date(
-          doc.updatedAt || doc.publishedAt || doc.publishAt || doc.createdAt || Date.now()
+          doc.updatedAt ||
+            doc.publishedAt ||
+            doc.publishAt ||
+            doc.createdAt ||
+            Date.now()
         ).toISOString();
-        upsertTag('meta', { property: 'article:published_time', content: publishedIso });
-        upsertTag('meta', { property: 'article:modified_time',  content: modifiedIso  });
+        upsertTag('meta', {
+          property: 'article:published_time',
+          content: publishedIso,
+        });
+        upsertTag('meta', {
+          property: 'article:modified_time',
+          content: modifiedIso,
+        });
 
         // Open Graph / Twitter
         const ogImage = ensureRenderableImage(doc);
@@ -427,48 +460,52 @@ export default function ReaderArticle() {
 
         upsertTag('meta', { property: 'og:type', content: 'article' });
         upsertTag('meta', { property: 'og:title', content: title });
-        upsertTag('meta', { property: 'og:description', content: String(desc).slice(0, 200) });
+        upsertTag('meta', {
+          property: 'og:description',
+          content: String(desc).slice(0, 200),
+        });
         upsertTag('meta', { property: 'og:url', content: canonical });
         if (ogImage) upsertTag('meta', { property: 'og:image', content: ogImage });
 
-        upsertTag('meta', { name: 'twitter:card', content: ogImage ? 'summary_large_image' : 'summary' });
+        upsertTag('meta', {
+          name: 'twitter:card',
+          content: ogImage ? 'summary_large_image' : 'summary',
+        });
         upsertTag('meta', { name: 'twitter:title', content: title });
-        upsertTag('meta', { name: 'twitter:description', content: String(desc).slice(0, 200) });
+        upsertTag('meta', {
+          name: 'twitter:description',
+          content: String(desc).slice(0, 200),
+        });
         if (ogImage) upsertTag('meta', { name: 'twitter:image', content: ogImage });
 
         // Optional author meta (helps some parsers) – prefers doc.author only
-          const authorNameMeta =
-            (doc.author && String(doc.author).trim()) || 'Timely Voice News';
-          upsertTag('meta', { name: 'author', content: authorNameMeta });
-
+        const authorNameMeta =
+          (doc.author && String(doc.author).trim()) || 'Timely Voice News';
+        upsertTag('meta', { name: 'author', content: authorNameMeta });
 
         // ---------- JSON-LD: Strong NewsArticle + Breadcrumb ----------
         const categoryObj = doc.category ?? null;
         const categoryName =
           categoryObj && typeof categoryObj === 'object'
-            ? (categoryObj.name || 'General')
-            : (categoryObj || 'General');
+            ? categoryObj.name || 'General'
+            : categoryObj || 'General';
         const categorySlug =
           categoryObj && typeof categoryObj === 'object'
-            ? (categoryObj.slug || categoryName)
+            ? categoryObj.slug || categoryName
             : categoryName;
 
-        // Author: prefer Person; fall back to Organization “News Desk”
-        // Author: prefer Person; fall back to your branded Organization
         const authorName =
           (doc.author && String(doc.author).trim()) || 'Timely Voice News';
 
-        const authorNode =
-          authorName.toLowerCase().includes('timely voice')
-            ? { '@type': 'Organization', name: authorName }
-            : { '@type': 'Person', name: authorName };
+        const authorNode = authorName
+          .toLowerCase()
+          .includes('timely voice')
+          ? { '@type': 'Organization', name: authorName }
+          : { '@type': 'Person', name: authorName };
 
-
-        // Dates (ISO)
         const datePublishedISO = publishedIso;
         const dateModifiedISO = modifiedIso;
 
-        // Publisher Organization node (with logo)
         const publisherNode = {
           '@type': 'Organization',
           name: SITE_NAME,
@@ -503,9 +540,23 @@ export default function ReaderArticle() {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+            {
+              '@type': 'ListItem',
+              position: 1,
+              name: 'Home',
+              item: `${SITE_URL}/`,
+            },
             ...(categoryName
-              ? [{ '@type': 'ListItem', position: 2, name: categoryName, item: `${SITE_URL}/category/${encodeURIComponent(categorySlug)}` }]
+              ? [
+                  {
+                    '@type': 'ListItem',
+                    position: 2,
+                    name: categoryName,
+                    item: `${SITE_URL}/category/${encodeURIComponent(
+                      categorySlug
+                    )}`,
+                  },
+                ]
               : []),
             {
               '@type': 'ListItem',
@@ -516,7 +567,10 @@ export default function ReaderArticle() {
           ],
         };
 
-        setJsonLd({ '@context': 'https://schema.org', '@graph': [articleNode, breadcrumbNode] });
+        setJsonLd({
+          '@context': 'https://schema.org',
+          '@graph': [articleNode, breadcrumbNode],
+        });
 
         // analytics
         try {
@@ -547,7 +601,9 @@ export default function ReaderArticle() {
               validateStatus: () => true,
             });
             const extra = (r2.data?.items || []).filter(
-              (a) => a.slug !== doc.slug && !pool.find((p) => p.slug === a.slug)
+              (a) =>
+                a.slug !== doc.slug &&
+                !pool.find((p) => p.slug === a.slug)
             );
             pool = [...pool, ...extra];
           }
@@ -581,9 +637,11 @@ export default function ReaderArticle() {
     (async () => {
       try {
         if (!article?.slug) return;
-        const res = await api.get('/top-news', { params: { limit: 50, page: 1 } });
+        const res = await api.get('/top-news', {
+          params: { limit: 50, page: 1 },
+        });
         const list = Array.isArray(res?.data?.items) ? res.data.items : [];
-        const idx = list.findIndex(x => x.slug === article.slug);
+        const idx = list.findIndex((x) => x.slug === article.slug);
         if (idx !== -1 && list[idx + 1]) {
           if (!cancel) setNextSlug(list[idx + 1].slug);
         } else {
@@ -593,7 +651,9 @@ export default function ReaderArticle() {
         if (!cancel) setNextSlug(null);
       }
     })();
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [article?.slug]);
 
   /* ---------- (3) fetch next article when we have nextSlug ---------- */
@@ -605,35 +665,38 @@ export default function ReaderArticle() {
           if (!cancel) setNextArticle(null);
           return;
         }
-        const res = await api.get(`/articles/slug/${encodeURIComponent(nextSlug)}`, {
-          validateStatus: (s) => s >= 200 && s < 300,
-          headers: { 'Cache-Control': 'no-cache' },
-        });
+        const res = await api.get(
+          `/articles/slug/${encodeURIComponent(nextSlug)}`,
+          {
+            validateStatus: (s) => s >= 200 && s < 300,
+            headers: { 'Cache-Control': 'no-cache' },
+          }
+        );
         if (!cancel) setNextArticle(res.data || null);
       } catch {
         if (!cancel) setNextArticle(null);
       }
     })();
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [nextSlug]);
 
   /* ---------- derived ---------- */
-  /* ---------- derived ---------- */
-const displayDate =
-  article?.updatedAt ||
-  article?.publishedAt ||
-  article?.publishAt ||
-  article?.createdAt;
+  const displayDate =
+    article?.updatedAt ||
+    article?.publishedAt ||
+    article?.publishAt ||
+    article?.createdAt;
 
-const rawImageUrl = ensureRenderableImage(article);
-const imageAlt = article?.imageAlt || article?.title || '';
+  const rawImageUrl = ensureRenderableImage(article);
+  const imageAlt = article?.imageAlt || article?.title || '';
 
-const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
+  const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
 
   // rails: alternate right, left, right, left…
   const rails = homeSections.filter((s) => s.template?.startsWith('rail_'));
   const rightRails = rails.filter((_, i) => i % 2 === 0);
-  const leftRails  = rails.filter((_, i) => i % 2 === 1);
 
   /* ---------- layout ---------- */
   const outerContainer = {
@@ -655,19 +718,20 @@ const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
     padding: '0 12px',
   };
 
-  // on mobile we don't render rails at all
-  const leftColumn   = { flex: '0 0 260px' };
   const centerColumn = {
-    flex: isMobile ? '1 1 auto' : '0 0 480px',
+    flex: isMobile ? '1 1 auto' : '0 0 740px',
     width: isMobile ? '100%' : 'auto',
   };
-  const rightColumn  = { flex: '0 0 260px' };
+  const rightColumn = { flex: '0 0 260px' };
 
   const railWrapFix = { display: 'flow-root', marginTop: 0, paddingTop: 0 };
 
   const renderRails = (items) =>
     items.map((sec, i) => (
-      <div key={sec.id || sec._id || sec.slug} style={{ marginTop: i === 0 ? 0 : 12 }}>
+      <div
+        key={sec.id || sec._id || sec.slug}
+        style={{ marginTop: i === 0 ? 0 : 12 }}
+      >
         <SectionRenderer section={sec} />
       </div>
     ));
@@ -699,7 +763,11 @@ const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
     lineHeight: 1,
   };
 
-  const timeText = { color: '#ffffffff', fontSize: isMobile ? 14 : 15, fontWeight: 500 };
+  const timeText = {
+    color: '#ffffffff',
+    fontSize: isMobile ? 14 : 15,
+    fontWeight: 500,
+  };
 
   const summaryBox = {
     background: '#003a7cff',
@@ -712,10 +780,6 @@ const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
     margin: '0 0 16px',
     boxShadow: '0 8px 20px 0 #000, 0 0 0 1px rgba(255,255,255,0.06)',
   };
-
-  const figureWrap = { margin: '0 0 12px' };
-  const imgStyle = { width: '100%', height: 'auto', borderRadius: 1, background: '#f1f5f9' };
-  const figCap = { color: '#64748b', fontSize: isMobile ? 14 : 16, marginTop: 6 };
 
   const articleBodyWrapper = { maxWidth: '70ch', margin: '0 auto' };
 
@@ -730,13 +794,15 @@ const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
     () => normalizeBody(article?.bodyHtml || article?.body || ''),
     [article?.bodyHtml, article?.body]
   );
-  const paragraphs = useMemo(() => splitParagraphs(normalizedBody), [normalizedBody]);
+  const paragraphs = useMemo(
+    () => splitParagraphs(normalizedBody),
+    [normalizedBody]
+  );
 
   // ------- (4) Light inline renderer for "Next up" -------
   function NextArticleInline({ doc, isMobile }) {
     if (!doc) return null;
 
-    // 🔧 fix: use image of the next article, not the current one
     const nextImageUrl = ensureRenderableImage(doc);
     const nextImageAlt = doc.imageAlt || doc.title || '';
     const bodyHtml = doc.bodyHtml || doc.body || '';
@@ -755,7 +821,12 @@ const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
       color: '#00ffbfff',
       fontWeight: 500,
     };
-    const imgS = { width: '100%', height: 'auto', borderRadius: 1, background: '#f1f5f9' };
+    const imgS = {
+      width: '100%',
+      height: 'auto',
+      borderRadius: 1,
+      background: '#f1f5f9',
+    };
     const bodyWrap = { maxWidth: '70ch', margin: '0 auto' };
     const proseS = {
       fontSize: isMobile ? 19 : 'clamp(19px, 2.2vw, 22px)',
@@ -765,8 +836,14 @@ const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
 
     return (
       <>
-        {/* divider + pill heading "Next up" */}
-        <div style={{ width: '100%', height: 1, background: 'rgba(255,255,255,0.25)', margin: '20px 0' }} />
+        <div
+          style={{
+            width: '100%',
+            height: 1,
+            background: 'rgba(255,255,255,0.25)',
+            margin: '20px 0',
+          }}
+        />
         <div
           style={{
             margin: '8px 0 16px',
@@ -777,7 +854,14 @@ const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
             gap: '12px',
           }}
         >
-          <div style={{ flex: 1, height: 2, background: 'rgba(255,255,255,0.3)', maxWidth: 140 }} />
+          <div
+            style={{
+              flex: 1,
+              height: 2,
+              background: 'rgba(255,255,255,0.3)',
+              maxWidth: 140,
+            }}
+          />
           <span
             style={{
               background: 'linear-gradient(135deg, #abcc16 0%, #9dff00 100%)',
@@ -793,7 +877,14 @@ const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
           >
             Next up
           </span>
-          <div style={{ flex: 1, height: 2, background: 'rgba(255,255,255,0.3)', maxWidth: 140 }} />
+          <div
+            style={{
+              flex: 1,
+              height: 2,
+              background: 'rgba(255,255,255,0.3)',
+              maxWidth: 140,
+            }}
+          />
         </div>
 
         <article
@@ -808,11 +899,13 @@ const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
             boxShadow: '0 0 0 0 transparent',
           }}
         >
-          <a href={`/article/${doc.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+          <a
+            href={`/article/${doc.slug}`}
+            style={{ textDecoration: 'none', color: 'inherit' }}
+          >
             <h2 style={titleH}>{doc.title}</h2>
           </a>
 
-          {/* ✅ use pickByline here */}
           <div style={srcRow}>By {pickByline(doc)}</div>
 
           {nextImageUrl && (
@@ -827,7 +920,13 @@ const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
                 style={imgS}
               />
               {doc.imageAlt ? (
-                <figcaption style={{ color: '#64748b', fontSize: isMobile ? 14 : 16, marginTop: 6 }}>
+                <figcaption
+                  style={{
+                    color: '#64748b',
+                    fontSize: isMobile ? 14 : 16,
+                    marginTop: 6,
+                  }}
+                >
                   {doc.imageAlt}
                 </figcaption>
               ) : null}
@@ -840,7 +939,6 @@ const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
             ))}
           </div>
 
-          {/* continue link */}
           <div style={{ marginTop: 12 }}>
             <a
               href={`/article/${doc.slug}`}
@@ -878,7 +976,9 @@ const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
         <SiteNav />
         <main id="content" className="container">
           <div style={{ padding: 24 }}>
-            <h1 style={{ fontWeight: 700, marginBottom: 8 }}>Story Not Available</h1>
+            <h1 style={{ fontWeight: 700, marginBottom: 8 }}>
+              Story Not Available
+            </h1>
             <p>This story isn’t available right now. Explore the latest headlines below.</p>
           </div>
         </main>
@@ -898,6 +998,10 @@ const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
       </>
     );
   }
+
+  // Prepare video (if any)
+  const videoUrlRaw = String(article?.videoUrl || '').trim();
+  const videoUrl = videoUrlRaw ? normalizeVideoUrl(videoUrlRaw) : '';
 
   return (
     <>
@@ -961,24 +1065,44 @@ const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
     padding: 0 2px;
     border-radius: 2px;
   }
+
+  /* INLINE HERO IMAGE/VIDEO – FLOAT LEFT ON DESKTOP */
+  .article-hero-inline {
+    float: left;
+    width: 40%;
+    max-width: 320px;
+    margin: 0 18px 10px 0;
+  }
+
+  .article-hero-inline img,
+  .article-hero-inline video,
+  .article-hero-inline iframe {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 1px;
+    background: #f1f5f9;
+  }
+
+  .article-hero-inline figcaption {
+    color: #64748b;
+    font-size: 14px;
+    margin-top: 4px;
+  }
+
+  @media (max-width: 767px) {
+    .article-hero-inline {
+      float: none;
+      width: 100%;
+      max-width: 100%;
+      margin: 0 0 12px 0;
+    }
+  }
 `}</style>
 
       <SiteNav />
       <div style={outerContainer}>
         <div style={mainWrapper}>
-          {/* LEFT RAILS (odd indices) — hidden on mobile */}
-          {!isMobile && (
-            <aside style={leftColumn}>
-              <div className="rail-wrap" style={railWrapFix}>
-                {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-                {!railsLoading && railsError && (
-                  <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>
-                )}
-                {!railsLoading && !railsError && renderRails(leftRails)}
-              </div>
-            </aside>
-          )}
-
           {/* CENTER ARTICLE */}
           <main style={centerColumn}>
             <article
@@ -995,17 +1119,23 @@ const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
             >
               <h1 style={titleH1}>{article.title}</h1>
 
-              {/* ✅ main byline fixed */}
               <div style={sourceRow}>By {pickByline(article)}</div>
 
-              {/* thin updated row */}
               <div style={timeShareBar}>
                 <small style={timeText}>
-                  {displayDate ? `Updated on: ${new Date(displayDate).toLocaleString()}` : ''}
+                  {displayDate
+                    ? `Updated on: ${new Date(displayDate).toLocaleString()}`
+                    : ''}
                   {reading.minutes ? (
                     <>
                       {' • '}
-                      <span style={{ color: '#ee6affff', fontWeight: 500, fontSize: isMobile ? 16 : 18 }}>
+                      <span
+                        style={{
+                          color: '#ee6affff',
+                          fontWeight: 500,
+                          fontSize: isMobile ? 16 : 18,
+                        }}
+                      >
                         {reading.minutes} min read
                       </span>
                     </>
@@ -1017,241 +1147,103 @@ const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
 
               {article.summary && <div style={summaryBox}>{article.summary}</div>}
 
-              {heroSrc && (
-  <figure style={figureWrap}>
-    <img
-      src={heroSrc}
-      alt={imageAlt || 'The Timely Voice'}
-      fetchPriority="high"
-      decoding="async"
-      loading="eager"
-      width="1280"
-      height="720"
-      style={imgStyle}
-      onError={(e) => {
-        // If Cloudinary (or any remote) fails, force local fallback once
-        if (e.currentTarget.dataset.fallback !== '1') {
-          e.currentTarget.dataset.fallback = '1';
-          e.currentTarget.src = FALLBACK_HERO_IMAGE;
-        }
-      }}
-    />
-    {article.imageAlt ? (
-      <figcaption style={figCap}>{article.imageAlt}</figcaption>
-    ) : null}
-  </figure>
-)}
+              {/* NEW: inline hero floated left inside article body */}
+              <div
+                ref={bodyRef}
+                className="article-body"
+                style={{ ...prose, ...articleBodyWrapper }}
+              >
+                {/* ===================== FIX 2: video replaces image when present ===================== */}
+                {videoUrl ? (
+                  <figure className="article-hero-inline">
+                    {isDrivePreview(videoUrl) ? (
+                      <div style={{ width: '100%', aspectRatio: '16 / 9' }}>
+                        <iframe
+                          src={videoUrl}
+                          title={article?.title || 'Video'}
+                          allow="autoplay; fullscreen"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            border: 0,
+                            borderRadius: 1,
+                            background: '#f1f5f9',
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <video
+                        src={videoUrl}
+                        controls
+                        playsInline
+                        preload="metadata"
+                        style={{ width: '100%', borderRadius: 1 }}
+                      />
+                    )}
+                    {article.videoAlt ? (
+                      <figcaption>{article.videoAlt}</figcaption>
+                    ) : null}
+                  </figure>
+                ) : heroSrc ? (
+                  <figure className="article-hero-inline">
+                    <img
+                      src={heroSrc}
+                      alt={imageAlt || 'The Timely Voice'}
+                      fetchPriority="high"
+                      decoding="async"
+                      loading="eager"
+                      width="640"
+                      height="360"
+                      onError={(e) => {
+                        if (e.currentTarget.dataset.fallback !== '1') {
+                          e.currentTarget.dataset.fallback = '1';
+                          e.currentTarget.src = FALLBACK_HERO_IMAGE;
+                        }
+                      }}
+                    />
+                    {article.imageAlt ? (
+                      <figcaption>{article.imageAlt}</figcaption>
+                    ) : null}
+                  </figure>
+                ) : null}
+                {/* ================================================================================ */}
 
-
-              {/* Structured body with inline ad after paragraph 2 */}
-              <div ref={bodyRef} className="article-body" style={{ ...prose, ...articleBodyWrapper }}>
-                {paragraphs.length === 0 ? null : paragraphs.map((html, i) => (
-                  <div key={`p-${i}`}>
-                    <div dangerouslySetInnerHTML={{ __html: html }} />
-                    {i === 1 && <AdSlot slotId="in-article-1" />}
-                  </div>
-                ))}
+                {paragraphs.length === 0
+                  ? null
+                  : paragraphs.map((html, i) => (
+                      <div key={`p-${i}`}>
+                        <div dangerouslySetInnerHTML={{ __html: html }} />
+                        {i === 1 && <AdSlot slotId="in-article-1" />}
+                      </div>
+                    ))}
               </div>
 
-               {/* ✅ Author / newsroom box under the article */}
               <AuthorBox article={article} />
 
-
-              {/* NEW: Related stories widget (improves internal linking) */}
               <RelatedStories
                 currentSlug={article.slug}
-                category={article?.category?.name ?? (typeof article?.category === 'string' ? article.category : 'General')}
+                category={
+                  article?.category?.name ??
+                  (typeof article?.category === 'string'
+                    ? article.category
+                    : 'General')
+                }
                 title="Related stories"
                 dense={false}
               />
-              {/* <div style={shareBottom}><ShareBar /></div> */}
             </article>
 
-            {related.length > 0 && (
-              <section style={{ marginTop: 16 }}>
-                <div
-                  style={{
-                    margin: '8px 0 16px',
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '12px',
-                  }}
-                >
-                  {/* left line */}
-                  <div
-                    style={{
-                      flex: '1',
-                      height: '2px',
-                      background: 'rgba(255,255,255,0.3)',
-                      maxWidth: '140px',
-                    }}
-                  ></div>
-
-                  {/* pill */}
-                  <span
-                    style={{
-                      background: 'linear-gradient(135deg, #abcc16 0%, #9dff00 100%)',
-                      color: '#000',
-                      fontWeight: 1000,
-                      padding: '6px 16px',
-                      fontSize: 21,
-                      lineHeight: 1.2,
-                      borderRadius: 0,
-                      boxShadow: '5px 5px 0 rgba(0,0,0,1)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      letterSpacing: 0.2,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    Keep Reading
-                  </span>
-
-                  {/* right line */}
-                  <div
-                    style={{
-                      flex: '1',
-                      height: '2px',
-                      background: 'rgba(255,255,255,0.3)',
-                      maxWidth: '140px',
-                    }}
-                  ></div>
-                </div>
-
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(220px, 1fr))',
-                    gap: isMobile ? 10 : 12,
-                  }}
-                >
-                  {related.map((a) => {
-                    const rImg = a.coverImageUrl || a.imageUrl || '';
-
-                    // ——— UNIFORM CARD SIZING (MOBILE HEIGHT INCREASED) ———
-                    const IMG_H = isMobile ? 230 : 150;
-                    const TITLE_FS = isMobile ? 17 : 16;
-                    const TITLE_LH = 1.3;
-                    const TITLE_LINES = 3;
-                    const TITLE_MIN_H = Math.ceil(TITLE_FS * TITLE_LH * TITLE_LINES);
-
-                    return (
-                      <a
-                        key={a._id || a.id || a.slug}
-                        href={`/article/${a.slug}`}
-                        style={{ textDecoration: 'none', color: 'inherit' }}
-                      >
-                        <article
-                          style={{
-                            background: 'linear-gradient(135deg, #0a2a6b 0%, #163a8a 50%, #1d4ed8 100%)',
-                            color: '#e9edff',
-                            border: '0 none',
-                            borderRadius: 0,
-                            padding: 0,
-                            boxShadow: '0 6px 24px rgba(0,0,0,.25)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            height: '100%',
-                            overflow: 'hidden',
-                          }}
-                        >
-                          {rImg && (
-                            <div style={{ position: 'relative' }}>
-                              {/* centered pill over the image */}
-                              <span
-                                style={{
-                                  position: 'absolute',
-                                  top: 4,
-                                  left: '13%',
-                                  transform: 'translateX(-50%)',
-                                  zIndex: 2,
-                                  pointerEvents: 'none',
-                                }}
-                              >
-                                <span
-                                  style={{
-                                    background: 'linear-gradient(135deg, #abcc16 0%, #9dff00 100%)',
-                                    color: '#000',
-                                    fontWeight: 700,
-                                    padding: '2px 8px',
-                                    fontSize: 12,
-                                    lineHeight: 1.3,
-                                    borderRadius: 0,
-                                    boxShadow: '3px 3px 0 rgba(0,0,0,1)',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                  }}
-                                >
-                                  {a?.category?.name ?? (typeof a?.category === 'string' ? a.category : 'General')}
-                                </span>
-                              </span>
-
-                              <img
-                                src={rImg}
-                                alt={a.imageAlt || a.title || ''}
-                                loading="lazy"
-                                decoding="async"
-                                width="640"
-                                height={IMG_H}
-                                style={{
-                                  width: '100%',
-                                  height: IMG_H,
-                                  objectFit: 'cover',
-                                  display: 'block',
-                                  margin: 0,
-                                  borderRadius: 0,
-                                  background: '#0b1f44',
-                                  flex: '0 0 auto',
-                                }}
-                              />
-                            </div>
-                          )}
-
-                          <div style={{ padding: isMobile ? 10 : 12 }}>
-                            <div
-                              style={{
-                                fontWeight: 600,
-                                lineHeight: TITLE_LH,
-                                fontSize: TITLE_FS,
-                                minHeight: TITLE_MIN_H,
-                                display: '-webkit-box',
-                                WebkitLineClamp: TITLE_LINES,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                              }}
-                            >
-                              {a.title}
-                            </div>
-                          </div>
-                        </article>
-                      </a>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-
-            {/* thin divider after Keep Reading */}
-            <div
-              style={{
-                width: '100%',
-                height: '1px',
-                background: 'rgba(255, 255, 255, 0.25)',
-                margin: '20px 0',
-              }}
-            ></div>
-
             <section style={{ marginTop: 24 }}>
-              <CommentForm slug={article.slug} onSubmitted={() => loadComments(article.slug)} />
+              <CommentForm
+                slug={article.slug}
+                onSubmitted={() => loadComments(article.slug)}
+              />
               <CommentThread comments={comments} />
             </section>
 
-            {/* (5) Render the inline "Next up" article after comments */}
-            {nextArticle ? <NextArticleInline doc={nextArticle} isMobile={isMobile} /> : null}
+            {nextArticle ? (
+              <NextArticleInline doc={nextArticle} isMobile={isMobile} />
+            ) : null}
           </main>
 
           {/* RIGHT RAILS (even indices) — hidden on mobile */}
@@ -1260,7 +1252,9 @@ const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
               <div className="rail-wrap" style={railWrapFix}>
                 {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
                 {!railsLoading && railsError && (
-                  <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>
+                  <div style={{ padding: 8, color: 'crimson' }}>
+                    {railsError}
+                  </div>
                 )}
                 {!railsLoading && !railsError && renderRails(rightRails)}
               </div>

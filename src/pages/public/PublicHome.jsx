@@ -1,13 +1,15 @@
 // src/pages/public/PublicHome.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+
+// ✅ NEW: import from libs (NOT App.jsx)
+import { cachedGet } from "../../lib/publicApi.js";
+import { styles } from "../../lib/uiTokens.js";
 import {
-  api,
-  styles,
   upsertTag,
   removeManagedHeadTags,
   setJsonLd,
   buildCanonicalFromLocation,
-} from "../../App.jsx";
+} from "../../lib/seoHead.js";
 
 import SiteNav from "../../components/SiteNav.jsx";
 import SiteFooter from "../../components/SiteFooter.jsx";
@@ -19,13 +21,32 @@ export default function PublicHome() {
   const [sectionsLoading, setSectionsLoading] = useState(true);
   const [sectionsError, setSectionsError] = useState("");
 
+  // ✅ Keep stable set (avoid recreating each render)
+  const MAIN_TEMPLATES = useMemo(
+    () =>
+      new Set([
+        "main_v1",
+        "top_v1",
+        "top_v2",
+        "main_v8",
+        "main_m3",
+        "main_v9",
+        "m10",
+        "main_m10",
+        "m11",
+        "main_m11",
+        "ad",
+      ]),
+    []
+  );
+
   /* ---------- SEO / HEAD TAGS ---------- */
   useEffect(() => {
     removeManagedHeadTags();
 
     const origin =
       typeof window !== "undefined" ? window.location.origin : "https://timelyvoice.com";
-    const canonical = buildCanonicalFromLocation([]); // homepage "/"
+    const canonical = buildCanonicalFromLocation(); // homepage "/"
 
     const title = "The Timely Voice — Latest India & World News, Exam-Friendly Updates";
     const desc =
@@ -56,20 +77,13 @@ export default function PublicHome() {
     upsertTag("meta", { property: "og:description", content: desc });
     upsertTag("meta", { property: "og:url", content: canonical });
     upsertTag("meta", { property: "og:site_name", content: "The Timely Voice" });
-    // Optional: home OG image (falls back to logo if available)
-    upsertTag("meta", {
-      property: "og:image",
-      content: `${origin}/logo-512.png`,
-    });
+    upsertTag("meta", { property: "og:image", content: `${origin}/logo-512.png` });
 
     // Twitter
     upsertTag("meta", { name: "twitter:card", content: "summary_large_image" });
     upsertTag("meta", { name: "twitter:title", content: title });
     upsertTag("meta", { name: "twitter:description", content: desc });
-    upsertTag("meta", {
-      name: "twitter:image",
-      content: `${origin}/logo-512.png`,
-    });
+    upsertTag("meta", { name: "twitter:image", content: `${origin}/logo-512.png` });
 
     // JSON-LD: WebSite + NewsMediaOrganization
     setJsonLd({
@@ -100,20 +114,24 @@ export default function PublicHome() {
     });
   }, []);
 
-  /* ---------- Main sections plan (Admin) ---------- */
+  /* ---------- Main sections plan (public) ---------- */
   useEffect(() => {
     let cancel = false;
+
     (async () => {
       try {
         setSectionsLoading(true);
         setSectionsError("");
 
         const params = { sectionType: "homepage", mode: "public" };
-        const res = await api.get("/sections/plan", { params });
 
-        const data = Array.isArray(res.data) ? res.data : [];
+        // ✅ cachedGet: prevents repeat refetch on fast navigations
+        // TTL 30s is enough to feel instant, but still fresh
+        const data = await cachedGet("/sections/plan", { params }, 30_000);
 
-        const ordered = data
+        const arr = Array.isArray(data) ? data : [];
+
+        const ordered = arr
           .map((r) => ({
             ...r,
             placementIndex: Number.isFinite(Number(r.placementIndex))
@@ -124,33 +142,17 @@ export default function PublicHome() {
 
         if (!cancel) setSections(ordered);
       } catch (e) {
-        if (!cancel) {
-          setSectionsError("Failed to load homepage sections");
-        }
+        if (!cancel) setSectionsError("Failed to load homepage sections");
         console.error(e);
       } finally {
         if (!cancel) setSectionsLoading(false);
       }
     })();
+
     return () => {
       cancel = true;
     };
   }, []);
-
-  // Templates treated as full-width “hero”/main blocks
-  const MAIN_TEMPLATES = new Set([
-    "main_v1",
-    "top_v1",
-    "top_v2",
-    "main_v8",
-    "main_m3",
-    "main_v9",
-    "m10",
-    "main_m10",
-    "m11",
-    "main_m11",
-    "ad",
-  ]);
 
   const mains = sections.filter((s) => MAIN_TEMPLATES.has(s.template));
   const rails = sections.filter((s) => s.template?.startsWith?.("rail_"));
@@ -168,7 +170,7 @@ export default function PublicHome() {
           <div style={{ display: "flex", gap: 8, alignItems: "center" }} />
         </div>
 
-        {/* HOMEPAGE INTRO: helps Google understand what the site is about */}
+        {/* HOMEPAGE INTRO */}
         <section
           aria-label="The Timely Voice overview"
           style={{
@@ -196,10 +198,10 @@ export default function PublicHome() {
               color: "#cbd5f5",
             }}
           >
-            Timely Voice News curates important developments from India and
-            around the world and rewrites them in clear, exam-friendly language.
-            Follow concise updates on politics, economy, science, technology and
-            global affairs, backed by verified sources and editorial checks.
+            Timely Voice News curates important developments from India and around the world
+            and rewrites them in clear, exam-friendly language. Follow concise updates on
+            politics, economy, science, technology and global affairs, backed by verified
+            sources and editorial checks.
           </p>
         </section>
 
@@ -209,14 +211,10 @@ export default function PublicHome() {
           <div style={{ padding: 12, color: "crimson" }}>{sectionsError}</div>
         ) : (
           <>
-            {/* FULL-WIDTH main blocks in backend order */}
+            {/* FULL-WIDTH main blocks */}
             {mains.map((sec) => (
               <div
-                key={
-                  sec._id ||
-                  sec.id ||
-                  `${sec.slug}|${sec.template}|${sec.placementIndex}`
-                }
+                key={sec._id || sec.id || `${sec.slug}|${sec.template}|${sec.placementIndex}`}
                 className="fullwidth-section"
                 style={{ marginBottom: 24 }}
               >
@@ -224,7 +222,7 @@ export default function PublicHome() {
               </div>
             ))}
 
-            {/* TWO-COLUMN LAYOUT (others + right rail) */}
+            {/* TWO-COLUMN LAYOUT */}
             <div className="home-grid home-rails">
               <main>
                 {others.length === 0 ? (
@@ -232,11 +230,7 @@ export default function PublicHome() {
                 ) : (
                   others.map((sec) => (
                     <SectionRenderer
-                      key={
-                        sec._id ||
-                        sec.id ||
-                        `${sec.slug}|${sec.template}|${sec.placementIndex}`
-                      }
+                      key={sec._id || sec.id || `${sec.slug}|${sec.template}|${sec.placementIndex}`}
                       section={sec}
                     />
                   ))
@@ -249,11 +243,7 @@ export default function PublicHome() {
                 ) : (
                   rails.map((sec) => (
                     <SectionRenderer
-                      key={
-                        sec._id ||
-                        sec.id ||
-                        `${sec.slug}|${sec.template}|${sec.placementIndex}`
-                      }
+                      key={sec._id || sec.id || `${sec.slug}|${sec.template}|${sec.placementIndex}`}
                       section={sec}
                     />
                   ))

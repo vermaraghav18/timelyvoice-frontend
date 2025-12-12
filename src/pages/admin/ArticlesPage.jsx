@@ -66,6 +66,40 @@ function withCacheBust(url = "", seed = Date.now()) {
   }
 }
 
+// ——— Normalize video URLs (Google Drive → direct file) ———
+// ——— Video helpers (Drive → embed preview; otherwise direct video URL) ———
+function getDriveFileId(url = "") {
+  const s = String(url || "").trim();
+  if (!s) return "";
+  const byPath = s.match(/\/file\/d\/([^/]+)/);     // /file/d/<ID>/view
+  const byParam = s.match(/[?&]id=([^&]+)/);       // ?id=<ID>
+  return (byPath && byPath[1]) || (byParam && byParam[1]) || "";
+}
+
+function getVideoPreview(url = "") {
+  const raw = String(url || "").trim();
+  if (!raw) return { kind: "none", src: "" };
+
+  // Google Drive: use /preview (works reliably in iframe)
+  if (raw.includes("drive.google.com")) {
+    const id = getDriveFileId(raw);
+    if (id) {
+      return {
+        kind: "drive",
+        src: `https://drive.google.com/file/d/${id}/preview`,
+        open: `https://drive.google.com/file/d/${id}/view`,
+      };
+    }
+    // fallback: still treat as drive but open raw
+    return { kind: "drive", src: raw, open: raw };
+  }
+
+  // Non-drive: assume direct playable URL (Cloudinary mp4, CDN mp4, etc.)
+  return { kind: "direct", src: raw, open: raw };
+}
+
+
+
 // ——— Helper: convert Date → value for <input type="datetime-local"> in LOCAL time ———
 function toLocalInputValue(date = new Date()) {
   if (!date) return "";
@@ -120,6 +154,8 @@ export default function ArticlesPage() {
     publishAt: "",
     imageUrl: "",
     imagePublicId: "",
+    // NEW: optional video URL (Google Drive / Cloudinary)
+    videoUrl: "",
     // SEO fields
     imageAlt: "",
     metaTitle: "",
@@ -459,6 +495,7 @@ export default function ArticlesPage() {
       publishAt: toLocalInputValue(),
       imageUrl: "",
       imagePublicId: "",
+       videoUrl: "", // NEW
       imageAlt: "",
       metaTitle: "",
       metaDesc: "",
@@ -498,6 +535,7 @@ export default function ArticlesPage() {
         publishAt: a.publishedAt ? toLocalInputValue(a.publishedAt) : "",
         imageUrl: a.imageUrl || "",
         imagePublicId: a.imagePublicId || "",
+         videoUrl: a.videoUrl || "", // NEW
         imageAlt: a.imageAlt || "",
         metaTitle: a.metaTitle || "",
         metaDesc: a.metaDesc || "",
@@ -559,7 +597,7 @@ export default function ArticlesPage() {
     autosaveTimerRef.current = setTimeout(async () => {
       try {
         setAutoSaving(true);
-        const payload = {
+                const payload = {
           title: form.title?.trim(),
           slug: form.slug?.trim() || undefined,
           summary: form.summary?.trim(),
@@ -572,7 +610,9 @@ export default function ArticlesPage() {
             : undefined,
           imageUrl: normalizeCloudinaryUrl(form.imageUrl) || undefined,
           imagePublicId: form.imagePublicId || undefined,
+          videoUrl: form.videoUrl || undefined, // NEW
           imageAlt: form.imageAlt || undefined,
+
           metaTitle: form.metaTitle
             ? String(form.metaTitle).slice(0, META_TITLE_MAX)
             : undefined,
@@ -644,7 +684,7 @@ export default function ArticlesPage() {
       }
 
       // build a clean payload the backend expects
-      const payload = {
+           const payload = {
         title: form.title?.trim(),
         slug:
           form.slug?.trim() ||
@@ -664,7 +704,9 @@ export default function ArticlesPage() {
           : undefined,
         imageUrl, // now Cloudinary if it was Drive
         imagePublicId, // now Cloudinary if it was Drive
+        videoUrl: form.videoUrl || undefined, // NEW
         imageAlt: form.imageAlt || undefined,
+
         metaTitle: form.metaTitle
           ? String(form.metaTitle).slice(0, META_TITLE_MAX)
           : undefined,
@@ -1136,7 +1178,7 @@ export default function ArticlesPage() {
             )}
             {!loading &&
               data.items.map((a) => {
-                const imgState =
+                                const imgState =
                   imgEdits[a._id] || {
                     value: a.imageUrl || "",
                     saving: "idle",
@@ -1150,13 +1192,31 @@ export default function ArticlesPage() {
                     : imgState.saving === "error"
                     ? "#ef4444"
                     : "#d1d5db";
-                const previewUrlRaw =
-                  a.imageUrl || a.ogImage || imgState.value || "";
-                const base = previewUrlRaw || DEFAULT_IMAGE_URL;
-                const seed =
-                  (a.updatedAt ? new Date(a.updatedAt).getTime() : 0) ||
-                  Date.now();
-                const thumbSrc = withCacheBust(base, seed);
+
+                                const hasVideo = !!a.videoUrl;
+const videoPreview = hasVideo ? getVideoPreview(a.videoUrl) : { kind: "none", src: "" };
+
+
+
+
+                  // NEW: RSS origin info
+                const sourceUrl = a.sourceUrl || "";
+                let sourceLabel = "";
+                if (sourceUrl) {
+                  try {
+                    const u = new URL(sourceUrl);
+                    sourceLabel = u.hostname.replace(/^www\./, "");
+                  } catch {
+                    sourceLabel = sourceUrl;
+                  }
+                }
+                  
+                // NEW: body word count for display
+                const bodyWordCount = (a.body || "")
+                  .split(/\s+/)
+                  .filter(Boolean).length;
+
+                
 
                 // status badge style
                 const statusBadge =
@@ -1188,40 +1248,76 @@ export default function ArticlesPage() {
                           </span>
                         )}
                         <div
-                          className="article-title-row"
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "flex-start",
-                            gap: 8,
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <div
-                            style={{
-                              fontWeight: 600,
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 8,
-                              flexWrap: "wrap",
-                              maxWidth: "100%",
-                            }}
-                          >
-                            <span
-                              className="article-title-text"
-                              style={{ wordBreak: "break-word" }}
-                            >
-                              {a.title}
-                            </span>
-                          </div>
-                          <span
-                            className="status-inline"
-                            style={{ ...badge, ...statusBadge, fontSize: 11 }}
-                          >
-                            {a.status}
-                          </span>
-                        </div>
+  className="article-title-row"
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 8,
+    flexWrap: "wrap",
+  }}
+>
+  <div
+    style={{
+      fontWeight: 600,
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      flexWrap: "wrap",
+      maxWidth: "100%",
+    }}
+  >
+    <span
+      className="article-title-text"
+      style={{ wordBreak: "break-word" }}
+    >
+      {a.title}
+    </span>
+
+    {bodyWordCount > 0 && (
+      <span
+        style={{
+          fontSize: 11,
+          color: "#6b7280",
+          whiteSpace: "nowrap",
+        }}
+        title={`Approx. ${bodyWordCount} words in body`}
+      >
+        · {bodyWordCount} words
+      </span>
+    )}
+  </div>
+  <span
+    className="status-inline"
+     style={{ ...badge, ...statusBadge }}
+  >
+    {/* existing status text stays as-is */}
+  </span>
+</div>
+
                       </div>
+
+                      {sourceLabel && (
+  <div
+    className="article-source-url"
+    style={{ color: "#4b5563", fontSize: 11, marginTop: 4 }}
+  >
+    Source:{" "}
+    {sourceUrl ? (
+      <a
+        href={sourceUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ color: "#2563eb", textDecoration: "none" }}
+      >
+        {sourceLabel}
+      </a>
+    ) : (
+      sourceLabel
+    )}
+  </div>
+)}
+
 {/* slug (just under title on mobile) */}
 <div
   className="article-slug"
@@ -1270,187 +1366,231 @@ export default function ArticlesPage() {
 )}
 
 
-                      {/* Mobile-only preview image just under slug+tags */}
-                      <div
-                        className="thumb-mobile-only"
-                        style={{ marginTop: 10 }}
-                      >
-                        <img
-                          src={thumbSrc}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          style={{
-                            width: "100%",
-                            maxWidth: 320,
-                            height: "auto",
-                            borderRadius: 10,
-                            border: "1px solid #eee",
-                            background: "#f8fafc",
-                            objectFit: "cover",
-                          }}
-                          onError={(e) => {
-                            const tries = Number(
-                              e.currentTarget.dataset.tries || 0
-                            );
-                            if (tries === 0 && base !== DEFAULT_IMAGE_URL) {
-                              e.currentTarget.dataset.tries = "1";
-                              e.currentTarget.src = withCacheBust(
-                                DEFAULT_IMAGE_URL,
-                                Date.now()
-                              );
-                              return;
-                            }
-                            if (tries === 1) {
-                              e.currentTarget.dataset.tries = "2";
-                              e.currentTarget.src = withCacheBust(
-                                DEFAULT_IMAGE_URL,
-                                Date.now() + 1
-                              );
-                              return;
-                            }
-                            e.currentTarget.replaceWith(
-                              Object.assign(document.createElement("div"), {
-                                style:
-                                  "width:100%;max-width:320px;height:120px;display:grid;place-items:center;border:1px solid #eee;border-radius:10px;background:#f8fafc;color:#999;font-size:12px",
-                                innerText: "Image failed",
-                              })
-                            );
-                          }}
-                        />
-                      </div>
+                  {/* Mobile-only preview just under slug+tags */}
+{/* Mobile-only preview just under slug+tags */}
+<div className="thumb-mobile-only" style={{ marginTop: 10 }}>
+  {(() => {
+    const baseImage = normalizeCloudinaryUrl(
+      imgState?.value || a.imageUrl || a.thumbImage || ""
+    );
 
-                      {/* Quick Image URL editor (with open/default/AI image buttons) */}
-                      <div style={{ marginTop: 10 }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                            marginBottom: 4,
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: 12,
-                              color: "#555",
-                              fontWeight: 600,
-                            }}
-                          >
-                            Image URL (quick)
-                          </span>
-                          <span
-                            title={imgState.saving}
-                            style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: 8,
-                              background: dotColor,
-                              display: "inline-block",
-                            }}
-                          />
-                        </div>
-                        <input
-                          value={imgState.value}
-                          onChange={(e) =>
-                            onChangeQuickImage(a._id, e.target.value)
-                          }
-                          placeholder="https://…"
-                          style={inp}
-                        />
-                        <div
-                          className="image-tools-desktop"
-                          style={{
-                            display: "flex",
-                            gap: 8,
-                            alignItems: "center",
-                            marginTop: 6,
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <label
-                            style={{
-                              display: "inline-flex",
-                              gap: 6,
-                              alignItems: "center",
-                              fontSize: 12,
-                            }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={!!imgState.syncOg}
-                              onChange={(e) =>
-                                setImgState(a._id, { syncOg: e.target.checked })
-                              }
-                            />
-                            Also set <code>OG Image URL</code>
-                          </label>
-                          {imgState.value ? (
-                            <>
-                              <a
-                                href={imgState.value}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{
-                                  textDecoration: "none",
-                                  color: "#1B4965",
-                                  fontSize: 12,
-                                }}
-                              >
-                                open image ↗
-                              </a>
-                              <span style={{ color: "#999", fontSize: 12 }}>
-                                |
-                              </span>
-                            </>
-                          ) : null}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              window.open(
-                                `/article/${encodeURIComponent(a.slug)}`,
-                                "_blank",
-                                "noopener,noreferrer"
-                              )
-                            }
-                            style={{
-                              ...btnSmallGhost,
-                              padding: "4px 8px",
-                              fontSize: 12,
-                            }}
-                            title="Open public article page"
-                          >
-                            open article ↗
-                          </button>
-                          {/* Force default image for this article */}
-                          <button
-                            type="button"
-                            onClick={() => handleUseDefaultImage(a._id)}
-                            style={{
-                              ...btnSmallGhost,
-                              padding: "4px 8px",
-                              fontSize: 12,
-                            }}
-                            title="Force this article to use the default image"
-                          >
-                            default image
-                          </button>
-                          {/* NEW: AI image button */}
-                          <button
-                            type="button"
-                            onClick={() => handleGenerateAiImage(a._id)}
-                            style={{
-                              ...btnSmallPrimary,
-                              padding: "4px 8px",
-                              fontSize: 12,
-                            }}
-                            title="Generate an AI hero image for this article"
-                          >
-                            AI image
-                          </button>
-                        </div>
-                      </div>
+    const thumbSrc = withCacheBust(baseImage || DEFAULT_IMAGE_URL, a.updatedAt || Date.now());
+
+    // Video
+    const hasVideo = !!a.videoUrl;
+    const videoPreview = hasVideo
+      ? getVideoPreview(a.videoUrl)
+      : { kind: "none", src: "", open: "" };
+
+    return hasVideo ? (
+      videoPreview?.kind === "drive" ? (
+        <div style={{ width: "100%", maxWidth: 320 }}>
+          <iframe
+            src={videoPreview.src}
+            title="Drive video preview"
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            style={{
+              width: "100%",
+              height: 180,
+              borderRadius: 10,
+              border: "1px solid #eee",
+              background: "#000",
+            }}
+          />
+          {videoPreview.open ? (
+            <a
+              href={videoPreview.open}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "inline-block",
+                marginTop: 6,
+                fontSize: 12,
+                color: "#2563eb",
+                textDecoration: "none",
+              }}
+            >
+              open video ↗
+            </a>
+          ) : null}
+        </div>
+      ) : (
+        <video
+          src={videoPreview?.src || ""}
+          controls
+          playsInline
+          preload="metadata"
+          style={{
+            width: "100%",
+            maxWidth: 320,
+            height: "auto",
+            borderRadius: 10,
+            border: "1px solid #eee",
+            background: "#000",
+            objectFit: "cover",
+          }}
+        />
+      )
+    ) : (
+      <img
+        src={thumbSrc}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        style={{
+          width: "100%",
+          maxWidth: 320,
+          height: "auto",
+          borderRadius: 10,
+          border: "1px solid #eee",
+          background: "#f8fafc",
+          objectFit: "cover",
+        }}
+        onError={(e) => {
+          const tries = Number(e.currentTarget.dataset.tries || 0);
+
+          // attempt 1: default image
+          if (tries === 0 && baseImage && baseImage !== DEFAULT_IMAGE_URL) {
+            e.currentTarget.dataset.tries = "1";
+            e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now());
+            return;
+          }
+
+          // attempt 2: default image again (different cache-bust)
+          if (tries === 1) {
+            e.currentTarget.dataset.tries = "2";
+            e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 1);
+            return;
+          }
+
+          // final fallback
+          e.currentTarget.replaceWith(
+            Object.assign(document.createElement("div"), {
+              style:
+                "width:100%;max-width:320px;height:120px;display:grid;place-items:center;border:1px solid #eee;border-radius:10px;background:#f8fafc;color:#999;font-size:12px",
+              innerText: "Image failed",
+            })
+          );
+        }}
+      />
+    );
+  })()}
+</div>
+
+{/* Quick Image URL editor (with open/default/AI image buttons) */}
+<div style={{ marginTop: 10 }}>
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 4,
+      flexWrap: "wrap",
+    }}
+  >
+    <span style={{ fontSize: 12, color: "#555", fontWeight: 600 }}>
+      Image URL (quick)
+    </span>
+    <span
+      title={imgState.saving}
+      style={{
+        width: 8,
+        height: 8,
+        borderRadius: 8,
+        background: dotColor,
+        display: "inline-block",
+      }}
+    />
+  </div>
+
+  <input
+    value={imgState.value}
+    onChange={(e) => onChangeQuickImage(a._id, e.target.value)}
+    placeholder="https://…"
+    style={inp}
+  />
+
+  <div
+    className="image-tools-desktop"
+    style={{
+      display: "flex",
+      gap: 8,
+      alignItems: "center",
+      marginTop: 6,
+      flexWrap: "wrap",
+    }}
+  >
+    <label
+      style={{
+        display: "inline-flex",
+        gap: 6,
+        alignItems: "center",
+        fontSize: 12,
+      }}
+    >
+      <input
+        type="checkbox"
+        checked={!!imgState.syncOg}
+        onChange={(e) => setImgState(a._id, { syncOg: e.target.checked })}
+      />
+      Also set <code>OG Image URL</code>
+    </label>
+
+    {imgState.value ? (
+      <>
+        <a
+          href={imgState.value}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            textDecoration: "none",
+            color: "#1B4965",
+            fontSize: 12,
+          }}
+        >
+          open image ↗
+        </a>
+        <span style={{ color: "#999", fontSize: 12 }}>|</span>
+      </>
+    ) : null}
+
+    <button
+      type="button"
+      onClick={() =>
+        window.open(
+          `/article/${encodeURIComponent(a.slug)}`,
+          "_blank",
+          "noopener,noreferrer"
+        )
+      }
+      style={{ ...btnSmallGhost, padding: "4px 8px", fontSize: 12 }}
+      title="Open public article page"
+    >
+      open article ↗
+    </button>
+
+    <button
+      type="button"
+      onClick={() => handleUseDefaultImage(a._id)}
+      style={{ ...btnSmallGhost, padding: "4px 8px", fontSize: 12 }}
+      title="Force this article to use the default image"
+    >
+      default image
+    </button>
+
+    <button
+      type="button"
+      onClick={() => handleGenerateAiImage(a._id)}
+      style={{ ...btnSmallPrimary, padding: "4px 8px", fontSize: 12 }}
+      title="Generate an AI hero image for this article"
+    >
+      AI image
+    </button>
+  </div>
+</div>
+
+
 
                       {/* Mobile-only main actions block: default / AI / delete + publish / edit */}
                       <div className="article-actions-mobile">
@@ -1529,65 +1669,107 @@ export default function ArticlesPage() {
                     <td style={td}>{fmt(a.publishedAt) || "—"}</td>
                     <td style={td}>{fmt(a.updatedAt)}</td>
 
-                    {/* Preview column – desktop only */}
-                    <td style={{ ...td, width: 230 }}>
-                      <div
-                        className="thumb-desktop-only"
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 8,
-                          alignItems: "flex-start",
-                        }}
-                      >
-                        <span style={badge}>
-                          {a.category?.name || a.category || "General"}
-                        </span>
-                        <img
-                          id={`thumb-${a._id}`}
-                          src={thumbSrc}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          style={{
-                            width: 200,
-                            height: 120,
-                            objectFit: "cover",
-                            borderRadius: 10,
-                            border: "1px solid #eee",
-                            background: "#f8fafc",
-                          }}
-                          onError={(e) => {
-                            const tries = Number(
-                              e.currentTarget.dataset.tries || 0
-                            );
-                            if (tries === 0 && base !== DEFAULT_IMAGE_URL) {
-                              e.currentTarget.dataset.tries = "1";
-                              e.currentTarget.src = withCacheBust(
-                                DEFAULT_IMAGE_URL,
-                                Date.now()
-                              );
-                              return;
-                            }
-                            if (tries === 1) {
-                              e.currentTarget.dataset.tries = "2";
-                              e.currentTarget.src = withCacheBust(
-                                DEFAULT_IMAGE_URL,
-                                Date.now() + 1
-                              );
-                              return;
-                            }
-                            e.currentTarget.replaceWith(
-                              Object.assign(document.createElement("div"), {
-                                style:
-                                  "width:200px;height:120px;display:grid;place-items:center;border:1px solid #eee;border-radius:10px;background:#f8fafc;color:#999;font-size:12px",
-                                innerText: "Image failed",
-                              })
-                            );
-                          }}
-                        />
-                      </div>
-                    </td>
+                                       {/* Preview column – desktop only */}
+                   {/* Preview column – desktop only */}
+<td style={{ ...td, width: 230 }}>
+  {(() => {
+    const baseImage = normalizeCloudinaryUrl(
+      imgState?.value || a.imageUrl || a.thumbImage || ""
+    );
+    const thumbSrc = withCacheBust(baseImage || DEFAULT_IMAGE_URL, a.updatedAt || Date.now());
+
+    const hasVideo = !!a.videoUrl;
+    const videoPreview = hasVideo
+      ? getVideoPreview(a.videoUrl)
+      : { kind: "none", src: "", open: "" };
+
+    return (
+      <div
+        className="thumb-desktop-only"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          alignItems: "flex-start",
+        }}
+      >
+        <span style={badge}>
+          {a.category?.name || a.category || "General"}
+        </span>
+
+        {hasVideo ? (
+          videoPreview?.kind === "drive" ? (
+            <iframe
+              src={videoPreview.src}
+              title="Drive video preview"
+              allow="autoplay; encrypted-media; picture-in-picture"
+              allowFullScreen
+              style={{
+                width: 200,
+                height: 120,
+                borderRadius: 10,
+                border: "1px solid #eee",
+                background: "#000",
+              }}
+            />
+          ) : (
+            <video
+              src={videoPreview?.src || ""}
+              controls
+              playsInline
+              preload="metadata"
+              style={{
+                width: 200,
+                height: 120,
+                objectFit: "cover",
+                borderRadius: 10,
+                border: "1px solid #eee",
+                background: "#000",
+              }}
+            />
+          )
+        ) : (
+          <img
+            id={`thumb-${a._id}`}
+            src={thumbSrc}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            style={{
+              width: 200,
+              height: 120,
+              objectFit: "cover",
+              borderRadius: 10,
+              border: "1px solid #eee",
+              background: "#f8fafc",
+            }}
+            onError={(e) => {
+              const tries = Number(e.currentTarget.dataset.tries || 0);
+              if (tries === 0 && baseImage && baseImage !== DEFAULT_IMAGE_URL) {
+                e.currentTarget.dataset.tries = "1";
+                e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now());
+                return;
+              }
+              if (tries === 1) {
+                e.currentTarget.dataset.tries = "2";
+                e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 1);
+                return;
+              }
+              e.currentTarget.replaceWith(
+                Object.assign(document.createElement("div"), {
+                  style:
+                    "width:200px;height:120px;display:grid;place-items:center;border:1px solid #eee;border-radius:10px;background:#f8fafc;color:#999;font-size:12px",
+                  innerText: "Image failed",
+                })
+              );
+            }}
+          />
+        )}
+      </div>
+    );
+  })()}
+</td>
+
 
                     {/* Actions column – desktop only */}
                     <td style={td}>
@@ -1721,7 +1903,7 @@ export default function ArticlesPage() {
             </div>
 
             {/* Paste-once importer (auto-fills the form from JSON/YAML) */}
-            <PasteImporter
+                       <PasteImporter
               onApply={(d) => {
                 setForm((f) => ({
                   ...f,
@@ -1734,7 +1916,9 @@ export default function ArticlesPage() {
                   publishAt: d.publishAt ?? f.publishAt,
                   imageUrl: d.imageUrl ?? f.imageUrl,
                   imagePublicId: d.imagePublicId ?? f.imagePublicId,
+                  videoUrl: d.videoUrl ?? f.videoUrl, // NEW
                   imageAlt: d.imageAlt ?? f.imageAlt,
+
                   metaTitle: (d.metaTitle ?? f.metaTitle)?.slice(
                     0,
                     META_TITLE_MAX
@@ -1917,6 +2101,20 @@ export default function ArticlesPage() {
                   />
                 </label>
               </div>
+
+                            {/* NEW: optional video URL */}
+              <label style={lbl}>
+                Video URL (optional)
+                <input
+                  value={form.videoUrl}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, videoUrl: e.target.value }))
+                  }
+                  placeholder="Paste video link (Google Drive / Cloudinary)"
+                  style={inp}
+                />
+              </label>
+
 
               {/* SEO fields with counters */}
               <div style={{ fontWeight: 600, marginTop: 8 }}>SEO</div>

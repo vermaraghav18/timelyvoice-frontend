@@ -1,7 +1,8 @@
 // src/pages/public/FinanceCategoryPage.jsx
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { api, removeManagedHeadTags, upsertTag } from '../../App.jsx';
+import { api, upsertTag } from '../../App.jsx';
+
 import SiteNav from '../../components/SiteNav.jsx';
 import SiteFooter from '../../components/SiteFooter.jsx';
 import '../public/TopNews.css';

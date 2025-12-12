@@ -1,20 +1,50 @@
 // frontend/src/admin/AdsPage.jsx
 import { useEffect, useMemo, useState } from "react";
-import { api, styles as base, getToken } from "../App.jsx";
+import axios from "axios";
 import "./ads.css";
 
-// Small helpers
+/**
+ * Self-contained admin Ads page.
+ * - No dependency on ../App.jsx exports (prevents Vite "no export named api" errors)
+ * - Uses localStorage.token for auth
+ */
+
+/* ----------------------- API + auth helpers ----------------------- */
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || "",
+  timeout: 30000,
+});
+
+function getToken() {
+  try {
+    return localStorage.getItem("token") || "";
+  } catch {
+    return "";
+  }
+}
+
+api.interceptors.request.use((cfg) => {
+  const t = getToken();
+  if (t) {
+    cfg.headers = cfg.headers || {};
+    // Only set if not already set
+    if (!cfg.headers.Authorization) cfg.headers.Authorization = `Bearer ${t}`;
+  }
+  return cfg;
+});
+
+/* ----------------------- Small helpers ----------------------- */
 const TGT_OPTIONS = [
   { v: "homepage", label: "Homepage" },
   { v: "category", label: "Category" },
-  { v: "path",     label: "Path" },
+  { v: "path", label: "Path" },
 ];
 
 const FILTER_OPTIONS = [
-  { v: "all",       label: "All targets" },
-  { v: "homepage",  label: "Homepage only" },
-  { v: "category",  label: "Categories only" },
-  { v: "path",      label: "Paths only" },
+  { v: "all", label: "All targets" },
+  { v: "homepage", label: "Homepage only" },
+  { v: "category", label: "Categories only" },
+  { v: "path", label: "Paths only" },
 ];
 
 function Field({ label, hint, error, children }) {
@@ -36,15 +66,17 @@ function EmptyState({ onNew }) {
       <div className="empty-glow" />
       <h3>No ads yet</h3>
       <p>Add your first placement—image URL, link, where to show, and its index.</p>
-      <button className="btn btn-primary" onClick={onNew}>+ New Ad</button>
+      <button className="btn btn-primary" onClick={onNew}>
+        + New Ad
+      </button>
     </div>
   );
 }
 
 function AdCard({ ad, onEdit, onToggle, onDelete, deletingId }) {
   // Prefer top-level fields; fall back to legacy custom.*
-  const img  = ad.imageUrl || ad.custom?.imageUrl || "";
-  const link = ad.linkUrl  || ad.custom?.link      || "";
+  const img = ad.imageUrl || ad.custom?.imageUrl || "";
+  const link = ad.linkUrl || ad.custom?.link || "";
   const afterNth = ad.custom?.afterNth;
 
   return (
@@ -75,11 +107,10 @@ function AdCard({ ad, onEdit, onToggle, onDelete, deletingId }) {
         {ad.notes ? <div className="ad-notes">{ad.notes}</div> : null}
 
         <div className="ad-actions">
-          <button className="btn" onClick={() => onEdit(ad)}>Edit</button>
-          <button
-            className={`btn ${ad.enabled ? "btn-warn" : "btn-ok"}`}
-            onClick={() => onToggle(ad)}
-          >
+          <button className="btn" onClick={() => onEdit(ad)}>
+            Edit
+          </button>
+          <button className={`btn ${ad.enabled ? "btn-warn" : "btn-ok"}`} onClick={() => onToggle(ad)}>
             {ad.enabled ? "Disable" : "Enable"}
           </button>
           <button
@@ -117,44 +148,43 @@ export default function AdsPage() {
     placementIndex: 0,
     enabled: true,
     notes: "",
-    // NEW: UI field for inserting after the Nth article
-    afterNth: "", // keep as string for input; convert to number on save
+    afterNth: "", // string input -> number on save
   }));
-  const editing = Boolean(form._id || form.imageUrl || form.linkUrl || form.notes || form.afterNth);
 
   // LOAD
   useEffect(() => {
     let dead = false;
     (async () => {
       try {
-        setLoading(true); setError("");
-        const res = await api.get("/api/admin/ads", {
-          headers: { Authorization: `Bearer ${getToken()}` },
-        });
+        setLoading(true);
+        setError("");
+
+        const res = await api.get("/api/admin/ads");
         if (!dead) setItems(Array.isArray(res.data) ? res.data : []);
       } catch (e) {
         const msg =
           e?.response?.status === 401
             ? "Please log in again (401)."
-            : (e?.response?.data?.error || "Failed to load ads");
+            : e?.response?.data?.error || "Failed to load ads";
         if (!dead) setError(msg);
+        // eslint-disable-next-line no-console
         console.error(e);
-      } finally { if (!dead) setLoading(false); }
+      } finally {
+        if (!dead) setLoading(false);
+      }
     })();
-    return () => { dead = true; };
+    return () => {
+      dead = true;
+    };
   }, []);
 
   const filtered = useMemo(() => {
     let list = [...items];
-    if (fltType !== "all") {
-      list = list.filter((ad) => ad.target?.type === fltType);
-    }
+    if (fltType !== "all") list = list.filter((ad) => ad.target?.type === fltType);
+
     const v = fltValue.trim().toLowerCase();
-    if (v) {
-      list = list.filter((ad) =>
-        String(ad.target?.value || "").toLowerCase().includes(v)
-      );
-    }
+    if (v) list = list.filter((ad) => String(ad.target?.value || "").toLowerCase().includes(v));
+
     return list.sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
   }, [items, fltType, fltValue]);
 
@@ -176,30 +206,27 @@ export default function AdsPage() {
   function startEdit(ad) {
     setForm({
       _id: ad._id,
-      // Prefer top-level fields; fall back to legacy custom.*
       imageUrl: ad.imageUrl || ad.custom?.imageUrl || "",
-      linkUrl:  ad.linkUrl  || ad.custom?.link      || "",
+      linkUrl: ad.linkUrl || ad.custom?.link || "",
       targetType: ad.target?.type || "homepage",
       targetValue: ad.target?.value || "",
       placementIndex: Number(ad.placementIndex ?? 0),
       enabled: ad.enabled !== false,
       notes: ad.notes || "",
-      // pull from ad.custom.afterNth if present; keep as string for input
       afterNth:
         typeof ad?.custom?.afterNth === "number"
           ? String(ad.custom.afterNth)
-          : (ad?.custom?.afterNth ?? "") // if somehow string in DB
+          : ad?.custom?.afterNth ?? "",
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function toggleEnabled(ad) {
     try {
-      const res = await api.patch(`/api/admin/ads/${ad._id}`, { enabled: !ad.enabled }, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      });
+      const res = await api.patch(`/api/admin/ads/${ad._id}`, { enabled: !ad.enabled });
       setItems((prev) => prev.map((x) => (x._id === ad._id ? res.data : x)));
     } catch (e) {
+      // eslint-disable-next-line no-console
       console.error(e);
       alert("Failed to toggle");
     }
@@ -209,13 +236,13 @@ export default function AdsPage() {
     if (!id) return;
     const ok = window.confirm("Delete this ad permanently?");
     if (!ok) return;
+
     setDeletingId(id);
     try {
-      await api.delete(`/api/admin/ads/${id}`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      });
+      await api.delete(`/api/admin/ads/${id}`);
       setItems((prev) => prev.filter((x) => x._id !== id));
     } catch (e) {
+      // eslint-disable-next-line no-console
       console.error(e);
       alert("Failed to delete ad");
     } finally {
@@ -223,21 +250,17 @@ export default function AdsPage() {
     }
   }
 
-  // Simple validation
+  // Validation
   const vErr = {};
   if (!form.imageUrl.trim()) vErr.imageUrl = "Image URL required";
   if (!form.linkUrl.trim()) vErr.linkUrl = "Link URL required";
-  if (!["homepage", "category", "path"].includes(form.targetType))
-    vErr.targetType = "Invalid target type";
-  if (form.targetType !== "homepage" && !form.targetValue.trim())
-    vErr.targetValue = "Required for category/path";
-  // afterNth is optional; if present must be >= 1
-  if (form.afterNth !== "" && Number(form.afterNth) < 1) {
-    vErr.afterNth = "Must be 1 or more (or leave blank)";
-  }
+  if (!["homepage", "category", "path"].includes(form.targetType)) vErr.targetType = "Invalid target type";
+  if (form.targetType !== "homepage" && !form.targetValue.trim()) vErr.targetValue = "Required for category/path";
+  if (form.afterNth !== "" && Number(form.afterNth) < 1) vErr.afterNth = "Must be 1 or more (or leave blank)";
 
   async function save() {
     if (Object.keys(vErr).length) return;
+
     try {
       setSaving(true);
 
@@ -251,30 +274,23 @@ export default function AdsPage() {
           type: form.targetType,
           value: form.targetType === "homepage" ? "" : form.targetValue.trim(),
         },
-        // NEW: send afterNth via custom
         custom: {
-          afterNth:
-            form.afterNth === "" || form.afterNth == null
-              ? undefined
-              : Number(form.afterNth),
+          afterNth: form.afterNth === "" || form.afterNth == null ? undefined : Number(form.afterNth),
         },
       };
 
       let res;
       if (form._id) {
-        res = await api.patch(`/api/admin/ads/${form._id}`, payload, {
-          headers: { Authorization: `Bearer ${getToken()}` },
-        });
+        res = await api.patch(`/api/admin/ads/${form._id}`, payload);
         setItems((prev) => prev.map((x) => (x._id === form._id ? res.data : x)));
       } else {
-        res = await api.post("/api/admin/ads", payload, {
-          headers: { Authorization: `Bearer ${getToken()}` },
-        });
+        res = await api.post("/api/admin/ads", payload);
         setItems((prev) => [...prev, res.data]);
       }
-      // reset editor
+
       startNew();
     } catch (e) {
+      // eslint-disable-next-line no-console
       console.error(e);
       alert("Save failed");
     } finally {
@@ -284,19 +300,19 @@ export default function AdsPage() {
 
   return (
     <div className="ads-wrap">
-      {/* Header */}
       <header className="ads-header">
         <div className="shine" />
         <h1>Ads</h1>
         <p>Manage image ads and their placements. Fully responsive & live preview.</p>
       </header>
 
-      {/* Editor */}
       <section className="panel glass slide-down">
         <div className="panel-head">
           <h3>{form._id ? "Edit Ad" : "New Ad"}</h3>
           <div className="panel-actions">
-            <button className="btn" onClick={startNew}>+ New</button>
+            <button className="btn" onClick={startNew}>
+              + New
+            </button>
             <button className="btn btn-primary" disabled={saving || Object.keys(vErr).length} onClick={save}>
               {saving ? "Saving…" : "Save"}
             </button>
@@ -331,7 +347,9 @@ export default function AdsPage() {
                   onChange={(e) => setForm((f) => ({ ...f, targetType: e.target.value }))}
                 >
                   {TGT_OPTIONS.map((o) => (
-                    <option key={o.v} value={o.v}>{o.label}</option>
+                    <option key={o.v} value={o.v}>
+                      {o.label}
+                    </option>
                   ))}
                 </select>
               </Field>
@@ -343,11 +361,7 @@ export default function AdsPage() {
               >
                 <input
                   className="inp"
-                  placeholder={
-                    form.targetType === "homepage"
-                      ? "—"
-                      : (form.targetType === "category" ? "sports" : "/path")
-                  }
+                  placeholder={form.targetType === "homepage" ? "—" : form.targetType === "category" ? "sports" : "/path"}
                   value={form.targetType === "homepage" ? "" : form.targetValue}
                   onChange={(e) => setForm((f) => ({ ...f, targetValue: e.target.value }))}
                   disabled={form.targetType === "homepage"}
@@ -361,9 +375,7 @@ export default function AdsPage() {
                   type="number"
                   className="inp"
                   value={form.placementIndex}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, placementIndex: Number(e.target.value || 0) }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, placementIndex: Number(e.target.value || 0) }))}
                 />
               </Field>
 
@@ -380,7 +392,6 @@ export default function AdsPage() {
               </Field>
             </div>
 
-            {/* NEW: afterNth input */}
             <Field
               label="Insert after Nth article"
               hint='Leave blank to show above the list; "5" inserts after the 5th article'
@@ -406,7 +417,6 @@ export default function AdsPage() {
             </Field>
           </div>
 
-          {/* Live Preview */}
           <div className="editor-preview">
             <div className="preview-head">Preview</div>
             <div className="preview-body">
@@ -419,9 +429,7 @@ export default function AdsPage() {
               )}
               <div className="preview-meta">
                 <span>{form.targetType}</span>
-                {form.targetType !== "homepage" && form.targetValue ? (
-                  <span> • {form.targetValue}</span>
-                ) : null}
+                {form.targetType !== "homepage" && form.targetValue ? <span> • {form.targetValue}</span> : null}
                 <span> • index #{Number(form.placementIndex || 0)}</span>
                 {form.afterNth !== "" ? <span> • after {form.afterNth}</span> : null}
               </div>
@@ -430,14 +438,17 @@ export default function AdsPage() {
         </div>
       </section>
 
-      {/* Filters */}
       <section className="panel glass">
         <div className="filters">
           <div className="grid-3">
             <div>
               <label className="lbl">Filter Target Type</label>
               <select className="inp" value={fltType} onChange={(e) => setFltType(e.target.value)}>
-                {FILTER_OPTIONS.map((o) => <option key={o.v} value={o.v}>{o.label}</option>)}
+                {FILTER_OPTIONS.map((o) => (
+                  <option key={o.v} value={o.v}>
+                    {o.label}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
@@ -453,13 +464,14 @@ export default function AdsPage() {
               <button className="btn" onClick={() => { setFltType("all"); setFltValue(""); }}>
                 Reset
               </button>
-              <button className="btn btn-primary" onClick={startNew}>+ New Ad</button>
+              <button className="btn btn-primary" onClick={startNew}>
+                + New Ad
+              </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* List */}
       <section className="list">
         {loading ? (
           <div className="loading">Loading…</div>

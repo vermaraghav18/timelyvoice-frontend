@@ -1,7 +1,29 @@
 // src/admin/ArticlesBulkImport.jsx
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { api, styles, getToken, setToken } from "../App.jsx";
+
+// ✅ DO NOT import from App.jsx anymore
+import { api } from "../lib/publicApi.js";
+import { styles } from "../lib/uiTokens.js";
+
+/* ---------------- Token helpers (localStorage.token) ---------------- */
+const TOKEN_KEY = "token";
+function getToken() {
+  try {
+    return localStorage.getItem(TOKEN_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+function setToken(value) {
+  try {
+    if (!value) localStorage.removeItem(TOKEN_KEY);
+    else localStorage.setItem(TOKEN_KEY, String(value));
+  } catch {
+    /* ignore */
+  }
+}
+/* ------------------------------------------------------------------- */
 
 const NDJSON_SAMPLE = [
   {
@@ -92,16 +114,14 @@ export default function AdminArticlesBulkImport() {
       let contentType = "application/x-ndjson";
 
       if (format === "ndjson") {
-        // raw NDJSON string (one JSON object per line)
         bodyToSend = String(payload ?? "").trim();
         if (!bodyToSend) throw new Error("Payload is empty.");
       } else {
-        // JSON array
         contentType = "application/json";
         let parsed = null;
         try {
           parsed = JSON.parse(String(payload ?? ""));
-        } catch (e) {
+        } catch {
           throw new Error("JSON is invalid. Please paste a valid JSON array.");
         }
         if (!Array.isArray(parsed)) {
@@ -110,7 +130,8 @@ export default function AdminArticlesBulkImport() {
         bodyToSend = JSON.stringify(parsed);
       }
 
-      const url = `/api/articles/bulk?dryRun=${dryRun ? 1 : 0}&continueOnError=${
+      // ✅ IMPORTANT: match your new api client style (no "/api" here)
+      const url = `/articles/bulk?dryRun=${dryRun ? 1 : 0}&continueOnError=${
         continueOnError ? 1 : 0
       }`;
 
@@ -130,13 +151,12 @@ export default function AdminArticlesBulkImport() {
     <div style={{ ...styles.page, maxWidth: 1100 }}>
       <div style={{ ...styles.nav, marginBottom: 20 }}>
         <h2 style={{ margin: 0 }}>Bulk Import Articles</h2>
-        <span style={styles.muted}>POST /api/articles/bulk</span>
+        <span style={styles.muted}>POST /articles/bulk</span>
       </div>
 
       <div style={styles.card}>
         <p style={{ ...styles.p, marginTop: 0 }}>
-          Format
-          <span style={styles.badge}>NDJSON</span>
+          Format <span style={styles.badge}>NDJSON</span>
           <span style={{ marginLeft: 8 }}>or</span>
           <span style={{ ...styles.badge, marginLeft: 8 }}>JSON array</span>
         </p>
@@ -219,7 +239,8 @@ export default function AdminArticlesBulkImport() {
         <p style={styles.p}>
           <strong>Payload</strong>
           <span style={{ marginLeft: 8, ...styles.muted }}>
-            Content-Type: {format === "ndjson" ? "application/x-ndjson" : "application/json"}
+            Content-Type:{" "}
+            {format === "ndjson" ? "application/x-ndjson" : "application/json"}
           </span>
         </p>
         <textarea
@@ -230,7 +251,8 @@ export default function AdminArticlesBulkImport() {
             padding: 10,
             borderRadius: 10,
             border: "1px solid #e5e7eb",
-            fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+            fontFamily:
+              "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
             fontSize: 13,
           }}
           value={payload}

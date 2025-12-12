@@ -1,13 +1,15 @@
 // frontend/src/pages/public/TopNews.jsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, upsertTag, buildCanonicalFromLocation } from "../../App.jsx";
+
+import { api, cachedGet } from "../../lib/publicApi.js";
+import { upsertTag, removeManagedHeadTags } from "../../lib/seoHead.js";
+
 import SiteNav from "../../components/SiteNav.jsx";
 import SiteFooter from "../../components/SiteFooter.jsx";
 import "./TopNews.css";
 
-// ✅ use the same helper + fallback as the article page
-import { ensureRenderableImage } from "../../lib/images";
+import { ensureRenderableImage } from "../../lib/images.js";
 
 const FALLBACK_HERO_IMAGE = "/tv-default-hero.jpg";
 
@@ -23,52 +25,65 @@ const CAT_COLORS = {
   Tech: "linear-gradient(135deg, #FB7185 0%, #FDA4AF 100%)",
 };
 
+/* ---------- Cloudinary optimizer ---------- */
+function optimizeCloudinary(url, width = 520) {
+  if (!url || !url.includes("/upload/")) return url;
+  return url.replace("/upload/", `/upload/f_auto,q_auto,w_${width}/`);
+}
+
+/* ---------- Video helpers ---------- */
+function getDriveFileId(url = "") {
+  const s = String(url || "").trim();
+  if (!s) return "";
+  const byPath = s.match(/\/file\/d\/([^/]+)/);
+  const byParam = s.match(/[?&]id=([^&]+)/);
+  return (byPath && byPath[1]) || (byParam && byParam[1]) || "";
+}
+
+function getVideoPreview(url = "") {
+  const raw = String(url || "").trim();
+  if (!raw) return { kind: "none", src: "" };
+
+  if (raw.includes("drive.google.com")) {
+    const id = getDriveFileId(raw);
+    if (id) {
+      return {
+        kind: "drive",
+        src: `https://drive.google.com/file/d/${id}/preview`,
+      };
+    }
+  }
+  return { kind: "direct", src: raw };
+}
+
+/* ---------- utils ---------- */
 function articleHref(slug) {
   if (!slug) return "#";
-  if (/^https?:\/\//i.test(slug)) return slug;
   if (slug.startsWith("/article/")) return slug;
-  if (slug.startsWith("/")) return `/article${slug}`;
   return `/article/${slug}`;
 }
 
-/** Safely parse many timestamp shapes → epoch ms (number) */
 function parseTs(v) {
   if (!v) return 0;
-  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
-  const s = String(v).trim();
-  if (/^\d+$/.test(s)) return Number(s);
-  const withT = s.replace(
-    /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/,
-    "$1T$2"
-  );
-  const t = Date.parse(withT);
+  if (typeof v === "number") return v;
+  const t = Date.parse(String(v).replace(" ", "T"));
   return Number.isFinite(t) ? t : 0;
 }
 
-/** Normalize + sort newest first (stable) */
 function normalizeTopNews(items = []) {
   return items
-    .filter(Boolean)
     .map((i, idx) => {
-      const candidates = [
-        i.publishedAt,
-        i.publishAt, // many payloads use this
-        i.updatedAt,
-        i.updated_at,
-        i.createdAt,
-        i.created_at,
-        i.pubDate,
-        i.timestamp,
-      ];
-      const best = Math.max(...candidates.map(parseTs), 0);
-      return { ...i, _ts: best, _idx: idx };
+      const ts = Math.max(
+        parseTs(i.publishedAt),
+        parseTs(i.publishAt),
+        parseTs(i.updatedAt),
+        parseTs(i.createdAt)
+      );
+      return { ...i, _ts: ts, _idx: idx };
     })
-    .sort((a, b) =>
-      b._ts === a._ts ? a._idx - b._idx : b._ts - a._ts
-    );
+    .sort((a, b) => (b._ts === a._ts ? a._idx - b._idx : b._ts - a._ts));
 }
 
-/** Case-insensitive category name */
 function getCategoryName(a) {
   const raw =
     a?.category?.name ??
@@ -85,9 +100,7 @@ function getCategoryName(a) {
     tech: "Tech",
     technology: "Tech",
   };
-  return (
-    map[String(raw || "General").trim().toLowerCase()] || "General"
-  );
+  return map[String(raw).toLowerCase()] || "General";
 }
 
 export default function TopNews() {
@@ -95,10 +108,13 @@ export default function TopNews() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // SEO
+  /* ---------- SEO ---------- */
   useEffect(() => {
+    removeManagedHeadTags();
+
     document.title = "Top News — The Timely Voice";
-    const canonical = buildCanonicalFromLocation(["top-news"]);
+    const canonical = `${window.location.origin}/top-news`;
+
     upsertTag("link", { rel: "canonical", href: canonical });
     upsertTag("meta", {
       name: "description",
@@ -106,50 +122,32 @@ export default function TopNews() {
     });
   }, []);
 
-  // Fetch (cache-buster) + normalize
+  /* ---------- Fetch (cached) ---------- */
   useEffect(() => {
     let cancel = false;
+
     (async () => {
       try {
         setLoading(true);
         setErr("");
 
-        const qs = new URLSearchParams({
-          page: 1,
-          limit: 50,
-          mode: "public",
-          __bust: Date.now(), // dev-only cache buster
-        });
-
-        const res = await api.get(`/top-news?${qs.toString()}`, {
-          validateStatus: () => true,
-          headers: { "Cache-Control": "no-cache" },
-        });
+        const data = await cachedGet(
+          "/top-news",
+          { params: { page: 1, limit: 50, mode: "public" } },
+          30_000 // ✅ 30s cache
+        );
 
         if (!cancel) {
-          const sorted = normalizeTopNews(res?.data?.items || []);
+          const sorted = normalizeTopNews(data?.items || []);
           setItems(sorted);
-
-          if (process.env.NODE_ENV !== "production") {
-            // eslint-disable-next-line no-console
-            console.table(
-              sorted.slice(0, 5).map((x) => ({
-                title: x.title,
-                ts: x._ts,
-                published:
-                  x.publishedAt ?? x.publishAt ?? x.updatedAt,
-              }))
-            );
-          }
         }
       } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error(e);
         if (!cancel) setErr("Failed to load top news");
       } finally {
         if (!cancel) setLoading(false);
       }
     })();
+
     return () => {
       cancel = true;
     };
@@ -172,75 +170,73 @@ export default function TopNews() {
               const catName = getCategoryName(a);
               const color = CAT_COLORS[catName] || "#4B5563";
 
-              // ✅ unified hero logic (Cloudinary or default crest)
               const rawImage = ensureRenderableImage(a);
-              const thumbSrc = rawImage || FALLBACK_HERO_IMAGE;
+              const thumbSrc = optimizeCloudinary(
+                rawImage || FALLBACK_HERO_IMAGE,
+                520
+              );
+
+              const hasVideo = !!a.videoUrl;
+              const video = hasVideo ? getVideoPreview(a.videoUrl) : null;
 
               return (
-                <li className="tn-item" key={a.id || a._id || a.slug}>
+                <li className="tn-item" key={a._id || a.id || a.slug}>
                   <div className="tn-left">
                     <Link to={href} className="tn-item-title">
                       {a.title}
                     </Link>
 
-                    {(a.summary ||
-                      a.description ||
-                      a.excerpt) && (
-                      <Link
-                        to={href}
-                        className="tn-summary"
-                        style={{
-                          display: "block",
-                          textDecoration: "none",
-                          color: "inherit",
-                        }}
-                        aria-label={`Open: ${a.title}`}
-                      >
-                        {a.summary ||
-                          a.description ||
-                          a.excerpt}
+                    {(a.summary || a.description) && (
+                      <Link to={href} className="tn-summary">
+                        {a.summary || a.description}
                       </Link>
                     )}
 
                     <div className="tn-divider"></div>
 
                     <div className="tn-meta">
-                      <span className="tn-source">
-                        The Timely Voice
-                      </span>
+                      <span className="tn-source">The Timely Voice</span>
                     </div>
                   </div>
 
                   <Link to={href} className="tn-thumb">
                     <span className="tn-badge">
-                      <span
-                        className="tn-pill"
-                        style={{ background: color }}
-                      >
+                      <span className="tn-pill" style={{ background: color }}>
                         {catName}
                       </span>
                     </span>
 
-                    {/* ✅ always show an image: article → fallback crest */}
-                    <img
-                      src={thumbSrc}
-                      alt={
-                        a.imageAlt ||
-                        a.title ||
-                        "The Timely Voice"
-                      }
-                      loading="lazy"
-                      decoding="async"
-                      onError={(e) => {
-                        // if Cloudinary (or bad URL) fails, force local crest once
-                        if (
-                          e.currentTarget.dataset.fallback !== "1"
-                        ) {
-                          e.currentTarget.dataset.fallback = "1";
+                    {hasVideo ? (
+                      video.kind === "drive" ? (
+                        <iframe
+                          src={video.src}
+                          title={a.title}
+                          loading="lazy"
+                          style={{ width: "100%", height: "100%", border: 0 }}
+                        />
+                      ) : (
+                        <video
+                          src={video.src}
+                          autoPlay
+                          muted
+                          loop
+                          playsInline
+                          preload="metadata"
+                          poster={thumbSrc}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      )
+                    ) : (
+                      <img
+                        src={thumbSrc}
+                        alt={a.imageAlt || a.title || "The Timely Voice"}
+                        loading="lazy"
+                        decoding="async"
+                        onError={(e) => {
                           e.currentTarget.src = FALLBACK_HERO_IMAGE;
-                        }
-                      }}
-                    />
+                        }}
+                      />
+                    )}
                   </Link>
                 </li>
               );
