@@ -1,7 +1,7 @@
 // frontend/src/pages/admin/AutomationDashboard.jsx
 import { useEffect, useState } from "react";
-import { styles } from "../../App.jsx";
-import { api } from "../../lib/publicApi";
+import { api, styles } from "../../App.jsx";
+
 export default function AutomationDashboard() {
   const [logs, setLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(true);

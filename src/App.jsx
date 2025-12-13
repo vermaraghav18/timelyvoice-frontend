@@ -10,8 +10,19 @@ import "./styles/typography.css";
 import "./styles/scroll-optimizations.css";
 
 /* ===================== SEO helpers (re-exported) ===================== */
-import { upsertTag, buildCanonicalFromLocation, addJsonLd } from "./lib/seoHead.js";
-export { upsertTag, buildCanonicalFromLocation, addJsonLd };
+import {
+  upsertTag,
+  buildCanonicalFromLocation,
+  addJsonLd,
+  removeManagedHeadTags,
+} from "./lib/seoHead.js";
+
+export {
+  upsertTag,
+  buildCanonicalFromLocation,
+  addJsonLd,
+  removeManagedHeadTags,
+};
 
 /* ===================== Shared API ===================== */
 export const api = axios.create({
