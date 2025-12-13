@@ -1,14 +1,14 @@
 // src/pages/public/Article.jsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { api, styles, removeManagedHeadTags } from '../../App.jsx';
 import {
-  api,
-  styles,
-  removeManagedHeadTags,
   upsertTag,
-  setJsonLd,
+  addJsonLd,
   buildDescriptionClient,
-} from '../../App.jsx';
+  buildCanonicalFromLocation,
+} from '../../lib/seoHead.js';
+
 import SiteNav from '../../components/SiteNav.jsx';
 import SiteFooter from '../../components/SiteFooter.jsx';
 import CommentThread from '../../components/comments/CommentThread.jsx';
@@ -23,7 +23,6 @@ import SectionRenderer from '../../components/sections/SectionRenderer.jsx';
 import RelatedStories from '../../components/RelatedStories.jsx';
 import '../../styles/rails.css';
 
-import { buildCanonicalFromLocation } from '../../App.jsx';
 import { ensureRenderableImage } from '../../lib/images';
 
 // --- Publisher/site constants (used in JSON-LD) ---
@@ -567,7 +566,8 @@ export default function ReaderArticle() {
           ],
         };
 
-        setJsonLd({
+       addJsonLd({
+
           '@context': 'https://schema.org',
           '@graph': [articleNode, breadcrumbNode],
         });
