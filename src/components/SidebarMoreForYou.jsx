@@ -1,7 +1,7 @@
 // src/components/SidebarMoreForYou.jsx
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../App.jsx';
+import { api } from '../lib/publicApi';
 
 const ui = {
   wrap: {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, styles } from "../../App";
+import { styles } from "../../App.jsx";
+import { api } from "../../lib/publicApi";
 
 const EMPTY = {
   key: "",

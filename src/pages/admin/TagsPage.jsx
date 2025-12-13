@@ -1,6 +1,6 @@
 // src/pages/admin/TagsPage.jsx
 import { useEffect, useMemo, useState } from "react";
-import { api } from "../../App";
+import { api } from "../../lib/publicApi";
 import { useToast } from "../../providers/ToastProvider.jsx";
 
 export default function TagsPage() {

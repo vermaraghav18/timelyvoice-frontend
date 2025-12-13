@@ -1,6 +1,7 @@
 // src/components/admin/TodayAnalyticsCard.jsx
 import { useEffect, useState } from "react";
-import { api, styles } from "../../App.jsx";
+import { styles } from "../../App.jsx";
+import { api } from "../../lib/publicApi";
 import { todayISO } from "../../lib/date.js";
 
 function Stat({ label, value }) {

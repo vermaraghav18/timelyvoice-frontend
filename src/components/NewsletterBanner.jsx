@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { api, styles } from '../App.jsx';
+import { styles } from '../App.jsx';        // still uses the UI tokens from App
+import { api } from '../lib/publicApi';     
 import { track } from '../lib/analytics';
 
 export default function NewsletterBanner({ variant='inline' }) {

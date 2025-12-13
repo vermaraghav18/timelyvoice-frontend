@@ -1,9 +1,9 @@
 // src/pages/admin/ArticlesPage.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api } from "../../App";
+import { api } from "../../lib/publicApi";
 import PasteImporter from "../../components/PasteImporter.jsx";
 import { useToast } from "../../providers/ToastProvider.jsx";
-import { getToken } from "../../App";
+import { getToken } from "../../utils/auth";
 
 // 🔁 Default Cloudinary fallback hero (admin preview only)
 const DEFAULT_IMAGE_URL = "/tv-default-hero.jpg";

@@ -1,6 +1,6 @@
 // frontend/src/components/RelatedStories.jsx
 import { useEffect, useState } from 'react';
-import { api } from '../App.jsx';
+import { api } from '../lib/publicApi';
 
 export default function RelatedStories({
   currentSlug,

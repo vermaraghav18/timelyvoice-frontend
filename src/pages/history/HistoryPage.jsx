@@ -1,6 +1,6 @@
 // src/pages/history/HistoryPage.jsx
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
-import { api } from "../../App.jsx";
+import { api } from "../../lib/publicApi";
 import "./HistoryPage.css";
 import TimelineSection from "./timeline/TimelineSection";
 

@@ -1,6 +1,7 @@
 // frontend/src/admin/articles/AdminDrafts.jsx
 import React, { useEffect, useRef, useState } from "react";
-import { api, styles, CATEGORIES } from "../../App.jsx";
+import { styles, CATEGORIES } from "../../App.jsx";
+import { api } from "../../lib/publicApi";
 import { clampLimit } from "../../lib/api-limit.js";
 
 /**
