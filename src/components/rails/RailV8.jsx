@@ -6,7 +6,7 @@ export default function RailV8({ section, custom }) {
   const { imageUrl, title, summary, linkUrl } = cfg;
 
   if (!imageUrl || !title || !summary) {
-    if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
+    if (typeof window !== "undefined" && import.meta.env.DEV) {
       console.warn("[rail_v8] Missing required fields", { imageUrl, title, summary });
     }
     return null;

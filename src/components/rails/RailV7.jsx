@@ -7,7 +7,7 @@ export default function RailV7({ section, custom }) {
 
   if (!imageUrl) {
     // Dev-only hint so you don't silently see nothing
-    if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
+    if (typeof window !== "undefined" && import.meta.env.DEV) {
       console.warn("[rail_v7] Missing custom.imageUrl; nothing will render.", { section, custom });
     }
     return null;
