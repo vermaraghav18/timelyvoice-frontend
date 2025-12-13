@@ -1,7 +1,9 @@
 // src/pages/public/Article.jsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
+
 import { api, styles, removeManagedHeadTags } from '../../App.jsx';
+
 import {
   upsertTag,
   addJsonLd,
@@ -56,25 +58,6 @@ function useIsMobile(breakpoint = 768) {
   }, [breakpoint]);
   return isMobile;
 }
-
-/* ===================== FIX 2 helpers: Video URL rendering ===================== */
-function normalizeVideoUrl(url) {
-  const u = String(url || '').trim();
-  if (!u) return '';
-
-  // Google Drive share link -> embed preview (more reliable than <video>)
-  // Example: https://drive.google.com/file/d/FILE_ID/view?usp=sharing
-  const m = u.match(/drive\.google\.com\/file\/d\/([^/]+)/i);
-  if (m && m[1]) {
-    return `https://drive.google.com/file/d/${m[1]}/preview`;
-  }
-
-  return u;
-}
-function isDrivePreview(url) {
-  return /drive\.google\.com\/file\/d\/[^/]+\/preview/i.test(url || '');
-}
-/* ============================================================================ */
 
 /** Normalize article body:
  * - If it already contains HTML (<p>, <h2>, <ul>…), keep it as-is.
@@ -318,14 +301,10 @@ export default function ReaderArticle() {
   const [railsLoading, setRailsLoading] = useState(true);
   const [railsError, setRailsError] = useState('');
 
-  // (1) ===== Next-up states =====
-  const [nextSlug, setNextSlug] = useState(null);
-  const [nextArticle, setNextArticle] = useState(null);
-
   // Comments loader
   async function loadComments(articleSlug) {
     const { data } = await api.get(
-      `/public/articles/${encodeURIComponent(articleSlug)}/comments`,
+      `/api/public/articles/${encodeURIComponent(articleSlug)}/comments`,
       { validateStatus: () => true }
     );
     setComments(Array.isArray(data) ? data : []);
@@ -357,7 +336,7 @@ export default function ReaderArticle() {
     (async () => {
       try {
         setRailsLoading(true);
-        const res = await api.get('/sections/plan', {
+        const res = await api.get('/api/sections/plan', {
           params: { sectionType: 'homepage' },
           validateStatus: () => true,
         });
@@ -389,7 +368,7 @@ export default function ReaderArticle() {
         setStatus('loading');
 
         const res = await api.get(
-          `/articles/slug/${encodeURIComponent(slug)}`,
+          `/api/articles/slug/${encodeURIComponent(slug)}`,
           {
             validateStatus: (s) => (s >= 200 && s < 300) || s === 308,
             headers: { 'Cache-Control': 'no-cache' },
@@ -496,9 +475,7 @@ export default function ReaderArticle() {
         const authorName =
           (doc.author && String(doc.author).trim()) || 'Timely Voice News';
 
-        const authorNode = authorName
-          .toLowerCase()
-          .includes('timely voice')
+        const authorNode = authorName.toLowerCase().includes('timely voice')
           ? { '@type': 'Organization', name: authorName }
           : { '@type': 'Person', name: authorName };
 
@@ -566,8 +543,7 @@ export default function ReaderArticle() {
           ],
         };
 
-       addJsonLd({
-
+        addJsonLd({
           '@context': 'https://schema.org',
           '@graph': [articleNode, breadcrumbNode],
         });
@@ -589,21 +565,19 @@ export default function ReaderArticle() {
 
         // related
         try {
-          const r1 = await api.get('/articles', {
+          const r1 = await api.get('/api/articles', {
             params: { page: 1, limit: 8, category: categoryName },
             validateStatus: () => true,
           });
           let pool = (r1.data?.items || []).filter((a) => a.slug !== doc.slug);
 
           if (pool.length < 4) {
-            const r2 = await api.get('/articles', {
+            const r2 = await api.get('/api/articles', {
               params: { page: 1, limit: 8 },
               validateStatus: () => true,
             });
             const extra = (r2.data?.items || []).filter(
-              (a) =>
-                a.slug !== doc.slug &&
-                !pool.find((p) => p.slug === a.slug)
+              (a) => a.slug !== doc.slug && !pool.find((p) => p.slug === a.slug)
             );
             pool = [...pool, ...extra];
           }
@@ -630,57 +604,6 @@ export default function ReaderArticle() {
   useEffect(() => {
     if (article?.slug) loadComments(article.slug);
   }, [article?.slug]);
-
-  /* ---------- (2) compute next slug from Top News order ---------- */
-  useEffect(() => {
-    let cancel = false;
-    (async () => {
-      try {
-        if (!article?.slug) return;
-        const res = await api.get('/top-news', {
-          params: { limit: 50, page: 1 },
-        });
-        const list = Array.isArray(res?.data?.items) ? res.data.items : [];
-        const idx = list.findIndex((x) => x.slug === article.slug);
-        if (idx !== -1 && list[idx + 1]) {
-          if (!cancel) setNextSlug(list[idx + 1].slug);
-        } else {
-          if (!cancel) setNextSlug(null);
-        }
-      } catch {
-        if (!cancel) setNextSlug(null);
-      }
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, [article?.slug]);
-
-  /* ---------- (3) fetch next article when we have nextSlug ---------- */
-  useEffect(() => {
-    let cancel = false;
-    (async () => {
-      try {
-        if (!nextSlug) {
-          if (!cancel) setNextArticle(null);
-          return;
-        }
-        const res = await api.get(
-          `/articles/slug/${encodeURIComponent(nextSlug)}`,
-          {
-            validateStatus: (s) => s >= 200 && s < 300,
-            headers: { 'Cache-Control': 'no-cache' },
-          }
-        );
-        if (!cancel) setNextArticle(res.data || null);
-      } catch {
-        if (!cancel) setNextArticle(null);
-      }
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, [nextSlug]);
 
   /* ---------- derived ---------- */
   const displayDate =
@@ -794,172 +717,7 @@ export default function ReaderArticle() {
     () => normalizeBody(article?.bodyHtml || article?.body || ''),
     [article?.bodyHtml, article?.body]
   );
-  const paragraphs = useMemo(
-    () => splitParagraphs(normalizedBody),
-    [normalizedBody]
-  );
-
-  // ------- (4) Light inline renderer for "Next up" -------
-  function NextArticleInline({ doc, isMobile }) {
-    if (!doc) return null;
-
-    const nextImageUrl = ensureRenderableImage(doc);
-    const nextImageAlt = doc.imageAlt || doc.title || '';
-    const bodyHtml = doc.bodyHtml || doc.body || '';
-    const normalized = normalizeBody(bodyHtml);
-    const paras = splitParagraphs(normalized);
-
-    const titleH = {
-      margin: '0 0 8px',
-      fontSize: isMobile ? 'clamp(18px, 5.5vw, 26px)' : 'clamp(18px, 2vw, 28px)',
-      lineHeight: 1.3,
-      fontWeight: 600,
-    };
-    const srcRow = {
-      margin: isMobile ? '6px 0 12px' : '10px 0 20px',
-      fontSize: isMobile ? 14 : 15,
-      color: '#00ffbfff',
-      fontWeight: 500,
-    };
-    const imgS = {
-      width: '100%',
-      height: 'auto',
-      borderRadius: 1,
-      background: '#f1f5f9',
-    };
-    const bodyWrap = { maxWidth: '70ch', margin: '0 auto' };
-    const proseS = {
-      fontSize: isMobile ? 19 : 'clamp(19px, 2.2vw, 22px)',
-      lineHeight: 1.9,
-      color: '#ffffffff',
-    };
-
-    return (
-      <>
-        <div
-          style={{
-            width: '100%',
-            height: 1,
-            background: 'rgba(255,255,255,0.25)',
-            margin: '20px 0',
-          }}
-        />
-        <div
-          style={{
-            margin: '8px 0 16px',
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '12px',
-          }}
-        >
-          <div
-            style={{
-              flex: 1,
-              height: 2,
-              background: 'rgba(255,255,255,0.3)',
-              maxWidth: 140,
-            }}
-          />
-          <span
-            style={{
-              background: 'linear-gradient(135deg, #abcc16 0%, #9dff00 100%)',
-              color: '#000',
-              fontWeight: 800,
-              padding: '6px 16px',
-              fontSize: 20,
-              lineHeight: 1.2,
-              borderRadius: 0,
-              boxShadow: '3px 3px 0 rgba(0,0,0,1)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Next up
-          </span>
-          <div
-            style={{
-              flex: 1,
-              height: 2,
-              background: 'rgba(255,255,255,0.3)',
-              maxWidth: 140,
-            }}
-          />
-        </div>
-
-        <article
-          className="card"
-          style={{
-            ...styles.card,
-            padding: isMobile ? 12 : 16,
-            marginTop: 0,
-            backgroundColor: '#001236ff',
-            color: '#FFFFFF',
-            border: 'none',
-            boxShadow: '0 0 0 0 transparent',
-          }}
-        >
-          <a
-            href={`/article/${doc.slug}`}
-            style={{ textDecoration: 'none', color: 'inherit' }}
-          >
-            <h2 style={titleH}>{doc.title}</h2>
-          </a>
-
-          <div style={srcRow}>By {pickByline(doc)}</div>
-
-          {nextImageUrl && (
-            <figure style={{ margin: '0 0 12px' }}>
-              <img
-                src={nextImageUrl}
-                alt={nextImageAlt}
-                loading="lazy"
-                decoding="async"
-                width="1280"
-                height="720"
-                style={imgS}
-              />
-              {doc.imageAlt ? (
-                <figcaption
-                  style={{
-                    color: '#64748b',
-                    fontSize: isMobile ? 14 : 16,
-                    marginTop: 6,
-                  }}
-                >
-                  {doc.imageAlt}
-                </figcaption>
-              ) : null}
-            </figure>
-          )}
-
-          <div className="article-body" style={{ ...proseS, ...bodyWrap }}>
-            {paras.map((html, i) => (
-              <div key={`n-${i}`} dangerouslySetInnerHTML={{ __html: html }} />
-            ))}
-          </div>
-
-          <div style={{ marginTop: 12 }}>
-            <a
-              href={`/article/${doc.slug}`}
-              style={{
-                display: 'inline-block',
-                textDecoration: 'none',
-                background: '#2e6bff',
-                color: '#fff',
-                padding: '10px 14px',
-                border: '1px solid rgba(255,255,255,.14)',
-                boxShadow: '0 8px 24px rgba(0,0,0,.25)',
-                fontWeight: 700,
-              }}
-            >
-              Continue to full article →
-            </a>
-          </div>
-        </article>
-      </>
-    );
-  }
+  const paragraphs = useMemo(() => splitParagraphs(normalizedBody), [normalizedBody]);
 
   // --- 404 SEO handling (must always define hooks in same order) ---
   useEffect(() => {
@@ -976,9 +734,7 @@ export default function ReaderArticle() {
         <SiteNav />
         <main id="content" className="container">
           <div style={{ padding: 24 }}>
-            <h1 style={{ fontWeight: 700, marginBottom: 8 }}>
-              Story Not Available
-            </h1>
+            <h1 style={{ fontWeight: 700, marginBottom: 8 }}>Story Not Available</h1>
             <p>This story isn’t available right now. Explore the latest headlines below.</p>
           </div>
         </main>
@@ -998,10 +754,6 @@ export default function ReaderArticle() {
       </>
     );
   }
-
-  // Prepare video (if any)
-  const videoUrlRaw = String(article?.videoUrl || '').trim();
-  const videoUrl = videoUrlRaw ? normalizeVideoUrl(videoUrlRaw) : '';
 
   return (
     <>
@@ -1066,7 +818,7 @@ export default function ReaderArticle() {
     border-radius: 2px;
   }
 
-  /* INLINE HERO IMAGE/VIDEO – FLOAT LEFT ON DESKTOP */
+  /* INLINE HERO IMAGE – FLOAT LEFT ON DESKTOP */
   .article-hero-inline {
     float: left;
     width: 40%;
@@ -1074,9 +826,7 @@ export default function ReaderArticle() {
     margin: 0 18px 10px 0;
   }
 
-  .article-hero-inline img,
-  .article-hero-inline video,
-  .article-hero-inline iframe {
+  .article-hero-inline img {
     display: block;
     width: 100%;
     height: auto;
@@ -1123,9 +873,7 @@ export default function ReaderArticle() {
 
               <div style={timeShareBar}>
                 <small style={timeText}>
-                  {displayDate
-                    ? `Updated on: ${new Date(displayDate).toLocaleString()}`
-                    : ''}
+                  {displayDate ? `Updated on: ${new Date(displayDate).toLocaleString()}` : ''}
                   {reading.minutes ? (
                     <>
                       {' • '}
@@ -1148,43 +896,8 @@ export default function ReaderArticle() {
               {article.summary && <div style={summaryBox}>{article.summary}</div>}
 
               {/* NEW: inline hero floated left inside article body */}
-              <div
-                ref={bodyRef}
-                className="article-body"
-                style={{ ...prose, ...articleBodyWrapper }}
-              >
-                {/* ===================== FIX 2: video replaces image when present ===================== */}
-                {videoUrl ? (
-                  <figure className="article-hero-inline">
-                    {isDrivePreview(videoUrl) ? (
-                      <div style={{ width: '100%', aspectRatio: '16 / 9' }}>
-                        <iframe
-                          src={videoUrl}
-                          title={article?.title || 'Video'}
-                          allow="autoplay; fullscreen"
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            border: 0,
-                            borderRadius: 1,
-                            background: '#f1f5f9',
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      <video
-                        src={videoUrl}
-                        controls
-                        playsInline
-                        preload="metadata"
-                        style={{ width: '100%', borderRadius: 1 }}
-                      />
-                    )}
-                    {article.videoAlt ? (
-                      <figcaption>{article.videoAlt}</figcaption>
-                    ) : null}
-                  </figure>
-                ) : heroSrc ? (
+              <div ref={bodyRef} className="article-body" style={{ ...prose, ...articleBodyWrapper }}>
+                {heroSrc && (
                   <figure className="article-hero-inline">
                     <img
                       src={heroSrc}
@@ -1201,12 +914,9 @@ export default function ReaderArticle() {
                         }
                       }}
                     />
-                    {article.imageAlt ? (
-                      <figcaption>{article.imageAlt}</figcaption>
-                    ) : null}
+                    {article.imageAlt ? <figcaption>{article.imageAlt}</figcaption> : null}
                   </figure>
-                ) : null}
-                {/* ================================================================================ */}
+                )}
 
                 {paragraphs.length === 0
                   ? null
@@ -1224,26 +934,18 @@ export default function ReaderArticle() {
                 currentSlug={article.slug}
                 category={
                   article?.category?.name ??
-                  (typeof article?.category === 'string'
-                    ? article.category
-                    : 'General')
+                  (typeof article?.category === 'string' ? article.category : 'General')
                 }
                 title="Related stories"
                 dense={false}
               />
             </article>
 
+            {/* Leave a comment MUST be the last visible section */}
             <section style={{ marginTop: 24 }}>
-              <CommentForm
-                slug={article.slug}
-                onSubmitted={() => loadComments(article.slug)}
-              />
+              <CommentForm slug={article.slug} onSubmitted={() => loadComments(article.slug)} />
               <CommentThread comments={comments} />
             </section>
-
-            {nextArticle ? (
-              <NextArticleInline doc={nextArticle} isMobile={isMobile} />
-            ) : null}
           </main>
 
           {/* RIGHT RAILS (even indices) — hidden on mobile */}
@@ -1252,9 +954,7 @@ export default function ReaderArticle() {
               <div className="rail-wrap" style={railWrapFix}>
                 {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
                 {!railsLoading && railsError && (
-                  <div style={{ padding: 8, color: 'crimson' }}>
-                    {railsError}
-                  </div>
+                  <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>
                 )}
                 {!railsLoading && !railsError && renderRails(rightRails)}
               </div>
