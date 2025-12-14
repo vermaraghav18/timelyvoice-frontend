@@ -2,107 +2,113 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 /**
- * Build-time injection of internal article links into index.html
- * so crawlers can discover /article/* URLs from the homepage HTML.
+ * Build-time injection:
+ * - Fetches latest articles from backend
+ * - Injects a <ul> of /article/... links inside index.html <noscript>
+ * - Also injects ItemList JSON-LD into <head> (helps discovery)
  */
 function injectBotLinks() {
-  const API_ORIGIN =
-    process.env.VITE_PUBLIC_API_ORIGIN ||
-    "https://timelyvoice-backend.onrender.com";
-
-  const LIMIT = Number(process.env.VITE_BOT_LINKS_LIMIT || 80);
-
-  const escapeHtml = (s = "") =>
-    String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-
-  async function fetchJson(url, timeoutMs = 9000) {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), timeoutMs);
-    try {
-      const res = await fetch(url, {
-        signal: ctrl.signal,
-        headers: { Accept: "application/json" },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    } finally {
-      clearTimeout(t);
-    }
-  }
-
-  function normalizeArticles(payload) {
-    // Accept a few possible shapes:
-    // 1) { items: [...] }
-    // 2) { articles: [...] }
-    // 3) [ ... ]
-    const arr =
-      (payload && payload.items) ||
-      (payload && payload.articles) ||
-      payload ||
-      [];
-    if (!Array.isArray(arr)) return [];
-
-    return arr
-      .map((a) => ({
-        slug: a?.slug,
-        title: a?.title,
-        summary: a?.summary || a?.description || "",
-      }))
-      .filter((a) => a.slug && a.title);
-  }
-
-  function buildList(items) {
-    if (!items.length) {
-      // tiny fallback (still gives bots at least something)
-      return [
-        `<li><a href="/top-news">Top News</a></li>`,
-        `<li><a href="/category/india">India</a></li>`,
-        `<li><a href="/category/world">World</a></li>`,
-        `<li><a href="/category/business">Business</a></li>`,
-      ].join("\n");
-    }
-
-    return items
-      .slice(0, LIMIT)
-      .map((a) => {
-        const href = `/article/${encodeURIComponent(a.slug)}`;
-        const title = escapeHtml(a.title);
-        const desc = escapeHtml((a.summary || "").slice(0, 140));
-        return `<li style="margin:14px 0">
-  <a href="${href}" style="font-size:18px;font-weight:700;text-decoration:none">${title}</a>
-  ${desc ? `<div style="color:#444;margin-top:6px">${desc}</div>` : ``}
-</li>`;
-      })
-      .join("\n");
-  }
+  const API =
+    process.env.BOT_LINKS_API ||
+    "https://timelyvoice-backend.onrender.com/api/articles?limit=80";
 
   return {
-    name: "inject-bot-links-into-index-html",
+    name: "inject-bot-links",
     apply: "build",
-    enforce: "post",
-    async transformIndexHtml(html) {
-      const marker = "<!-- BOT_LINKS_PLACEHOLDER -->";
-      if (!html.includes(marker)) return html;
 
-      let injected = "";
+    async transformIndexHtml(html) {
+      // Only run if placeholder exists
+      if (!html.includes("BOT_LINKS_PLACEHOLDER")) return html;
+
+      let items = [];
       try {
-        const url = `${API_ORIGIN}/api/articles?limit=${LIMIT}`;
-        const json = await fetchJson(url);
-        const items = normalizeArticles(json);
-        injected = buildList(items);
+        const res = await fetch(API, {
+          headers: { Accept: "application/json" },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const list = Array.isArray(json) ? json : json?.articles || [];
+          items = (Array.isArray(list) ? list : []).slice(0, 80);
+        }
       } catch (e) {
-        injected = buildList([]);
+        // Fail silently: keep placeholder empty if API is down at build time
+        items = [];
       }
 
-      // Optional comment line so you can grep it in curl output
-      const comment = `<!-- BOT_LINKS_INJECTED_AT_BUILD: limit=${LIMIT} -->`;
+      // Build <li> list (NO extra explanatory text — prevents the “- Vite injects…” leak)
+      const safe = (s) =>
+        String(s ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
 
-      return html.replace(marker, `${comment}\n${injected}`);
+      const toSlug = (a) => a?.slug || a?._id || "";
+      const toTitle = (a) => a?.title || a?.headline || a?.seoTitle || a?.slug || "Article";
+      const toSummary = (a) => a?.summary || a?.description || "";
+
+      const liHtml = items
+        .map((a) => {
+          const slug = toSlug(a);
+          if (!slug) return "";
+          const title = safe(toTitle(a));
+          const summary = safe(toSummary(a)).slice(0, 160);
+          return `<li style="margin:14px 0">
+  <a href="/article/${safe(slug)}" style="font-size:18px;font-weight:700;text-decoration:none">${title}</a>
+  ${summary ? `<div style="color:#444;margin-top:6px">${summary}</div>` : ""}
+</li>`;
+        })
+        .filter(Boolean)
+        .join("\n");
+
+      const botBlock =
+        items.length === 0
+          ? ""
+          : `<div style="max-width:920px;margin:24px auto;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.6">
+  <ul style="list-style:none;padding:0;margin:0">
+${liHtml}
+  </ul>
+</div>`;
+
+      // Replace placeholder inside <noscript>
+      const htmlOut = html.replace("<!-- BOT_LINKS_PLACEHOLDER -->", botBlock);
+
+      // JSON-LD ItemList in <head>
+      const itemList = items
+        .map((a, idx) => {
+          const slug = toSlug(a);
+          if (!slug) return null;
+          return {
+            "@type": "ListItem",
+            position: idx + 1,
+            url: `https://timelyvoice.com/article/${slug}`,
+            name: toTitle(a),
+          };
+        })
+        .filter(Boolean);
+
+      const jsonLd =
+        itemList.length === 0
+          ? null
+          : {
+              "@context": "https://schema.org",
+              "@type": "ItemList",
+              itemListElement: itemList,
+            };
+
+      if (!jsonLd) return htmlOut;
+
+      return {
+        html: htmlOut,
+        tags: [
+          {
+            tag: "script",
+            attrs: { type: "application/ld+json" },
+            children: JSON.stringify(jsonLd),
+            injectTo: "head",
+          },
+        ],
+      };
     },
   };
 }
