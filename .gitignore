@@ -27,3 +27,5 @@ dist-ssr
 # Ignore node modules
 node_modules/
 NUL
+
+.vercel
