@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>The Timely Voice</title>
 
-    <!-- ✅ Google AdSense (required) -->
+    <!-- ✅ Google AdSense -->
     <meta name="google-adsense-account" content="ca-pub-8472487092329023" />
     <script
       async
@@ -18,9 +18,6 @@
     <link rel="preconnect" href="https://googleads.g.doubleclick.net" crossorigin />
     <link rel="dns-prefetch" href="//pagead2.googlesyndication.com" />
     <link rel="dns-prefetch" href="//googleads.g.doubleclick.net" />
-
-    <!-- Preconnect to your API (DEV) -->
-    <link rel="preconnect" href="http://localhost:4000" crossorigin />
 
     <!-- Preconnect to Cloudinary (image CDN) -->
     <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
@@ -39,26 +36,22 @@
       imagesizes="100vw"
     />
 
-    <!-- Tiny critical CSS: stabilize header + hero before JS loads -->
+    <!-- Tiny critical CSS -->
     <style>
       body {
         margin: 0;
         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
         background: #fff;
       }
-
       #root {
         min-height: 100vh;
       }
-
-      /* Prevent layout shift while hero loads */
       .hero,
       [data-hero] {
         aspect-ratio: 16 / 9;
         background-color: #f4f7f6;
         overflow: hidden;
       }
-
       .hero img,
       [data-hero] img {
         width: 100%;
@@ -66,50 +59,15 @@
         object-fit: cover;
         display: block;
       }
-
-      /* Noscript bot links styling (only visible if JS disabled) */
-      .bot-links {
-        max-width: 900px;
-        margin: 24px auto;
-        padding: 0 16px;
-        line-height: 1.6;
-        color: #111;
-      }
-      .bot-links h1 {
-        font-size: 26px;
-        margin: 0 0 10px;
-      }
-      .bot-links p {
-        margin: 0 0 14px;
-        color: #444;
-      }
-      .bot-links ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-      }
-      .bot-links li {
-        margin: 12px 0;
-      }
-      .bot-links a {
-        font-weight: 700;
-        text-decoration: none;
-      }
     </style>
   </head>
 
   <body>
-    <!--
-      Bot-only fallback:
-      - Vercel rewrites SHOULD send bots to backend /ssr/home
-      - If rewrites ever fail, this noscript block still exposes crawlable links.
-      - Vite injects the actual <li><a href="/article/..."> items at build time.
-    -->
-    <noscript>
-      <div class="bot-links">
-        <h1>The Timely Voice</h1>
-        <p>Latest articles (JS disabled / bot fallback).</p>
-        <ul>
+    <!-- BOT LINKS FOR CRAWLERS (Vite will inject real links at build time) -->
+    <noscript id="bot-links">
+      <div style="max-width: 980px; margin: 24px auto; padding: 0 16px">
+        <h2 style="font-size: 18px; margin: 0 0 10px">Latest Articles</h2>
+        <ul style="padding-left: 18px; line-height: 1.6">
           <!-- BOT_LINKS_PLACEHOLDER -->
         </ul>
       </div>

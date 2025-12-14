@@ -27,7 +27,7 @@
         {
           "type": "header",
           "key": "User-Agent",
-          "value": ".*([Gg]ooglebot|[Aa]ds[Bb]ot|[Bb]ingbot|DuckDuckBot|[Dd]uck[Dd]uck[Bb]ot|[Yy]andex|[Bb]aiduspider|[Ss]lurp|Mediapartners-Google|[Ff]acebookexternalhit|[Tt]witterbot|[Ll]inked[Ii]n[Bb]ot|[Ss]lackbot|[Dd]iscordbot).*"
+          "value": "(?i).*(googlebot|bingbot|duckduckbot|yandex|baiduspider|slurp|mediapartners-google|adsbot-google|facebookexternalhit|twitterbot|linkedinbot|slackbot|discordbot).*"
         }
       ],
       "destination": "https://timelyvoice-backend.onrender.com/ssr/home"
@@ -44,7 +44,7 @@
         {
           "type": "header",
           "key": "User-Agent",
-          "value": ".*([Gg]ooglebot|[Aa]ds[Bb]ot|[Bb]ingbot|DuckDuckBot|[Dd]uck[Dd]uck[Bb]ot|[Yy]andex|[Bb]aiduspider|[Ss]lurp|Mediapartners-Google|[Ff]acebookexternalhit|[Tt]witterbot|[Ll]inked[Ii]n[Bb]ot|[Ss]lackbot|[Dd]iscordbot).*"
+          "value": "(?i).*(googlebot|bingbot|duckduckbot|yandex|baiduspider|slurp|mediapartners-google|adsbot-google|facebookexternalhit|twitterbot|linkedinbot|slackbot|discordbot).*"
         }
       ],
       "destination": "https://timelyvoice-backend.onrender.com/ssr/article/:slug"
