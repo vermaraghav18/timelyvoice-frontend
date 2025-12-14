@@ -22,50 +22,23 @@
     <!-- Preconnect to Cloudinary (image CDN) -->
     <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
     <link rel="dns-prefetch" href="//res.cloudinary.com" />
-
-    <!-- Preload fallback hero (safe) -->
-    <link
-      rel="preload"
-      as="image"
-      href="https://res.cloudinary.com/damjdyqj2/image/upload/f_auto,q_auto,w_1280/news-images/defaults/fallback-hero"
-      imagesrcset="
-        https://res.cloudinary.com/damjdyqj2/image/upload/f_auto,q_auto,w_640/news-images/defaults/fallback-hero 640w,
-        https://res.cloudinary.com/damjdyqj2/image/upload/f_auto,q_auto,w_1280/news-images/defaults/fallback-hero 1280w,
-        https://res.cloudinary.com/damjdyqj2/image/upload/f_auto,q_auto,w_1920/news-images/defaults/fallback-hero 1920w
-      "
-      imagesizes="100vw"
-    />
-
-    <!-- Tiny critical CSS -->
-    <style>
-      body {
-        margin: 0;
-        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-        background: #fff;
-      }
-      #root {
-        min-height: 100vh;
-      }
-      .hero,
-      [data-hero] {
-        aspect-ratio: 16 / 9;
-        background-color: #f4f7f6;
-        overflow: hidden;
-      }
-      .hero img,
-      [data-hero] img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-    </style>
   </head>
 
   <body>
-    <!-- ✅ BOT LINKS: build-time injected into the <noscript> below (for curl/view-source indexing) -->
-    <noscript id="bot-links">
-      <!-- BOT_LINKS_PLACEHOLDER -->
+    <!--
+      IMPORTANT:
+      - Vite build will replace the placeholder below with real <a href="/article/..."> links.
+      - It is inside <noscript> so normal users won't see it, but bots/curl will.
+    -->
+    <noscript>
+      <div style="max-width:900px;margin:24px auto;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.6;color:#111">
+        <h1 style="font-size:28px;margin:0 0 10px">The Timely Voice</h1>
+        <p style="margin:0 0 16px;color:#444">
+          Latest stories:
+        </p>
+
+        <!-- BOT_LINKS_PLACEHOLDER -->
+      </div>
     </noscript>
 
     <div id="root"></div>

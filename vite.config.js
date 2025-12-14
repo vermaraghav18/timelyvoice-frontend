@@ -2,113 +2,97 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 /**
- * Build-time injection:
+ * Build-time injection for bots/curl:
+ * - Finds <!-- BOT_LINKS_PLACEHOLDER --> in index.html
  * - Fetches latest articles from backend
- * - Injects a <ul> of /article/... links inside index.html <noscript>
- * - Also injects ItemList JSON-LD into <head> (helps discovery)
+ * - Injects <ul><li><a href="/article/...">...</a></li></ul>
+ *
+ * Optional env:
+ *   BOT_LINKS_API_BASE=https://timelyvoice-backend.onrender.com
  */
 function injectBotLinks() {
-  const API =
-    process.env.BOT_LINKS_API ||
-    "https://timelyvoice-backend.onrender.com/api/articles?limit=80";
+  const PLACEHOLDER = "<!-- BOT_LINKS_PLACEHOLDER -->";
+
+  const esc = (s = "") =>
+    String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  const normBase = (u) => String(u || "").replace(/\/+$/, "");
 
   return {
     name: "inject-bot-links",
     apply: "build",
-
+    enforce: "post",
     async transformIndexHtml(html) {
-      // Only run if placeholder exists
-      if (!html.includes("BOT_LINKS_PLACEHOLDER")) return html;
+      if (!html.includes(PLACEHOLDER)) return html;
 
-      let items = [];
+      const apiBase = normBase(
+        process.env.BOT_LINKS_API_BASE || "https://timelyvoice-backend.onrender.com"
+      );
+
+      // keep query conservative: limit + fields + sort
+      const url =
+        `${apiBase}/api/articles` +
+        `?limit=80&fields=title,slug,summary,publishAt&sort=-publishAt`;
+
+      let articles = [];
+
       try {
-        const res = await fetch(API, {
-          headers: { Accept: "application/json" },
+        const res = await fetch(url, {
+          headers: {
+            "User-Agent": "VercelBuildBotLinks/1.0",
+            Accept: "application/json",
+          },
         });
-        if (res.ok) {
-          const json = await res.json();
-          const list = Array.isArray(json) ? json : json?.articles || [];
-          items = (Array.isArray(list) ? list : []).slice(0, 80);
+
+        if (!res.ok) {
+          console.warn("[inject-bot-links] fetch failed:", res.status, res.statusText);
+        } else {
+          const data = await res.json();
+
+          // support common shapes: { articles: [...] } OR [...]
+          const raw =
+            Array.isArray(data?.articles) ? data.articles :
+            Array.isArray(data) ? data :
+            [];
+
+          articles = raw
+            .filter((a) => a && a.slug && a.title)
+            .slice(0, 80)
+            .map((a) => ({
+              slug: String(a.slug),
+              title: String(a.title),
+              summary: String(a.summary || "").slice(0, 180),
+            }));
         }
       } catch (e) {
-        // Fail silently: keep placeholder empty if API is down at build time
-        items = [];
+        console.warn("[inject-bot-links] exception:", e?.message || e);
       }
 
-      // Build <li> list (NO extra explanatory text — prevents the “- Vite injects…” leak)
-      const safe = (s) =>
-        String(s ?? "")
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;");
-
-      const toSlug = (a) => a?.slug || a?._id || "";
-      const toTitle = (a) => a?.title || a?.headline || a?.seoTitle || a?.slug || "Article";
-      const toSummary = (a) => a?.summary || a?.description || "";
-
-      const liHtml = items
-        .map((a) => {
-          const slug = toSlug(a);
-          if (!slug) return "";
-          const title = safe(toTitle(a));
-          const summary = safe(toSummary(a)).slice(0, 160);
-          return `<li style="margin:14px 0">
-  <a href="/article/${safe(slug)}" style="font-size:18px;font-weight:700;text-decoration:none">${title}</a>
-  ${summary ? `<div style="color:#444;margin-top:6px">${summary}</div>` : ""}
-</li>`;
-        })
-        .filter(Boolean)
-        .join("\n");
-
-      const botBlock =
-        items.length === 0
-          ? ""
-          : `<div style="max-width:920px;margin:24px auto;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.6">
+      const linksHtml = articles.length
+        ? `
+<div data-bot-links="1" style="padding:0;margin:0">
   <ul style="list-style:none;padding:0;margin:0">
-${liHtml}
+    ${articles
+      .map(
+        (a) => `
+    <li style="margin:14px 0">
+      <a href="/article/${esc(a.slug)}" style="font-size:18px;font-weight:700;text-decoration:none">${esc(
+          a.title
+        )}</a>
+      ${a.summary ? `<div style="color:#444;margin-top:6px">${esc(a.summary)}</div>` : ""}
+    </li>`
+      )
+      .join("")}
   </ul>
-</div>`;
+</div>`.trim()
+        : `<div data-bot-links="1" style="display:none"></div>`;
 
-      // Replace placeholder inside <noscript>
-      const htmlOut = html.replace("<!-- BOT_LINKS_PLACEHOLDER -->", botBlock);
-
-      // JSON-LD ItemList in <head>
-      const itemList = items
-        .map((a, idx) => {
-          const slug = toSlug(a);
-          if (!slug) return null;
-          return {
-            "@type": "ListItem",
-            position: idx + 1,
-            url: `https://timelyvoice.com/article/${slug}`,
-            name: toTitle(a),
-          };
-        })
-        .filter(Boolean);
-
-      const jsonLd =
-        itemList.length === 0
-          ? null
-          : {
-              "@context": "https://schema.org",
-              "@type": "ItemList",
-              itemListElement: itemList,
-            };
-
-      if (!jsonLd) return htmlOut;
-
-      return {
-        html: htmlOut,
-        tags: [
-          {
-            tag: "script",
-            attrs: { type: "application/ld+json" },
-            children: JSON.stringify(jsonLd),
-            injectTo: "head",
-          },
-        ],
-      };
+      return html.replace(PLACEHOLDER, linksHtml);
     },
   };
 }
@@ -126,11 +110,6 @@ export default defineConfig({
         secure: false,
       },
     },
-  },
-  preview: {
-    host: true,
-    port: 5173,
-    allowedHosts: [".ngrok-free.app"],
   },
   build: {
     cssCodeSplit: true,
