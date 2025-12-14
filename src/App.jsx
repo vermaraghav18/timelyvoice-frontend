@@ -3,30 +3,25 @@ import { useEffect, useState, lazy, Suspense } from "react";
 import { Routes, Route, useLocation, useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
+import {
+  upsertTag,
+  addJsonLd,
+  buildCanonicalFromLocation,
+} from "./lib/seoHead.js";
+
 /* ===================== Global CSS ===================== */
 import "./styles/home.css";
 import "./styles/aspectRatio.css";
 import "./styles/typography.css";
 import "./styles/scroll-optimizations.css";
 
-/* ===================== SEO helpers (re-exported) ===================== */
-import {
-  upsertTag,
-  buildCanonicalFromLocation,
-  addJsonLd,
-  removeManagedHeadTags,
-} from "./lib/seoHead.js";
-
-export {
-  upsertTag,
-  buildCanonicalFromLocation,
-  addJsonLd,
-  removeManagedHeadTags,
-};
 
 /* ===================== Shared API ===================== */
 export const api = axios.create({
-  baseURL: import.meta?.env?.VITE_API_BASE_URL || "",
+  baseURL:
+  import.meta?.env?.VITE_API_BASE_URL ||
+  import.meta?.env?.VITE_API_BASE ||
+  "",
   withCredentials: false,
 });
 
@@ -167,21 +162,7 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 /* ===================== Category Route Wrapper ===================== */
 function AnyCategoryRoute() {
   const { slug } = useParams();
-  const navigate = useNavigate();
-  const loc = useLocation();
   const normalized = String(slug || "").toLowerCase();
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const want = `/category/${normalized}`;
-    if (loc.pathname !== want) {
-      navigate(want, { replace: true });
-      return;
-    }
-    setReady(true);
-  }, [normalized, loc.pathname, navigate]);
-
-  if (!ready) return null;
 
   if (normalized === "history") return <HistoryPage />;
 
@@ -196,6 +177,7 @@ function AnyCategoryRoute() {
 
   return <CategoryPage />;
 }
+
 
 /* ===================== App ===================== */
 export default function App() {
@@ -234,7 +216,16 @@ export default function App() {
         <Routes>
           <Route path="/" element={<PublicHome />} />
           <Route path="/top-news" element={<TopNews />} />
-          <Route path="/health" element={<HealthPage />} />
+          <Route
+  path="/health"
+  element={
+    <FinanceCategoryPage
+      categorySlug="health"
+      displayName="Health"
+    />
+  }
+/>
+
 
           <Route path="/category/:slug" element={<AnyCategoryRoute />} />
 

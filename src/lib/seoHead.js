@@ -101,20 +101,24 @@ export function buildDescriptionClient(doc = {}) {
   return String(raw).replace(/\s+/g, " ").slice(0, 160);
 }
 
+/**
+ * Canonical URL builder (client-side)
+ *
+ * Goals:
+ * - Always canonicalize to pathname ONLY (no query params / hashes)
+ * - Always force the preferred host: https://timelyvoice.com
+ *   (prevents www / preview deployments / localhost from becoming canonical)
+ */
 export function buildCanonicalFromLocation() {
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const url = new URL(origin + window.location.pathname + window.location.search);
+  const hasWindow = typeof window !== "undefined" && window.location;
+  const pathname = hasWindow ? window.location.pathname : "/";
 
-  [
-    "utm_source",
-    "utm_medium",
-    "utm_campaign",
-    "utm_term",
-    "utm_content",
-    "fbclid",
-    "gclid",
-  ].forEach((k) => url.searchParams.delete(k));
+  // Base origin (preferred canonical)
+  const url = new URL(`https://timelyvoice.com${pathname}`);
 
+  // Ensure no hash/query in canonical
+  url.search = "";
   url.hash = "";
+
   return url.toString();
 }
