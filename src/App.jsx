@@ -7,7 +7,22 @@ import {
   upsertTag,
   addJsonLd,
   buildCanonicalFromLocation,
+  removeManagedHeadTags,
+  setJsonLd,
+  emitBreadcrumbs,
+  buildDescriptionClient,
 } from "./lib/seoHead.js";
+
+// ✅ Re-export so any page importing from App.jsx keeps working
+export {
+  upsertTag,
+  addJsonLd,
+  buildCanonicalFromLocation,
+  removeManagedHeadTags,
+  setJsonLd,
+  emitBreadcrumbs,
+  buildDescriptionClient,
+};
 
 /* ===================== Global CSS ===================== */
 import "./styles/home.css";
@@ -189,19 +204,20 @@ export default function App() {
   }, [loc.pathname, loc.search]);
 
   useEffect(() => {
-    const origin = window.location.origin;
-    addJsonLd("site", {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      name: "My News",
-      url: origin,
-      potentialAction: {
-        "@type": "SearchAction",
-        target: `${origin}/search?q={search_term_string}`,
-        "query-input": "required name=search_term_string",
-      },
-    });
-  }, []);
+  const origin = "https://timelyvoice.com";
+  addJsonLd("site", {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Timely Voice",
+    url: origin,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${origin}/search?q={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  });
+}, []);
+
 
   useEffect(() => {
     upsertTag("link", {
