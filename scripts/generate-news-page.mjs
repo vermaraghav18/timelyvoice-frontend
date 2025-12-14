@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
 
-const BACKEND = process.env.VITE_BACKEND_URL || "https://timelyvoice-backend.onrender.com";
+const BACKEND =
+  process.env.VITE_BACKEND_URL || "https://timelyvoice-backend.onrender.com";
 
 // Change this endpoint if your backend uses a different one.
 // It must return an array of articles with at least: slug, title (and ideally publishedAt)
@@ -19,21 +20,37 @@ function esc(s = "") {
 async function main() {
   console.log("[news] fetching:", API_URL);
 
-  const res = await fetch(API_URL, { headers: { "User-Agent": "TimelyVoiceBuildBot/1.0" } });
+  const res = await fetch(API_URL, {
+    headers: { "User-Agent": "TimelyVoiceBuildBot/1.0" },
+  });
   if (!res.ok) throw new Error(`[news] API failed: ${res.status} ${res.statusText}`);
 
   const data = await res.json();
 
   // Support either {items: []} or [] responses (common patterns)
-  const items = Array.isArray(data) ? data : (data.items || data.articles || []);
+  const items = Array.isArray(data) ? data : data.items || data.articles || [];
+
+  // --- DEDUPE by slug (fixes repeated links on /news) ---
+  const seen = new Set();
 
   const links = items
-    .filter(a => a?.slug && a?.title)
+    .filter((a) => a?.slug && a?.title)
+    .filter((a) => {
+      const key = String(a.slug).trim().toLowerCase();
+      if (!key) return false;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
     .slice(0, 200)
-    .map(a => {
+    .map((a) => {
       const href = `/article/${a.slug}`;
-      const date = a.publishedAt ? new Date(a.publishedAt).toISOString().slice(0, 10) : "";
-      return `<li><a href="${href}">${esc(a.title)}</a>${date ? ` <small>(${date})</small>` : ""}</li>`;
+      const date = a.publishedAt
+        ? new Date(a.publishedAt).toISOString().slice(0, 10)
+        : "";
+      return `<li><a href="${href}">${esc(a.title)}</a>${
+        date ? ` <small>(${date})</small>` : ""
+      }</li>`;
     })
     .join("\n");
 
