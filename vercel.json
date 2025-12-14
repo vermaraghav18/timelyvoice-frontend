@@ -21,9 +21,34 @@
 
     { "source": "/ssr/:path*", "destination": "https://timelyvoice-backend.onrender.com/ssr/:path*" },
 
+
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(googlebot|bingbot|duckduckbot|yandex|baiduspider|slurp|mediapartners-google|adsbot-google|facebookexternalhit|twitterbot|linkedinbot|slackbot|discordbot).*"
+        }
+      ],
+      "destination": "https://timelyvoice-backend.onrender.com/ssr/home"
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "query", "key": "_bot", "value": "1" }],
+      "destination": "https://timelyvoice-backend.onrender.com/ssr/home"
+    },
+
+
     {
       "source": "/article/:slug",
-      "has": [{ "type": "header", "key": "user-agent", "value": ".*(googlebot|bingbot|duckduckbot|yandex|baiduspider|slurp|mediapartners-google|adsbot-google|facebookexternalhit|twitterbot|linkedinbot|slackbot|discordbot).*" }],
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(googlebot|bingbot|duckduckbot|yandex|baiduspider|slurp|mediapartners-google|adsbot-google|facebookexternalhit|twitterbot|linkedinbot|slackbot|discordbot).*"
+        }
+      ],
       "destination": "https://timelyvoice-backend.onrender.com/ssr/article/:slug"
     },
     {
@@ -31,6 +56,7 @@
       "has": [{ "type": "query", "key": "_bot", "value": "1" }],
       "destination": "https://timelyvoice-backend.onrender.com/ssr/article/:slug"
     },
+
 
     { "source": "/:path*", "destination": "/" }
   ]
