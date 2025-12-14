@@ -6,40 +6,38 @@
     <title>The Timely Voice</title>
 
     <!-- ✅ Google AdSense (required) -->
-    <!-- Replace ca-pub-XXXXXXXXXXXXXXXX with your real client id -->
     <meta name="google-adsense-account" content="ca-pub-8472487092329023" />
-   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8472487092329023"
-     crossorigin="anonymous"></script>
+    <script
+      async
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8472487092329023"
+      crossorigin="anonymous"
+    ></script>
 
     <!-- Network performance hints for ads -->
-    <link rel="preconnect" href="https://pagead2.googlesyndication.com" crossorigin>
-    <link rel="preconnect" href="https://googleads.g.doubleclick.net" crossorigin>
-    <link rel="dns-prefetch" href="//pagead2.googlesyndication.com">
-    <link rel="dns-prefetch" href="//googleads.g.doubleclick.net">
+    <link rel="preconnect" href="https://pagead2.googlesyndication.com" crossorigin />
+    <link rel="preconnect" href="https://googleads.g.doubleclick.net" crossorigin />
+    <link rel="dns-prefetch" href="//pagead2.googlesyndication.com" />
+    <link rel="dns-prefetch" href="//googleads.g.doubleclick.net" />
 
     <!-- Preconnect to your API (DEV) -->
-    <link rel="preconnect" href="http://localhost:4000" crossorigin>
-
-    <!-- Preconnect to your API (PROD) — set to your real API origin and keep only one of these lines in production -->
-    <!-- <link rel="preconnect" href="https://YOUR-API-DOMAIN.com" crossorigin> -->
+    <link rel="preconnect" href="http://localhost:4000" crossorigin />
 
     <!-- Preconnect to Cloudinary (image CDN) -->
-    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
-    <link rel="dns-prefetch" href="//res.cloudinary.com">
+    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
+    <link rel="dns-prefetch" href="//res.cloudinary.com" />
 
-    <!-- Preload hero image (🔁 replace URL below with your real hero image path) -->
-   <link
-  rel="preload"
-  as="image"
-  href="https://res.cloudinary.com/damjdyqj2/image/upload/f_auto,q_auto,w_1280/news-images/defaults/fallback-hero"
-  imagesrcset="
-    https://res.cloudinary.com/damjdyqj2/image/upload/f_auto,q_auto,w_640/news-images/defaults/fallback-hero 640w,
-    https://res.cloudinary.com/damjdyqj2/image/upload/f_auto,q_auto,w_1280/news-images/defaults/fallback-hero 1280w,
-    https://res.cloudinary.com/damjdyqj2/image/upload/f_auto,q_auto,w_1920/news-images/defaults/fallback-hero 1920w
-  "
-  imagesizes="100vw"
-/>
-
+    <!-- Preload hero image -->
+    <link
+      rel="preload"
+      as="image"
+      href="https://res.cloudinary.com/damjdyqj2/image/upload/f_auto,q_auto,w_1280/news-images/defaults/fallback-hero"
+      imagesrcset="
+        https://res.cloudinary.com/damjdyqj2/image/upload/f_auto,q_auto,w_640/news-images/defaults/fallback-hero 640w,
+        https://res.cloudinary.com/damjdyqj2/image/upload/f_auto,q_auto,w_1280/news-images/defaults/fallback-hero 1280w,
+        https://res.cloudinary.com/damjdyqj2/image/upload/f_auto,q_auto,w_1920/news-images/defaults/fallback-hero 1920w
+      "
+      imagesizes="100vw"
+    />
 
     <!-- Tiny critical CSS: stabilize header + hero before JS loads -->
     <style>
@@ -68,23 +66,54 @@
         object-fit: cover;
         display: block;
       }
+
+      /* Noscript bot links styling (only visible if JS disabled) */
+      .bot-links {
+        max-width: 900px;
+        margin: 24px auto;
+        padding: 0 16px;
+        line-height: 1.6;
+        color: #111;
+      }
+      .bot-links h1 {
+        font-size: 26px;
+        margin: 0 0 10px;
+      }
+      .bot-links p {
+        margin: 0 0 14px;
+        color: #444;
+      }
+      .bot-links ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .bot-links li {
+        margin: 12px 0;
+      }
+      .bot-links a {
+        font-weight: 700;
+        text-decoration: none;
+      }
     </style>
   </head>
-  <body>
-    <!-- Optional: a static, above-the-root ad slot (kept commented).
-         For React-driven pages, it's better to place ad <ins> units inside components.
-         If you ever want a top-of-page static banner, uncomment this and set your ad-slot id.
 
-    <ins class="adsbygoogle"
-         style="display:block; text-align:center; margin:8px 0"
-         data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-         data-ad-slot="1234567890"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-    <script>
-      (adsbygoogle = window.adsbygoogle || []).push({});
-    </script>
+  <body>
+    <!--
+      Bot-only fallback:
+      - Vercel rewrites SHOULD send bots to backend /ssr/home
+      - If rewrites ever fail, this noscript block still exposes crawlable links.
+      - Vite injects the actual <li><a href="/article/..."> items at build time.
     -->
+    <noscript>
+      <div class="bot-links">
+        <h1>The Timely Voice</h1>
+        <p>Latest articles (JS disabled / bot fallback).</p>
+        <ul>
+          <!-- BOT_LINKS_PLACEHOLDER -->
+        </ul>
+      </div>
+    </noscript>
 
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>

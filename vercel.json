@@ -26,8 +26,8 @@
       "has": [
         {
           "type": "header",
-          "key": "user-agent",
-          "value": ".*(Googlebot|AdsBot|bingbot|DuckDuckBot|Yandex|Baiduspider|Slurp|Mediapartners-Google|facebookexternalhit|Twitterbot|LinkedInBot|Slackbot|Discordbot).*"
+          "key": "User-Agent",
+          "value": ".*([Gg]ooglebot|[Aa]ds[Bb]ot|[Bb]ingbot|DuckDuckBot|[Dd]uck[Dd]uck[Bb]ot|[Yy]andex|[Bb]aiduspider|[Ss]lurp|Mediapartners-Google|[Ff]acebookexternalhit|[Tt]witterbot|[Ll]inked[Ii]n[Bb]ot|[Ss]lackbot|[Dd]iscordbot).*"
         }
       ],
       "destination": "https://timelyvoice-backend.onrender.com/ssr/home"
@@ -43,8 +43,8 @@
       "has": [
         {
           "type": "header",
-          "key": "user-agent",
-          "value": ".*(Googlebot|AdsBot|bingbot|DuckDuckBot|Yandex|Baiduspider|Slurp|Mediapartners-Google|facebookexternalhit|Twitterbot|LinkedInBot|Slackbot|Discordbot).*"
+          "key": "User-Agent",
+          "value": ".*([Gg]ooglebot|[Aa]ds[Bb]ot|[Bb]ingbot|DuckDuckBot|[Dd]uck[Dd]uck[Bb]ot|[Yy]andex|[Bb]aiduspider|[Ss]lurp|Mediapartners-Google|[Ff]acebookexternalhit|[Tt]witterbot|[Ll]inked[Ii]n[Bb]ot|[Ss]lackbot|[Dd]iscordbot).*"
         }
       ],
       "destination": "https://timelyvoice-backend.onrender.com/ssr/article/:slug"
