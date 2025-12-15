@@ -2,6 +2,18 @@
   "version": 2,
   "redirects": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "header",
+          "key": "User-Agent",
+          "value": ".*[Gg]ooglebot.*"
+        }
+      ],
+      "destination": "/ssr/home",
+      "permanent": false
+    },
+    {
       "source": "/article/:slug/",
       "destination": "/article/:slug",
       "permanent": true
