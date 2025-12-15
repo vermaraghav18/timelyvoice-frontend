@@ -92,10 +92,6 @@
     {
       "source": "/ssr/:path*",
       "destination": "https://timelyvoice-backend.onrender.com/ssr/:path*"
-    },
-    {
-      "source": "/:path*",
-      "destination": "/"
     }
   ]
 }
