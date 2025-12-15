@@ -304,9 +304,10 @@ export default function ReaderArticle() {
   // Comments loader
   async function loadComments(articleSlug) {
     const { data } = await api.get(
-      `/api/public/articles/${encodeURIComponent(articleSlug)}/comments`,
-      { validateStatus: () => true }
-    );
+  `/public/articles/${encodeURIComponent(articleSlug)}/comments`,
+  { validateStatus: () => true }
+);
+
     setComments(Array.isArray(data) ? data : []);
   }
 
@@ -336,10 +337,11 @@ export default function ReaderArticle() {
     (async () => {
       try {
         setRailsLoading(true);
-        const res = await api.get('/api/sections/plan', {
-          params: { sectionType: 'homepage' },
-          validateStatus: () => true,
-        });
+       const res = await api.get('/sections/plan', {
+  params: { sectionType: 'homepage' },
+  validateStatus: () => true,
+});
+
         if (!cancel) {
           const rows = Array.isArray(res.data) ? res.data : [];
           setHomeSections(rows);
@@ -368,7 +370,8 @@ export default function ReaderArticle() {
         setStatus('loading');
 
         const res = await api.get(
-          `/api/articles/slug/${encodeURIComponent(slug)}`,
+  `/articles/slug/${encodeURIComponent(slug)}`,
+
           {
             validateStatus: (s) => (s >= 200 && s < 300) || s === 308,
             headers: { 'Cache-Control': 'no-cache' },
@@ -565,14 +568,16 @@ export default function ReaderArticle() {
 
         // related
         try {
-          const r1 = await api.get('/api/articles', {
+          const r1 = await api.get('/articles', {
+
             params: { page: 1, limit: 8, category: categoryName },
             validateStatus: () => true,
           });
           let pool = (r1.data?.items || []).filter((a) => a.slug !== doc.slug);
 
           if (pool.length < 4) {
-            const r2 = await api.get('/api/articles', {
+            const r2 = await api.get('/articles', {
+
               params: { page: 1, limit: 8 },
               validateStatus: () => true,
             });
