@@ -104,6 +104,18 @@
     {
       "source": "/ssr/:path*",
       "destination": "https://timelyvoice-backend.onrender.com/ssr/:path*"
+    },
+    {
+      "source": "/article/:slug",
+      "destination": "/"
+    },
+    {
+      "source": "/category/:slug",
+      "destination": "/"
+    },
+    {
+      "source": "/news",
+      "destination": "/"
     }
   ]
 }
