@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
-import { api, cachedGet } from "../../lib/publicApi.js";
 import { upsertTag, removeManagedHeadTags } from "../../lib/seoHead.js";
 
 import SiteNav from "../../components/SiteNav.jsx";
@@ -58,52 +57,50 @@ function prettifyTag(x = "") {
 }
 
 /**
- * ✅ FIX (Issue B):
- * Fetch tag stories via the proven production endpoint:
- *   GET /api/articles?tag=<tag>
+ * ✅ FIX (Issue B, robust):
+ * Use an absolute fetch() to the proven working endpoint:
+ *   GET https://<site>/api/articles?tag=<tag>&page=1&limit=40
  *
- * Your API returns: { items: [...] }
+ * This avoids any axios/cachedGet baseURL / /api/api issues.
  */
 async function fetchByTag(tag, { page = 1, limit = 40 } = {}) {
   const t = String(tag || "").trim();
   if (!t) return { items: [], total: 0 };
 
-  // ✅ IMPORTANT: must call /api/articles (NOT /articles)
+  const base = typeof window !== "undefined" ? window.location.origin : "";
+  const url =
+    `${base}/api/articles` +
+    `?tag=${encodeURIComponent(t)}` +
+    `&page=${encodeURIComponent(page)}` +
+    `&limit=${encodeURIComponent(limit)}`;
+
+  const r = await fetch(url, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+
+  const text = await r.text();
+  let data = null;
   try {
-    const data = await cachedGet(
-      "/api/articles",
-      { params: { tag: t, page, limit } },
-      20_000
-    );
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
 
-    if (Array.isArray(data?.items)) {
-      return { items: data.items, total: data.total ?? data.items.length };
-    }
-    if (Array.isArray(data)) {
-      return { items: data, total: data.length };
-    }
-    if (Array.isArray(data?.articles)) {
-      return { items: data.articles, total: data.total ?? data.articles.length };
-    }
-  } catch (e) {
-    // fallback to plain api.get (no cache), same endpoint
-    const res = await api.get("/api/articles", {
-      params: { tag: t, page, limit },
-      validateStatus: () => true,
-    });
+  if (!r.ok) {
+    const msg = (text || "").slice(0, 140);
+    throw new Error(`Tag fetch failed (${r.status}): ${msg}`);
+  }
 
-    const data = res?.data;
-    if (Array.isArray(data?.items)) {
-      return { items: data.items, total: data.total ?? data.items.length };
-    }
-    if (Array.isArray(data)) {
-      return { items: data, total: data.length };
-    }
-    if (Array.isArray(data?.articles)) {
-      return { items: data.articles, total: data.total ?? data.articles.length };
-    }
-
-    throw e;
+  if (Array.isArray(data?.items)) {
+    return { items: data.items, total: data.total ?? data.items.length };
+  }
+  if (Array.isArray(data?.articles)) {
+    return { items: data.articles, total: data.total ?? data.articles.length };
+  }
+  if (Array.isArray(data)) {
+    return { items: data, total: data.length };
   }
 
   return { items: [], total: 0 };
@@ -148,7 +145,7 @@ export default function TagPage() {
 
         if (!cancel) setItems(sorted);
       } catch (e) {
-        if (!cancel) setErr("Failed to load stories for this tag");
+        if (!cancel) setErr(e?.message || "Failed to load stories for this tag");
       } finally {
         if (!cancel) setLoading(false);
       }
