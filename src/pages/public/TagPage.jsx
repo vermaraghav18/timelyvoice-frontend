@@ -57,40 +57,55 @@ function prettifyTag(x = "") {
     .join(" ");
 }
 
-async function fetchByTag(tag, { page = 1, limit = 30 } = {}) {
-  // Try a few common patterns safely (no crashing).
+/**
+ * ✅ FIX (Issue B):
+ * Always fetch tags via the known-good backend endpoint:
+ *   GET /api/articles?tag=<tag>
+ *
+ * Your API returns: { items: [...] }
+ */
+async function fetchByTag(tag, { page = 1, limit = 40 } = {}) {
   const t = String(tag || "").trim();
   if (!t) return { items: [], total: 0 };
 
-  const candidates = [
-    // Most likely (you can adjust backend later)
-    () => cachedGet("/tags", { params: { tag: t, page, limit, mode: "public" } }, 20_000),
-    () => cachedGet("/articles/by-tag", { params: { tag: t, page, limit, mode: "public" } }, 20_000),
-    () => cachedGet("/articles", { params: { tag: t, page, limit, mode: "public" } }, 20_000),
+  // Prefer cachedGet (matches your app’s public API pattern)
+  try {
+    const data = await cachedGet(
+      "/articles",
+      { params: { tag: t, page, limit } },
+      20_000
+    );
 
-    // Fallback (no cache) – supports if backend exposes /api/articles/search etc.
-    () => api.get("/tags", { params: { tag: t, page, limit, mode: "public" } }).then((r) => r.data),
-    () => api.get("/articles/by-tag", { params: { tag: t, page, limit, mode: "public" } }).then((r) => r.data),
-    () => api.get("/articles", { params: { tag: t, page, limit, mode: "public" } }).then((r) => r.data),
-  ];
-
-  let lastErr = null;
-  for (const fn of candidates) {
-    try {
-      const data = await fn();
-      // Normalize response shapes
-      if (Array.isArray(data)) return { items: data, total: data.length };
-      if (Array.isArray(data?.items)) return { items: data.items, total: data.total ?? data.items.length };
-      if (Array.isArray(data?.articles)) return { items: data.articles, total: data.total ?? data.articles.length };
-      // If backend returns {data:{items:[]}} etc, handle lightly
-      if (Array.isArray(data?.data?.items)) return { items: data.data.items, total: data.data.total ?? data.data.items.length };
-    } catch (e) {
-      lastErr = e;
+    if (Array.isArray(data?.items)) {
+      return { items: data.items, total: data.total ?? data.items.length };
     }
+    if (Array.isArray(data)) {
+      return { items: data, total: data.length };
+    }
+    if (Array.isArray(data?.articles)) {
+      return { items: data.articles, total: data.total ?? data.articles.length };
+    }
+  } catch (e) {
+    // fallback to plain api.get (no cache), same endpoint
+    const res = await api.get("/articles", {
+      params: { tag: t, page, limit },
+      validateStatus: () => true,
+    });
+
+    const data = res?.data;
+    if (Array.isArray(data?.items)) {
+      return { items: data.items, total: data.total ?? data.items.length };
+    }
+    if (Array.isArray(data)) {
+      return { items: data, total: data.length };
+    }
+    if (Array.isArray(data?.articles)) {
+      return { items: data.articles, total: data.total ?? data.articles.length };
+    }
+
+    throw e;
   }
 
-  // Nothing worked
-  if (lastErr) throw lastErr;
   return { items: [], total: 0 };
 }
 
