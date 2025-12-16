@@ -1,57 +1,22 @@
-// frontend/src/pages/public/TopNews.jsx
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+// frontend/src/pages/public/TagPage.jsx
+import { useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 
-import { api, cachedGet } from "././lib/publicApi.js";
-import { upsertTag, removeManagedHeadTags } from "././lib/seoHead.js";
+import { api, cachedGet } from "../../lib/publicApi.js";
+import { upsertTag, removeManagedHeadTags } from "../../lib/seoHead.js";
 
-import SiteNav from "././components/SiteNav.jsx";
-import SiteFooter from "././components/SiteFooter.jsx";
+import SiteNav from "../../components/SiteNav.jsx";
+import SiteFooter from "../../components/SiteFooter.jsx";
+
 import "./TopNews.css";
-
-import { ensureRenderableImage } from "././lib/images.js";
+import { ensureRenderableImage } from "../../lib/images.js";
 
 const FALLBACK_HERO_IMAGE = "/tv-default-hero.jpg";
-
-const CAT_COLORS = {
-  World: "linear-gradient(135deg, #3B82F6 0%, #0073ff 100%)",
-  Politics: "linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)",
-  Business: "linear-gradient(135deg, #10B981 0%, #34D399 100%)",
-  Entertainment: "linear-gradient(135deg, #A855F7 0%, rgb(119, 0, 255))",
-  General: "linear-gradient(135deg, #6B7280 0%, #9CA3AF 100%)",
-  Health: "linear-gradient(135deg, #EF4444 0%, #F87171 100%)",
-  Science: "linear-gradient(135deg, #22D3EE 0%, #67E8F9 100%)",
-  Sports: "linear-gradient(135deg, #abcc16 0%, #9dff00 100%)",
-  Tech: "linear-gradient(135deg, #FB7185 0%, #FDA4AF 100%)",
-};
 
 /* ---------- Cloudinary optimizer ---------- */
 function optimizeCloudinary(url, width = 520) {
   if (!url || !url.includes("/upload/")) return url;
   return url.replace("/upload/", `/upload/f_auto,q_auto,w_${width}/`);
-}
-
-/* ---------- Video helpers ---------- */
-function getDriveFileId(url = "") {
-  const s = String(url || "").trim();
-  if (!s) return "";
-  const byPath = s.match(/\/file\/d\/([^/]+)/);
-  const byParam = s.match(/[?&]id=([^&]+)/);
-  return (byPath && byPath[1]) || (byParam && byParam[1]) || "";
-}
-
-// Convert Drive share -> direct playable file URL (best-effort)
-function toPlayableVideoSrc(url = "") {
-  const raw = String(url || "").trim();
-  if (!raw) return "";
-
-  if (raw.includes("drive.google.com")) {
-    const id = getDriveFileId(raw);
-    if (id) return `https://drive.google.com/uc?export=download&id=${id}`;
-  }
-
-  // Cloudinary mp4 or any direct mp4 URL
-  return raw;
 }
 
 /* ---------- utils ---------- */
@@ -68,8 +33,8 @@ function parseTs(v) {
   return Number.isFinite(t) ? t : 0;
 }
 
-function normalizeTopNews(items = []) {
-  return items
+function normalizeItems(items = []) {
+  return (Array.isArray(items) ? items : [])
     .map((i, idx) => {
       const ts = Math.max(
         parseTs(i.publishedAt),
@@ -82,45 +47,79 @@ function normalizeTopNews(items = []) {
     .sort((a, b) => (b._ts === a._ts ? a._idx - b._idx : b._ts - a._ts));
 }
 
-function getCategoryName(a) {
-  const raw =
-    a?.category?.name ??
-    (typeof a?.category === "string" ? a.category : "General");
-  const map = {
-    world: "World",
-    politics: "Politics",
-    business: "Business",
-    entertainment: "Entertainment",
-    general: "General",
-    health: "Health",
-    science: "Science",
-    sports: "Sports",
-    tech: "Tech",
-    technology: "Tech",
-  };
-  return map[String(raw).toLowerCase()] || "General";
+function prettifyTag(x = "") {
+  const s = String(x || "").trim();
+  if (!s) return "Tag";
+  return s
+    .split(/[-_\s]+/g)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
-export default function TopNews() {
+async function fetchByTag(tag, { page = 1, limit = 30 } = {}) {
+  // Try a few common patterns safely (no crashing).
+  const t = String(tag || "").trim();
+  if (!t) return { items: [], total: 0 };
+
+  const candidates = [
+    // Most likely (you can adjust backend later)
+    () => cachedGet("/tags", { params: { tag: t, page, limit, mode: "public" } }, 20_000),
+    () => cachedGet("/articles/by-tag", { params: { tag: t, page, limit, mode: "public" } }, 20_000),
+    () => cachedGet("/articles", { params: { tag: t, page, limit, mode: "public" } }, 20_000),
+
+    // Fallback (no cache) – supports if backend exposes /api/articles/search etc.
+    () => api.get("/tags", { params: { tag: t, page, limit, mode: "public" } }).then((r) => r.data),
+    () => api.get("/articles/by-tag", { params: { tag: t, page, limit, mode: "public" } }).then((r) => r.data),
+    () => api.get("/articles", { params: { tag: t, page, limit, mode: "public" } }).then((r) => r.data),
+  ];
+
+  let lastErr = null;
+  for (const fn of candidates) {
+    try {
+      const data = await fn();
+      // Normalize response shapes
+      if (Array.isArray(data)) return { items: data, total: data.length };
+      if (Array.isArray(data?.items)) return { items: data.items, total: data.total ?? data.items.length };
+      if (Array.isArray(data?.articles)) return { items: data.articles, total: data.total ?? data.articles.length };
+      // If backend returns {data:{items:[]}} etc, handle lightly
+      if (Array.isArray(data?.data?.items)) return { items: data.data.items, total: data.data.total ?? data.data.items.length };
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+
+  // Nothing worked
+  if (lastErr) throw lastErr;
+  return { items: [], total: 0 };
+}
+
+export default function TagPage() {
+  const { tag } = useParams();
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
+  const tagTitle = useMemo(() => prettifyTag(tag), [tag]);
+  const canonical = useMemo(
+    () => `${window.location.origin}/tag/${encodeURIComponent(tag || "")}`,
+    [tag]
+  );
+
   /* ---------- SEO ---------- */
   useEffect(() => {
     removeManagedHeadTags();
-
-    document.title = "Top News — The Timely Voice";
-    const canonical = `${window.location.origin}/top-news`;
+    document.title = `${tagTitle} — The Timely Voice`;
 
     upsertTag("link", { rel: "canonical", href: canonical });
     upsertTag("meta", {
       name: "description",
-      content: "All the latest headlines across categories, newest first.",
+      content: `Latest stories tagged ${tagTitle}, newest first.`,
     });
-  }, []);
+  }, [tagTitle, canonical]);
 
-  /* ---------- Fetch (cached) ---------- */
+  /* ---------- Fetch ---------- */
   useEffect(() => {
     let cancel = false;
 
@@ -129,18 +128,12 @@ export default function TopNews() {
         setLoading(true);
         setErr("");
 
-        const data = await cachedGet(
-          "/top-news",
-          { params: { page: 1, limit: 50, mode: "public" } },
-          30_000 // ✅ 30s cache
-        );
+        const res = await fetchByTag(tag, { page: 1, limit: 40 });
+        const sorted = normalizeItems(res?.items || []);
 
-        if (!cancel) {
-          const sorted = normalizeTopNews(data?.items || []);
-          setItems(sorted);
-        }
+        if (!cancel) setItems(sorted);
       } catch (e) {
-        if (!cancel) setErr("Failed to load top news");
+        if (!cancel) setErr("Failed to load stories for this tag");
       } finally {
         if (!cancel) setLoading(false);
       }
@@ -149,33 +142,31 @@ export default function TopNews() {
     return () => {
       cancel = true;
     };
-  }, []);
+  }, [tag]);
 
   return (
     <>
       <SiteNav />
 
       <main className="container">
-        <h1 className="tn-title">Top News</h1>
+        <h1 className="tn-title">Tag: {tagTitle}</h1>
 
         {loading && <div className="tn-status">Loading…</div>}
         {err && <div className="tn-error">{err}</div>}
 
-        {!loading && !err && (
+        {!loading && !err && items.length === 0 && (
+          <div className="tn-status">No stories found for this tag.</div>
+        )}
+
+        {!loading && !err && items.length > 0 && (
           <ul className="tn-list">
             {items.map((a) => {
               const href = articleHref(a.slug);
-              const catName = getCategoryName(a);
-              const color = CAT_COLORS[catName] || "#4B5563";
-
               const rawImage = ensureRenderableImage(a);
               const thumbSrc = optimizeCloudinary(
                 rawImage || FALLBACK_HERO_IMAGE,
                 520
               );
-
-              const hasVideo = !!a.videoUrl;
-              const videoSrc = hasVideo ? toPlayableVideoSrc(a.videoUrl) : "";
 
               return (
                 <li className="tn-item" key={a._id || a.id || a.slug}>
@@ -198,13 +189,6 @@ export default function TopNews() {
                   </div>
 
                   <Link to={href} className="tn-thumb">
-                    <span className="tn-badge">
-                      <span className="tn-pill" style={{ background: color }}>
-                        {catName}
-                      </span>
-                    </span>
-
-                    {/* ✅ ALWAYS show the image */}
                     <img
                       src={thumbSrc}
                       alt={a.imageAlt || a.title || "The Timely Voice"}
@@ -214,19 +198,6 @@ export default function TopNews() {
                         e.currentTarget.src = FALLBACK_HERO_IMAGE;
                       }}
                     />
-
-                    {/* ✅ If video exists, show it OVERLAY (no iframe, no controls) */}
-                    {hasVideo && videoSrc ? (
-                      <video
-                        className="tn-video"
-                        src={videoSrc}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="metadata"
-                      />
-                    ) : null}
                   </Link>
                 </li>
               );
