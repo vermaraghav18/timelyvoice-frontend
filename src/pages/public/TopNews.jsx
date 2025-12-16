@@ -44,17 +44,15 @@ function getVideoPreview(url = "") {
   const raw = String(url || "").trim();
   if (!raw) return { kind: "none", src: "" };
 
-  if (raw.includes("drive.google.com")) {
-    const id = getDriveFileId(raw);
-    if (id) {
-      return {
-        kind: "drive",
-        src: `https://drive.google.com/file/d/${id}/preview`,
-      };
-    }
+  // Only allow real mp4 streams
+  if (raw.endsWith(".mp4")) {
+    return { kind: "direct", src: raw };
   }
-  return { kind: "direct", src: raw };
+
+  // Disable Drive videos (not preview-safe)
+  return { kind: "none", src: "" };
 }
+
 
 /* ---------- utils ---------- */
 function articleHref(slug) {
@@ -206,37 +204,29 @@ export default function TopNews() {
                       </span>
                     </span>
 
-                    {hasVideo ? (
-                      video.kind === "drive" ? (
-                        <iframe
-                          src={video.src}
-                          title={a.title}
-                          loading="lazy"
-                          style={{ width: "100%", height: "100%", border: 0 }}
-                        />
-                      ) : (
-                        <video
-                          src={video.src}
-                          autoPlay
-                          muted
-                          loop
-                          playsInline
-                          preload="metadata"
-                          poster={thumbSrc}
-                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        />
-                      )
-                    ) : (
-                      <img
-                        src={thumbSrc}
-                        alt={a.imageAlt || a.title || "The Timely Voice"}
-                        loading="lazy"
-                        decoding="async"
-                        onError={(e) => {
-                          e.currentTarget.src = FALLBACK_HERO_IMAGE;
-                        }}
-                      />
-                    )}
+                   {hasVideo && video.kind === "direct" ? (
+  <video
+    src={video.src}
+    autoPlay
+    muted
+    loop
+    playsInline
+    preload="metadata"
+    poster={thumbSrc}
+    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+  />
+) : (
+  <img
+    src={thumbSrc}
+    alt={a.imageAlt || a.title || "The Timely Voice"}
+    loading="lazy"
+    decoding="async"
+    onError={(e) => {
+      e.currentTarget.src = FALLBACK_HERO_IMAGE;
+    }}
+  />
+)}
+
                   </Link>
                 </li>
               );

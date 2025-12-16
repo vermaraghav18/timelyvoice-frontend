@@ -76,26 +76,18 @@ function getDriveFileId(url = "") {
   return (byPath && byPath[1]) || (byParam && byParam[1]) || "";
 }
 
-function getVideoPreview(url = "") {
+function toPlayableVideoSrc(url = "") {
   const raw = String(url || "").trim();
-  if (!raw) return { kind: "none", src: "" };
+  if (!raw) return "";
 
-  // Google Drive: use /preview (works reliably in iframe)
+  // Google Drive share -> direct downloadable file URL (best effort)
   if (raw.includes("drive.google.com")) {
     const id = getDriveFileId(raw);
-    if (id) {
-      return {
-        kind: "drive",
-        src: `https://drive.google.com/file/d/${id}/preview`,
-        open: `https://drive.google.com/file/d/${id}/view`,
-      };
-    }
-    // fallback: still treat as drive but open raw
-    return { kind: "drive", src: raw, open: raw };
+    if (id) return `https://drive.google.com/uc?export=download&id=${id}`;
   }
 
-  // Non-drive: assume direct playable URL (Cloudinary mp4, CDN mp4, etc.)
-  return { kind: "direct", src: raw, open: raw };
+  // Cloudinary mp4 or any direct mp4 url
+  return raw;
 }
 
 
@@ -1193,8 +1185,8 @@ export default function ArticlesPage() {
                     ? "#ef4444"
                     : "#d1d5db";
 
-                                const hasVideo = !!a.videoUrl;
-const videoPreview = hasVideo ? getVideoPreview(a.videoUrl) : { kind: "none", src: "" };
+                               const hasVideo = !!a.videoUrl;
+
 
 
 
@@ -1287,12 +1279,10 @@ const videoPreview = hasVideo ? getVideoPreview(a.videoUrl) : { kind: "none", sr
       </span>
     )}
   </div>
-  <span
-    className="status-inline"
-     style={{ ...badge, ...statusBadge }}
-  >
-    {/* existing status text stays as-is */}
-  </span>
+ <span className="status-inline" style={{ ...badge, ...statusBadge }}>
+  {a.status}
+</span>
+
 </div>
 
                       </div>
@@ -1378,103 +1368,79 @@ const videoPreview = hasVideo ? getVideoPreview(a.videoUrl) : { kind: "none", sr
 
     // Video
     const hasVideo = !!a.videoUrl;
-    const videoPreview = hasVideo
-      ? getVideoPreview(a.videoUrl)
-      : { kind: "none", src: "", open: "" };
 
-    return hasVideo ? (
-      videoPreview?.kind === "drive" ? (
-        <div style={{ width: "100%", maxWidth: 320 }}>
-          <iframe
-            src={videoPreview.src}
-            title="Drive video preview"
-            allow="autoplay; encrypted-media; picture-in-picture"
-            allowFullScreen
-            style={{
-              width: "100%",
-              height: 180,
-              borderRadius: 10,
-              border: "1px solid #eee",
-              background: "#000",
-            }}
-          />
-          {videoPreview.open ? (
-            <a
-              href={videoPreview.open}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                display: "inline-block",
-                marginTop: 6,
-                fontSize: 12,
-                color: "#2563eb",
-                textDecoration: "none",
-              }}
-            >
-              open video ↗
-            </a>
-          ) : null}
-        </div>
-      ) : (
-        <video
-          src={videoPreview?.src || ""}
-          controls
-          playsInline
-          preload="metadata"
-          style={{
-            width: "100%",
-            maxWidth: 320,
-            height: "auto",
-            borderRadius: 10,
-            border: "1px solid #eee",
-            background: "#000",
-            objectFit: "cover",
-          }}
-        />
-      )
-    ) : (
-      <img
-        src={thumbSrc}
-        alt=""
-        loading="lazy"
-        decoding="async"
+
+    return (
+  <div
+    style={{
+      width: "100%",
+      maxWidth: 320,
+      position: "relative",
+      borderRadius: 10,
+      overflow: "hidden",
+      border: "1px solid #eee",
+      background: "#000",
+    }}
+  >
+    {/* ✅ Always show the image */}
+    <img
+      src={thumbSrc}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      style={{
+        width: "100%",
+        height: "auto",
+        display: "block",
+        background: "#f8fafc",
+        objectFit: "cover",
+      }}
+      onError={(e) => {
+        const tries = Number(e.currentTarget.dataset.tries || 0);
+
+        if (tries === 0 && baseImage && baseImage !== DEFAULT_IMAGE_URL) {
+          e.currentTarget.dataset.tries = "1";
+          e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now());
+          return;
+        }
+
+        if (tries === 1) {
+          e.currentTarget.dataset.tries = "2";
+          e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 1);
+          return;
+        }
+
+        e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 2);
+      }}
+    />
+
+    {/* ✅ If video exists, overlay it (no iframe, no controls) */}
+    {hasVideo ? (
+      <video
+        src={toPlayableVideoSrc(a.videoUrl)}
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="metadata"
         style={{
-          width: "100%",
-          maxWidth: 320,
-          height: "auto",
+          position: "absolute",
+          right: 8,
+          bottom: 8,
+          width: "55%",
+          height: "40%",
           borderRadius: 10,
-          border: "1px solid #eee",
-          background: "#f8fafc",
+          border: "1px solid rgba(255,255,255,0.35)",
+          background: "#000",
           objectFit: "cover",
-        }}
-        onError={(e) => {
-          const tries = Number(e.currentTarget.dataset.tries || 0);
-
-          // attempt 1: default image
-          if (tries === 0 && baseImage && baseImage !== DEFAULT_IMAGE_URL) {
-            e.currentTarget.dataset.tries = "1";
-            e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now());
-            return;
-          }
-
-          // attempt 2: default image again (different cache-bust)
-          if (tries === 1) {
-            e.currentTarget.dataset.tries = "2";
-            e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 1);
-            return;
-          }
-
-          // final fallback
-          e.currentTarget.replaceWith(
-            Object.assign(document.createElement("div"), {
-              style:
-                "width:100%;max-width:320px;height:120px;display:grid;place-items:center;border:1px solid #eee;border-radius:10px;background:#f8fafc;color:#999;font-size:12px",
-              innerText: "Image failed",
-            })
-          );
+          boxShadow: "0 8px 20px rgba(0,0,0,0.35)",
+          pointerEvents: "none",
         }}
       />
-    );
+    ) : null}
+  </div>
+);
+
   })()}
 </div>
 
@@ -1679,94 +1645,88 @@ const videoPreview = hasVideo ? getVideoPreview(a.videoUrl) : { kind: "none", sr
     const thumbSrc = withCacheBust(baseImage || DEFAULT_IMAGE_URL, a.updatedAt || Date.now());
 
     const hasVideo = !!a.videoUrl;
-    const videoPreview = hasVideo
-      ? getVideoPreview(a.videoUrl)
-      : { kind: "none", src: "", open: "" };
 
     return (
-      <div
-        className="thumb-desktop-only"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-          alignItems: "flex-start",
-        }}
-      >
-        <span style={badge}>
-          {a.category?.name || a.category || "General"}
-        </span>
+  <div
+    className="thumb-desktop-only"
+    style={{
+      display: "flex",
+      flexDirection: "column",
+      gap: 8,
+      alignItems: "flex-start",
+    }}
+  >
+    <span style={badge}>{a.category?.name || a.category || "General"}</span>
 
-        {hasVideo ? (
-          videoPreview?.kind === "drive" ? (
-            <iframe
-              src={videoPreview.src}
-              title="Drive video preview"
-              allow="autoplay; encrypted-media; picture-in-picture"
-              allowFullScreen
-              style={{
-                width: 200,
-                height: 120,
-                borderRadius: 10,
-                border: "1px solid #eee",
-                background: "#000",
-              }}
-            />
-          ) : (
-            <video
-              src={videoPreview?.src || ""}
-              controls
-              playsInline
-              preload="metadata"
-              style={{
-                width: 200,
-                height: 120,
-                objectFit: "cover",
-                borderRadius: 10,
-                border: "1px solid #eee",
-                background: "#000",
-              }}
-            />
-          )
-        ) : (
-          <img
-            id={`thumb-${a._id}`}
-            src={thumbSrc}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            style={{
-              width: 200,
-              height: 120,
-              objectFit: "cover",
-              borderRadius: 10,
-              border: "1px solid #eee",
-              background: "#f8fafc",
-            }}
-            onError={(e) => {
-              const tries = Number(e.currentTarget.dataset.tries || 0);
-              if (tries === 0 && baseImage && baseImage !== DEFAULT_IMAGE_URL) {
-                e.currentTarget.dataset.tries = "1";
-                e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now());
-                return;
-              }
-              if (tries === 1) {
-                e.currentTarget.dataset.tries = "2";
-                e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 1);
-                return;
-              }
-              e.currentTarget.replaceWith(
-                Object.assign(document.createElement("div"), {
-                  style:
-                    "width:200px;height:120px;display:grid;place-items:center;border:1px solid #eee;border-radius:10px;background:#f8fafc;color:#999;font-size:12px",
-                  innerText: "Image failed",
-                })
-              );
-            }}
-          />
-        )}
-      </div>
-    );
+    <div
+      style={{
+        width: 200,
+        height: 120,
+        position: "relative",
+        borderRadius: 10,
+        overflow: "hidden",
+        border: "1px solid #eee",
+        background: "#000",
+      }}
+    >
+      {/* ✅ Always show the image */}
+      <img
+        id={`thumb-${a._id}`}
+        src={thumbSrc}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
+          background: "#f8fafc",
+        }}
+        onError={(e) => {
+          const tries = Number(e.currentTarget.dataset.tries || 0);
+          if (tries === 0 && baseImage && baseImage !== DEFAULT_IMAGE_URL) {
+            e.currentTarget.dataset.tries = "1";
+            e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now());
+            return;
+          }
+          if (tries === 1) {
+            e.currentTarget.dataset.tries = "2";
+            e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 1);
+            return;
+          }
+          e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 2);
+        }}
+      />
+
+      {/* ✅ If video exists, overlay it (no iframe, no controls) */}
+      {hasVideo ? (
+        <video
+          src={toPlayableVideoSrc(a.videoUrl)}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          style={{
+            position: "absolute",
+            right: 6,
+            bottom: 6,
+            width: "52%",
+            height: "52%",
+            borderRadius: 10,
+            border: "1px solid rgba(255,255,255,0.35)",
+            background: "#000",
+            objectFit: "cover",
+            boxShadow: "0 8px 20px rgba(0,0,0,0.35)",
+            pointerEvents: "none",
+          }}
+        />
+      ) : null}
+    </div>
+  </div>
+);
+
   })()}
 </td>
 

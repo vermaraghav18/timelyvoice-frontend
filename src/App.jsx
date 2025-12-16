@@ -32,13 +32,19 @@ import "./styles/scroll-optimizations.css";
 
 
 /* ===================== Shared API ===================== */
-export const api = axios.create({
-  baseURL:
+/* ===================== Shared API ===================== */
+const API_BASE =
   import.meta?.env?.VITE_API_BASE_URL ||
   import.meta?.env?.VITE_API_BASE ||
-  "",
+  (typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://localhost:4000/api"
+    : ""); // production should set env
+
+export const api = axios.create({
+  baseURL: API_BASE,
   withCredentials: false,
 });
+
 
 export function getToken() {
   try {

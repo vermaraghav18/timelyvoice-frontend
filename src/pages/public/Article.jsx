@@ -27,6 +27,26 @@ import '../../styles/rails.css';
 
 import { ensureRenderableImage } from '../../lib/images';
 
+// --- Video helpers (Drive share -> direct playable url) ---
+function getDriveFileId(url = '') {
+  const s = String(url || '').trim();
+  if (!s) return '';
+  const byPath = s.match(/\/file\/d\/([^/]+)/);
+  const byParam = s.match(/[?&]id=([^&]+)/);
+  return (byPath && byPath[1]) || (byParam && byParam[1]) || '';
+}
+
+function toPlayableVideoSrc(url = "") {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+
+  // ✅ allow mp4 OR Cloudinary video URLs
+  if (/\.mp4(\?|#|$)/i.test(raw)) return raw;
+  if (raw.includes("/video/upload/")) return raw;
+
+  return "";
+}
+
 // --- Publisher/site constants (used in JSON-LD) ---
 const SITE_NAME = 'The Timely Voice';
 
@@ -304,9 +324,9 @@ export default function ReaderArticle() {
   // Comments loader
   async function loadComments(articleSlug) {
     const { data } = await api.get(
-  `/public/articles/${encodeURIComponent(articleSlug)}/comments`,
-  { validateStatus: () => true }
-);
+      `/public/articles/${encodeURIComponent(articleSlug)}/comments`,
+      { validateStatus: () => true }
+    );
 
     setComments(Array.isArray(data) ? data : []);
   }
@@ -337,10 +357,10 @@ export default function ReaderArticle() {
     (async () => {
       try {
         setRailsLoading(true);
-       const res = await api.get('/sections/plan', {
-  params: { sectionType: 'homepage' },
-  validateStatus: () => true,
-});
+        const res = await api.get('/sections/plan', {
+          params: { sectionType: 'homepage' },
+          validateStatus: () => true,
+        });
 
         if (!cancel) {
           const rows = Array.isArray(res.data) ? res.data : [];
@@ -370,8 +390,7 @@ export default function ReaderArticle() {
         setStatus('loading');
 
         const res = await api.get(
-  `/articles/slug/${encodeURIComponent(slug)}`,
-
+          `/articles/slug/${encodeURIComponent(slug)}`,
           {
             validateStatus: (s) => (s >= 200 && s < 300) || s === 308,
             headers: { 'Cache-Control': 'no-cache' },
@@ -436,8 +455,6 @@ export default function ReaderArticle() {
 
         // Brand on social
         upsertTag('meta', { property: 'og:site_name', content: SITE_NAME });
-        // Optional: set your Twitter/X handle (uncomment and set it if you have one)
-        // upsertTag('meta', { name: 'twitter:site', content: '@YourHandle' });
 
         upsertTag('meta', { property: 'og:type', content: 'article' });
         upsertTag('meta', { property: 'og:title', content: title });
@@ -569,7 +586,6 @@ export default function ReaderArticle() {
         // related
         try {
           const r1 = await api.get('/articles', {
-
             params: { page: 1, limit: 8, category: categoryName },
             validateStatus: () => true,
           });
@@ -577,7 +593,6 @@ export default function ReaderArticle() {
 
           if (pool.length < 4) {
             const r2 = await api.get('/articles', {
-
               params: { page: 1, limit: 8 },
               validateStatus: () => true,
             });
@@ -831,12 +846,28 @@ export default function ReaderArticle() {
     margin: 0 18px 10px 0;
   }
 
+  /* ✅ Bigger HERO when it's a video (only affects video) */
+  .article-hero-inline.article-hero-video {
+    width: 62%;
+    max-width: 520px;
+  }
+
   .article-hero-inline img {
     display: block;
     width: 100%;
     height: auto;
     border-radius: 1px;
     background: #f1f5f9;
+  }
+
+  /* ✅ NEW: hero video uses same layout as hero image */
+  .article-hero-inline video {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 1px;
+    background: #000;
+    object-fit: cover;
   }
 
   .article-hero-inline figcaption {
@@ -851,6 +882,11 @@ export default function ReaderArticle() {
       width: 100%;
       max-width: 100%;
       margin: 0 0 12px 0;
+    }
+
+    .article-hero-inline.article-hero-video {
+      width: 100%;
+      max-width: 100%;
     }
   }
 `}</style>
@@ -901,27 +937,55 @@ export default function ReaderArticle() {
               {article.summary && <div style={summaryBox}>{article.summary}</div>}
 
               {/* NEW: inline hero floated left inside article body */}
-              <div ref={bodyRef} className="article-body" style={{ ...prose, ...articleBodyWrapper }}>
-                {heroSrc && (
-                  <figure className="article-hero-inline">
-                    <img
-                      src={heroSrc}
-                      alt={imageAlt || 'The Timely Voice'}
-                      fetchPriority="high"
-                      decoding="async"
-                      loading="eager"
-                      width="640"
-                      height="360"
-                      onError={(e) => {
-                        if (e.currentTarget.dataset.fallback !== '1') {
-                          e.currentTarget.dataset.fallback = '1';
-                          e.currentTarget.src = FALLBACK_HERO_IMAGE;
-                        }
-                      }}
-                    />
-                    {article.imageAlt ? <figcaption>{article.imageAlt}</figcaption> : null}
-                  </figure>
-                )}
+              <div
+                ref={bodyRef}
+                className="article-body"
+                style={{ ...prose, ...articleBodyWrapper }}
+              >
+                {/* ✅ FIX: If video exists, it REPLACES the hero image */}
+                {(() => {
+                  const playable = toPlayableVideoSrc(article?.videoUrl);
+
+                  // If video exists, show only video (bigger)
+                  if (playable) {
+                    return (
+                      <figure className="article-hero-inline article-hero-video">
+                        <video
+                          src={playable}
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          preload="metadata"
+                        />
+                      </figure>
+                    );
+                  }
+
+                  // Otherwise show hero image
+                  if (!heroSrc) return null;
+
+                  return (
+                    <figure className="article-hero-inline">
+                      <img
+                        src={heroSrc}
+                        alt={imageAlt || "The Timely Voice"}
+                        fetchPriority="high"
+                        decoding="async"
+                        loading="eager"
+                        width="640"
+                        height="360"
+                        onError={(e) => {
+                          if (e.currentTarget.dataset.fallback !== "1") {
+                            e.currentTarget.dataset.fallback = "1";
+                            e.currentTarget.src = FALLBACK_HERO_IMAGE;
+                          }
+                        }}
+                      />
+                      {article.imageAlt ? <figcaption>{article.imageAlt}</figcaption> : null}
+                    </figure>
+                  );
+                })()}
 
                 {paragraphs.length === 0
                   ? null
@@ -955,13 +1019,25 @@ export default function ReaderArticle() {
 
           {/* RIGHT RAILS (even indices) — hidden on mobile */}
           {!isMobile && (
-            <aside style={rightColumn}>
-              <div className="rail-wrap" style={railWrapFix}>
+            <aside style={{ flex: '0 0 260px' }}>
+              <div className="rail-wrap" style={{ display: 'flow-root', marginTop: 0, paddingTop: 0 }}>
                 {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
                 {!railsLoading && railsError && (
                   <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>
                 )}
-                {!railsLoading && !railsError && renderRails(rightRails)}
+                {!railsLoading &&
+                  !railsError &&
+                  homeSections
+                    .filter((s) => s.template?.startsWith('rail_'))
+                    .filter((_, i) => i % 2 === 0)
+                    .map((sec, i) => (
+                      <div
+                        key={sec.id || sec._id || sec.slug}
+                        style={{ marginTop: i === 0 ? 0 : 12 }}
+                      >
+                        <SectionRenderer section={sec} />
+                      </div>
+                    ))}
               </div>
             </aside>
           )}

@@ -1,147 +1,240 @@
-// src/pages/public/TagPage.jsx
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+// frontend/src/pages/public/TopNews.jsx
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
-import {
-  api,
-  styles,
-  removeManagedHeadTags,
-  upsertTag,
-  buildCanonicalFromLocation,
-} from '../../App.jsx';
+import { api, cachedGet } from "././lib/publicApi.js";
+import { upsertTag, removeManagedHeadTags } from "././lib/seoHead.js";
 
-import SiteNav from '../../components/SiteNav.jsx';
-import SiteFooter from '../../components/SiteFooter.jsx';
+import SiteNav from "././components/SiteNav.jsx";
+import SiteFooter from "././components/SiteFooter.jsx";
+import "./TopNews.css";
 
-export default function TagPage() {
-  const { slug } = useParams();
-  const [tag, setTag] = useState(null);
-  const [articles, setArticles] = useState([]);
+import { ensureRenderableImage } from "././lib/images.js";
+
+const FALLBACK_HERO_IMAGE = "/tv-default-hero.jpg";
+
+const CAT_COLORS = {
+  World: "linear-gradient(135deg, #3B82F6 0%, #0073ff 100%)",
+  Politics: "linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)",
+  Business: "linear-gradient(135deg, #10B981 0%, #34D399 100%)",
+  Entertainment: "linear-gradient(135deg, #A855F7 0%, rgb(119, 0, 255))",
+  General: "linear-gradient(135deg, #6B7280 0%, #9CA3AF 100%)",
+  Health: "linear-gradient(135deg, #EF4444 0%, #F87171 100%)",
+  Science: "linear-gradient(135deg, #22D3EE 0%, #67E8F9 100%)",
+  Sports: "linear-gradient(135deg, #abcc16 0%, #9dff00 100%)",
+  Tech: "linear-gradient(135deg, #FB7185 0%, #FDA4AF 100%)",
+};
+
+/* ---------- Cloudinary optimizer ---------- */
+function optimizeCloudinary(url, width = 520) {
+  if (!url || !url.includes("/upload/")) return url;
+  return url.replace("/upload/", `/upload/f_auto,q_auto,w_${width}/`);
+}
+
+/* ---------- Video helpers ---------- */
+function getDriveFileId(url = "") {
+  const s = String(url || "").trim();
+  if (!s) return "";
+  const byPath = s.match(/\/file\/d\/([^/]+)/);
+  const byParam = s.match(/[?&]id=([^&]+)/);
+  return (byPath && byPath[1]) || (byParam && byParam[1]) || "";
+}
+
+// Convert Drive share -> direct playable file URL (best-effort)
+function toPlayableVideoSrc(url = "") {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+
+  if (raw.includes("drive.google.com")) {
+    const id = getDriveFileId(raw);
+    if (id) return `https://drive.google.com/uc?export=download&id=${id}`;
+  }
+
+  // Cloudinary mp4 or any direct mp4 URL
+  return raw;
+}
+
+/* ---------- utils ---------- */
+function articleHref(slug) {
+  if (!slug) return "#";
+  if (slug.startsWith("/article/")) return slug;
+  return `/article/${slug}`;
+}
+
+function parseTs(v) {
+  if (!v) return 0;
+  if (typeof v === "number") return v;
+  const t = Date.parse(String(v).replace(" ", "T"));
+  return Number.isFinite(t) ? t : 0;
+}
+
+function normalizeTopNews(items = []) {
+  return items
+    .map((i, idx) => {
+      const ts = Math.max(
+        parseTs(i.publishedAt),
+        parseTs(i.publishAt),
+        parseTs(i.updatedAt),
+        parseTs(i.createdAt)
+      );
+      return { ...i, _ts: ts, _idx: idx };
+    })
+    .sort((a, b) => (b._ts === a._ts ? a._idx - b._idx : b._ts - a._ts));
+}
+
+function getCategoryName(a) {
+  const raw =
+    a?.category?.name ??
+    (typeof a?.category === "string" ? a.category : "General");
+  const map = {
+    world: "World",
+    politics: "Politics",
+    business: "Business",
+    entertainment: "Entertainment",
+    general: "General",
+    health: "Health",
+    science: "Science",
+    sports: "Sports",
+    tech: "Tech",
+    technology: "Tech",
+  };
+  return map[String(raw).toLowerCase()] || "General";
+}
+
+export default function TopNews() {
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const [err, setErr] = useState("");
 
-  // Canonical URL for this tag page (normalized)
-  const canonical = useMemo(
-    () => buildCanonicalFromLocation(['tag', String(slug || '').toLowerCase()]),
-    [slug]
-  );
-
-  // Fetch tag details + tagged articles
-  useEffect(() => {
-    let alive = true;
-
-    setLoading(true);
-    setNotFound(false);
-
-    Promise.all([
-      api.get(`/api/tags/slug/${encodeURIComponent(slug)}`, {
-        validateStatus: () => true,
-      }),
-      api.get(`/api/articles?tag=${encodeURIComponent(slug)}`, {
-        validateStatus: () => true,
-      }),
-    ])
-      .then(([tRes, aRes]) => {
-        if (!alive) return;
-
-        if (tRes.status === 200 && tRes.data) {
-          setTag(tRes.data);
-        } else {
-          setNotFound(true);
-        }
-
-        if (aRes.status === 200 && Array.isArray(aRes.data?.items)) {
-          setArticles(aRes.data.items);
-        } else {
-          setArticles([]);
-        }
-      })
-      .catch(() => {
-        if (!alive) return;
-        setNotFound(true);
-        setArticles([]);
-      })
-      .finally(() => {
-        if (alive) setLoading(false);
-      });
-
-    return () => {
-      alive = false;
-    };
-  }, [slug]);
-
-  // SEO: tag pages are low-value listing pages → NOINDEX, FOLLOW
+  /* ---------- SEO ---------- */
   useEffect(() => {
     removeManagedHeadTags();
 
-    const baseName = tag?.name || slug || 'Tag';
-    const title = `#${baseName} — NewsSite`;
-    const desc =
-      (tag?.description ||
-        `Stories tagged #${baseName} on NewsSite`).trim() ||
-      'Browse tagged stories on NewsSite';
+    document.title = "Top News — The Timely Voice";
+    const canonical = `${window.location.origin}/top-news`;
 
-    // title + description
-    upsertTag('title', {}, { textContent: title });
-    upsertTag('meta', {
-      name: 'description',
-      content: desc,
+    upsertTag("link", { rel: "canonical", href: canonical });
+    upsertTag("meta", {
+      name: "description",
+      content: "All the latest headlines across categories, newest first.",
     });
+  }, []);
 
-    // canonical
-    upsertTag('link', { rel: 'canonical', href: canonical });
+  /* ---------- Fetch (cached) ---------- */
+  useEffect(() => {
+    let cancel = false;
 
-    // IMPORTANT: tell Google not to index tag listing pages
-    upsertTag('meta', {
-      name: 'robots',
-      content: 'noindex,follow',
-      'data-managed': 'robots',
-    });
-  }, [tag, canonical, slug]);
+    (async () => {
+      try {
+        setLoading(true);
+        setErr("");
+
+        const data = await cachedGet(
+          "/top-news",
+          { params: { page: 1, limit: 50, mode: "public" } },
+          30_000 // ✅ 30s cache
+        );
+
+        if (!cancel) {
+          const sorted = normalizeTopNews(data?.items || []);
+          setItems(sorted);
+        }
+      } catch (e) {
+        if (!cancel) setErr("Failed to load top news");
+      } finally {
+        if (!cancel) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancel = true;
+    };
+  }, []);
 
   return (
     <>
       <SiteNav />
-      <main className={styles.container}>
-        {loading && <p>Loading…</p>}
 
-        {!loading && notFound && (
-          <>
-            <h2>Tag not found</h2>
-            <p>
-              Try another tag or go back to the <Link to="/">home page</Link>.
-            </p>
-          </>
-        )}
+      <main className="container">
+        <h1 className="tn-title">Top News</h1>
 
-        {!loading && !notFound && (
-          <>
-            <h1 className="mb-4">#{tag?.name || slug}</h1>
+        {loading && <div className="tn-status">Loading…</div>}
+        {err && <div className="tn-error">{err}</div>}
 
-            {articles.length === 0 ? (
-              <p>No articles yet for this tag.</p>
-            ) : (
-              <ul className="space-y-4">
-                {articles.map((a) => (
-                  <li key={a._id} className="p-4 bg-white rounded-xl">
-                    <Link
-                      to={`/article/${a.slug}`}
-                      className="text-lg font-semibold"
-                    >
+        {!loading && !err && (
+          <ul className="tn-list">
+            {items.map((a) => {
+              const href = articleHref(a.slug);
+              const catName = getCategoryName(a);
+              const color = CAT_COLORS[catName] || "#4B5563";
+
+              const rawImage = ensureRenderableImage(a);
+              const thumbSrc = optimizeCloudinary(
+                rawImage || FALLBACK_HERO_IMAGE,
+                520
+              );
+
+              const hasVideo = !!a.videoUrl;
+              const videoSrc = hasVideo ? toPlayableVideoSrc(a.videoUrl) : "";
+
+              return (
+                <li className="tn-item" key={a._id || a.id || a.slug}>
+                  <div className="tn-left">
+                    <Link to={href} className="tn-item-title">
                       {a.title}
                     </Link>
-                    <div className="text-sm opacity-75">
-                      {new Date(a.publishAt || a.createdAt).toLocaleString()} •{' '}
-                      {a.category?.name || ''}
+
+                    {(a.summary || a.description) && (
+                      <Link to={href} className="tn-summary">
+                        {a.summary || a.description}
+                      </Link>
+                    )}
+
+                    <div className="tn-divider"></div>
+
+                    <div className="tn-meta">
+                      <span className="tn-source">The Timely Voice</span>
                     </div>
-                    <p className="mt-2 opacity-80">{a.summary}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
+                  </div>
+
+                  <Link to={href} className="tn-thumb">
+                    <span className="tn-badge">
+                      <span className="tn-pill" style={{ background: color }}>
+                        {catName}
+                      </span>
+                    </span>
+
+                    {/* ✅ ALWAYS show the image */}
+                    <img
+                      src={thumbSrc}
+                      alt={a.imageAlt || a.title || "The Timely Voice"}
+                      loading="lazy"
+                      decoding="async"
+                      onError={(e) => {
+                        e.currentTarget.src = FALLBACK_HERO_IMAGE;
+                      }}
+                    />
+
+                    {/* ✅ If video exists, show it OVERLAY (no iframe, no controls) */}
+                    {hasVideo && videoSrc ? (
+                      <video
+                        className="tn-video"
+                        src={videoSrc}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="metadata"
+                      />
+                    ) : null}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </main>
+
       <SiteFooter />
     </>
   );

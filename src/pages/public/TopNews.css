@@ -82,8 +82,6 @@
   padding: 0;
 }
 
-
-
 /* Category tag pill overlay */
 .tn-pill {
   color: #000000;
@@ -128,6 +126,21 @@
   object-fit: cover;
 }
 
+/* ✅ Video overlay (NEW) */
+.tn-video {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 46%;
+  height: 46%;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: #000;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  pointer-events: none; /* keep the whole card clickable */
+}
+
 /* Responsive */
 @media (max-width: 720px) {
   .tn-item {
@@ -136,5 +149,11 @@
   }
   .tn-thumb {
     height: 280px; /* was 220px */
+  }
+
+  /* ✅ keep overlay nice on mobile */
+  .tn-video {
+    width: 55%;
+    height: 40%;
   }
 }
