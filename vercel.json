@@ -126,6 +126,12 @@
       "source": "/category/:slug",
       "destination": "/"
     },
+
+    {
+      "source": "/tag/:tag",
+      "destination": "/"
+    },
+
     {
       "source": "/news",
       "destination": "/"
