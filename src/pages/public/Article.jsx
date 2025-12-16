@@ -202,7 +202,7 @@ function splitParagraphs(normalizedHtml = '') {
 /** Simple in-article AdSense slot */
 function AdSlot({
   slotId = 'in-article-1',
-  client = 'ca-pub-XXXXXXXXXXXXXXX',
+  client = 'ca-pub-8472487092329023',
   slot = '1234567890',
 }) {
   useEffect(() => {
@@ -219,7 +219,6 @@ function AdSlot({
         data-ad-slot={slot}
         data-ad-format="auto"
         data-full-width-responsive="true"
-        data-adtest="on" /* remove when live */
         id={slotId}
       />
     </div>
