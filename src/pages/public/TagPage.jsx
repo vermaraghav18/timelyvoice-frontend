@@ -59,7 +59,7 @@ function prettifyTag(x = "") {
 
 /**
  * ✅ FIX (Issue B):
- * Always fetch tags via the known-good backend endpoint:
+ * Fetch tag stories via the proven production endpoint:
  *   GET /api/articles?tag=<tag>
  *
  * Your API returns: { items: [...] }
@@ -68,10 +68,10 @@ async function fetchByTag(tag, { page = 1, limit = 40 } = {}) {
   const t = String(tag || "").trim();
   if (!t) return { items: [], total: 0 };
 
-  // Prefer cachedGet (matches your app’s public API pattern)
+  // ✅ IMPORTANT: must call /api/articles (NOT /articles)
   try {
     const data = await cachedGet(
-      "/articles",
+      "/api/articles",
       { params: { tag: t, page, limit } },
       20_000
     );
@@ -87,7 +87,7 @@ async function fetchByTag(tag, { page = 1, limit = 40 } = {}) {
     }
   } catch (e) {
     // fallback to plain api.get (no cache), same endpoint
-    const res = await api.get("/articles", {
+    const res = await api.get("/api/articles", {
       params: { tag: t, page, limit },
       validateStatus: () => true,
     });
