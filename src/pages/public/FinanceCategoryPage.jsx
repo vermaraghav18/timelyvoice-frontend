@@ -46,7 +46,6 @@ const CAT_COLORS = {
 function articleHref(slug) {
   if (!slug) return "#";
   if (/^https?:\/\//i.test(slug)) return slug;
-  // keep consistent with your routes
   return `/article/${slug}`;
 }
 
@@ -95,7 +94,7 @@ export default function FinanceCategoryPage({
     if (canonical) upsertTag("link", { rel: "canonical", href: canonical });
   }, [canonical, displayName]);
 
-  /* ---------- FETCH ARTICLES (CORRECT WAY) ---------- */
+  /* ---------- FETCH ARTICLES (PUBLIC CATEGORY ENDPOINT) ---------- */
   useEffect(() => {
     let alive = true;
 
@@ -105,14 +104,16 @@ export default function FinanceCategoryPage({
       setItems([]);
 
       const raw = String(categorySlug || "").trim();
+      const effective = raw || toTitleCase(displayName || ""); // small safety, no behavior change in normal cases
 
       try {
-        // ✅ Use backend filtering (this MUST be fixed on backend to support ObjectId categories)
-        // Hits: GET /api/articles?category=health&limit=60
-        const r = await api.get("/articles", {
-          params: { category: raw, limit: 60 },
-          validateStatus: () => true,
-        });
+        const r = await api.get(
+          `/public/categories/${encodeURIComponent(effective)}/articles`,
+          {
+            params: { limit: 60 },
+            validateStatus: () => true,
+          }
+        );
 
         if (!alive) return;
 
@@ -121,40 +122,7 @@ export default function FinanceCategoryPage({
           return;
         }
 
-        // Fallback: try variants in case category naming differs
-        const candidates = Array.from(
-          new Set([raw, raw.toLowerCase(), toTitleCase(raw), displayName])
-        );
-
-        const merged = [];
-        const seen = new Set();
-
-        for (const cat of candidates) {
-          const res = await api.get("/articles", {
-            params: { category: cat, limit: 60 },
-            validateStatus: () => true,
-          });
-
-          const arr = Array.isArray(res?.data?.items) ? res.data.items : [];
-          for (const a of arr) {
-            const key = a._id || a.id || a.slug;
-            if (!key || seen.has(key)) continue;
-            seen.add(key);
-            merged.push(a);
-          }
-        }
-
-        merged.sort((a, b) => {
-          const ta = new Date(
-            a.publishedAt || a.publishAt || a.updatedAt || a.createdAt || 0
-          ).getTime();
-          const tb = new Date(
-            b.publishedAt || b.publishAt || b.updatedAt || b.createdAt || 0
-          ).getTime();
-          return tb - ta;
-        });
-
-        setItems(merged);
+        setErr("No stories found for this category.");
       } catch (e) {
         if (alive) setErr("Failed to load stories");
       } finally {
@@ -206,7 +174,10 @@ export default function FinanceCategoryPage({
         {pageSections.length > 0 && (
           <div style={{ marginBottom: 12 }}>
             {pageSections.map((sec) => (
-              <div key={sec._id || sec.id || sec.slug} style={{ marginBottom: 12 }}>
+              <div
+                key={sec._id || sec.id || sec.slug}
+                style={{ marginBottom: 12 }}
+              >
                 <SectionRenderer section={sec} />
               </div>
             ))}
@@ -270,7 +241,10 @@ export default function FinanceCategoryPage({
 
                       <Link to={href} className="tn-thumb">
                         <span className="tn-badge">
-                          <span className="tn-pill" style={{ background: pillBg }}>
+                          <span
+                            className="tn-pill"
+                            style={{ background: pillBg }}
+                          >
                             {catLabel}
                           </span>
                         </span>
