@@ -18,6 +18,7 @@
     }
   ],
   "rewrites": [
+
     {
       "source": "/",
       "has": [
@@ -126,29 +127,9 @@
       "destination": "https://timelyvoice-backend.onrender.com/ssr/:path*"
     },
 
+  
     {
-      "source": "/admin",
-      "destination": "/"
-    },
-    {
-      "source": "/admin/:path*",
-      "destination": "/"
-    },
-
-    {
-      "source": "/article/:slug",
-      "destination": "/"
-    },
-    {
-      "source": "/category/:slug",
-      "destination": "/"
-    },
-    {
-      "source": "/tag/:tag",
-      "destination": "/"
-    },
-    {
-      "source": "/news",
+      "source": "/(.*)",
       "destination": "/"
     }
   ]
