@@ -1,5 +1,5 @@
 // src/pages/public/PublicHome.jsx
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Fragment } from "react";
 
 // ✅ NEW: wrap page to enable HT-style left/right page-skin ads
 import PageShell from "../../layouts/PageShell.jsx";
@@ -14,10 +14,59 @@ import {
   buildCanonicalFromLocation,
 } from "../../lib/seoHead.js";
 
+// ✅ AdSense helper (already used elsewhere in your project)
+import { pushAd } from "../../lib/adsense.js";
+
 import SiteNav from "../../components/SiteNav.jsx";
 import SiteFooter from "../../components/SiteFooter.jsx";
 import SectionRenderer from "../../components/sections/SectionRenderer.jsx";
 import "../../styles/rails.css";
+
+/* ---------- Google AdSense (PublicHome in-content) ---------- */
+const ADS_CLIENT = "ca-pub-8472487092329023";
+
+// your new 3 horizontal units (from your screenshots)
+const ADS_SLOT_HOME_1 = "6924527574";
+const ADS_SLOT_HOME_2 = "8808454882";
+const ADS_SLOT_HOME_3 = "7025418163";
+
+function HomeAd({ slot, style }) {
+  useEffect(() => {
+    // SPA timing: push now + a tiny delayed push
+    pushAd();
+    const t = setTimeout(() => pushAd(), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slot]);
+
+  return (
+    <div
+      className="tv-ad tv-ad--home"
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        margin: "16px 0",
+        width: "100%",
+      }}
+    >
+      <ins
+        className="adsbygoogle"
+        style={{
+          display: "block",
+          width: "100%",
+          maxWidth: "100%",
+          textAlign: "center",
+          minHeight: 90,
+          ...(style || {}),
+        }}
+        data-ad-client={ADS_CLIENT}
+        data-ad-slot={slot}
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
+    </div>
+  );
+}
 
 export default function PublicHome() {
   const [sections, setSections] = useState([]);
@@ -48,10 +97,13 @@ export default function PublicHome() {
     removeManagedHeadTags();
 
     const origin =
-      typeof window !== "undefined" ? window.location.origin : "https://timelyvoice.com";
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "https://timelyvoice.com";
     const canonical = buildCanonicalFromLocation(); // homepage "/"
 
-    const title = "The Timely Voice — Latest India & World News, Exam-Friendly Updates";
+    const title =
+      "The Timely Voice — Latest India & World News, Exam-Friendly Updates";
     const desc =
       "The Timely Voice brings clear, exam-focused coverage of India, world affairs, economy, science and policy. Daily fact-based news summaries, background explainers and analysis for students and curious readers.";
 
@@ -79,7 +131,10 @@ export default function PublicHome() {
     upsertTag("meta", { property: "og:title", content: title });
     upsertTag("meta", { property: "og:description", content: desc });
     upsertTag("meta", { property: "og:url", content: canonical });
-    upsertTag("meta", { property: "og:site_name", content: "The Timely Voice" });
+    upsertTag("meta", {
+      property: "og:site_name",
+      content: "The Timely Voice",
+    });
     upsertTag("meta", { property: "og:image", content: `${origin}/logo-512.png` });
 
     // Twitter
@@ -170,7 +225,6 @@ export default function PublicHome() {
       {/* ✅ Wrap all homepage content so PageShell can render left/right page-skin ads */}
       <PageShell>
         {/* HOMEPAGE INTRO */}
-       
 
         {sectionsLoading && !sections.length ? (
           <div style={{ padding: 12 }}>Loading sections…</div>
@@ -179,14 +233,18 @@ export default function PublicHome() {
         ) : (
           <>
             {/* FULL-WIDTH main blocks */}
-            {mains.map((sec) => (
-              <div
+            {mains.map((sec, idx) => (
+              <Fragment
                 key={sec._id || sec.id || `${sec.slug}|${sec.template}|${sec.placementIndex}`}
-                className="fullwidth-section"
-                style={{ marginBottom: 24 }}
               >
-                <SectionRenderer section={sec} />
-              </div>
+                <div className="fullwidth-section" style={{ marginBottom: 24 }}>
+                  <SectionRenderer section={sec} />
+                </div>
+
+                {/* ✅ 2 horizontal ads between the full-width sections */}
+                {idx === 0 && <HomeAd slot={ADS_SLOT_HOME_1} />}
+                {idx === 1 && <HomeAd slot={ADS_SLOT_HOME_2} />}
+              </Fragment>
             ))}
 
             {/* TWO-COLUMN LAYOUT */}
@@ -195,11 +253,15 @@ export default function PublicHome() {
                 {others.length === 0 ? (
                   <div style={{ padding: 8, color: "#666" }}>No sections</div>
                 ) : (
-                  others.map((sec) => (
-                    <SectionRenderer
+                  others.map((sec, idx) => (
+                    <Fragment
                       key={sec._id || sec.id || `${sec.slug}|${sec.template}|${sec.placementIndex}`}
-                      section={sec}
-                    />
+                    >
+                      <SectionRenderer section={sec} />
+
+                      {/* ✅ 3rd horizontal ad inside main column between sections */}
+                      {idx === 1 && <HomeAd slot={ADS_SLOT_HOME_3} />}
+                    </Fragment>
                   ))
                 )}
               </main>
