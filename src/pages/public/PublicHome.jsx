@@ -25,10 +25,10 @@ import "../../styles/rails.css";
 /* ---------- Google AdSense (PublicHome in-content) ---------- */
 const ADS_CLIENT = "ca-pub-8472487092329023";
 
-// your new 3 horizontal units (from your screenshots)
-const ADS_SLOT_HOME_1 = "6924527574";
-const ADS_SLOT_HOME_2 = "8808454882";
-const ADS_SLOT_HOME_3 = "7025418163";
+// ✅ NEW Display (Horizontal/Responsive) units you just created
+const ADS_SLOT_HOME_1 = "7797134855"; // TV_HOME_BANNER_1
+const ADS_SLOT_HOME_2 = "1278267467"; // TV_HOME_BANNER_2
+const ADS_SLOT_HOME_3 = "2123627039"; // TV_HOME_BANNER_3
 
 function HomeAd({ slot, style }) {
   useEffect(() => {
@@ -74,6 +74,7 @@ export default function PublicHome() {
   const [sectionsError, setSectionsError] = useState("");
 
   // ✅ Keep stable set (avoid recreating each render)
+  // IMPORTANT: removed "ad" template so backend can NEVER inject ad-style sections here
   const MAIN_TEMPLATES = useMemo(
     () =>
       new Set([
@@ -87,7 +88,6 @@ export default function PublicHome() {
         "main_m10",
         "m11",
         "main_m11",
-        "ad",
       ]),
     []
   );
