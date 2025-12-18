@@ -47,68 +47,64 @@
 }
 
 
-/* ================== PAGE SKIN / SIDE BANNERS (HT-style) ================== */
+/* ================== PAGE SKIN / SIDE BANNERS (EDGE-STUCK) ================== */
 
-/* Default center width */
+/* Center content stays above skins */
 .site-container{
   max-width: 1200px;
   margin: 0 auto;
   position: relative;
   z-index: 2;
+
+  /* default: no side padding unless skins are shown */
+  padding-left: 0;
+  padding-right: 0;
 }
 
-/* Default: skins OFF (we enable by media queries below) */
+/* Skins pinned to viewport edges */
 .page-skin{
   position: fixed;
-  top: 120px; /* below header */
+  top: 120px;        /* below header */
   width: 160px;
+  height: 600px;
   z-index: 1;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  /* default hidden; enabled by media query */
   display: none;
 }
 
-/* Laptop+ widths: shrink center so skins fit on 1366px screens */
-@media (min-width: 1360px){
-  .site-container{
-    max-width: 1000px; /* 1000 + 160 + 160 = 1320 fits on 1366 */
-  }
+.left-skin{ left: 0; }
+.right-skin{ right: 0; }
 
+/* Show skins on desktop and protect content from overlap */
+@media (min-width: 1100px){
   .page-skin{
     display: block;
   }
 
-  .left-skin{
-    left: calc((100vw - 1000px) / 2 - 160px);
-  }
-
-  .right-skin{
-    right: calc((100vw - 1000px) / 2 - 160px);
-  }
-}
-
-/* Very wide screens: restore 1200px center + reposition skins */
-@media (min-width: 1700px){
+  /* prevent content under ads: 160px + 10px breathing room */
   .site-container{
-    max-width: 1200px;
-  }
-
-  .left-skin{
-    left: calc((100vw - 1200px) / 2 - 160px);
-  }
-
-  .right-skin{
-    right: calc((100vw - 1200px) / 2 - 160px);
+    padding-left: 170px;
+    padding-right: 170px;
   }
 }
 
-/* Smaller screens: keep hidden */
-@media (max-width: 1359px){
+/* Small screens: hide skins and remove padding */
+@media (max-width: 900px){
   .page-skin{
     display: none;
+  }
+  .site-container{
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 
 /* Optional: reduce top offset on short-height displays */
-@media (min-width: 1360px) and (max-height: 750px){
+@media (max-height: 750px){
   .page-skin{
     top: 100px;
   }
