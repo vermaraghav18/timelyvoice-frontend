@@ -123,6 +123,8 @@ export default function SiteNav() {
     };
   }, [isMobile, mobileMenuOpen]);
 
+  const container = { maxWidth: 1120, margin: "0 auto" };
+
   const languages = useMemo(
     () => [
       { code: "en", label: "ENGLISH", aria: "English" },
@@ -388,11 +390,9 @@ export default function SiteNav() {
     transition: "padding 180ms ease, transform 180ms ease",
   };
 
-  // ✅ IMPORTANT CHANGE:
-  // We no longer constrain width with an inline maxWidth container.
-  // We wrap header rows in <div className="site-container"> so it matches content width + side padding.
   const topGridStyle = !isMobile
     ? {
+        ...container,
         padding: condensed ? "6px 12px 4px" : "12px 12px 8px",
         display: "grid",
         gridTemplateColumns: "1fr auto 1fr",
@@ -401,6 +401,7 @@ export default function SiteNav() {
         transition: "padding 180ms ease",
       }
     : {
+        ...container,
         padding: "8px 10px 10px",
         display: "grid",
         gridTemplateColumns: "auto 1fr auto",
@@ -442,14 +443,7 @@ export default function SiteNav() {
   };
 
   return (
-    <header
-      style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 9999,
-        boxShadow: "0 2px 12px rgba(0,0,0,0.18)",
-      }}
-    >
+    <header style={{ position: "sticky", top: 0, zIndex: 50, boxShadow: "0 2px 12px rgba(0,0,0,0.18)" }}>
       <style>{`
         .tv-scrollfade {
           -webkit-overflow-scrolling: touch;
@@ -462,196 +456,149 @@ export default function SiteNav() {
         .tv-scrollfade::-webkit-scrollbar-track { background: transparent; }
       `}</style>
 
-      {/* TOP BAR (full width background) */}
       <div style={topBarStyle}>
-        <div className="site-container" style={topGridStyle}>
-          {!isMobile ? (
-            <>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  flexWrap: "wrap",
-                  justifyContent: "flex-start",
-                }}
-              >
+        {!isMobile ? (
+          <div style={topGridStyle}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-start" }}>
+              <div style={{ display: "flex", gap: 8, opacity: condensed ? 0.9 : 1, transition: "opacity 180ms ease" }}>
+                {["X", "IG", "TG", "YT"].map((t) => (
+                  <a key={t} href="#" style={chip} aria-label={t}>
+                    {t}
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {/* Logo with Google News overlay */}
+            <div style={{ textAlign: "center", minWidth: 0 }}>
+              <div style={{ position: "relative", display: "inline-block" }}>
+                <Link
+                  to="/"
+                  aria-label="The Timely Voice — Home"
+                  style={{ ...logoStyle, ...logoBadgeCommon, position: "relative", zIndex: 2 }}
+                >
+                  The Timely Voice
+                </Link>
+
                 <div
                   style={{
-                    display: "flex",
-                    gap: 8,
-                    opacity: condensed ? 0.9 : 1,
-                    transition: "opacity 180ms ease",
+                    position: "absolute",
+                    right: "-48px",
+                    top: "70%",
+                    transform: "translateY(-50%) rotate(3deg)",
+                    background: "#ffffff",
+                    borderRadius: "10px",
+                    border: "3px solid #000",
+                    boxShadow: "6px 8px 0 #000",
+                    padding: "4px",
+                    zIndex: 3,
                   }}
                 >
-                  {["X", "IG", "TG", "YT"].map((t) => (
-                    <a key={t} href="#" style={chip} aria-label={t}>
-                      {t}
-                    </a>
-                  ))}
-                </div>
-              </div>
-
-              {/* Logo with Google News overlay */}
-              <div style={{ textAlign: "center", minWidth: 0 }}>
-                <div style={{ position: "relative", display: "inline-block" }}>
-                  <Link
-                    to="/"
-                    aria-label="The Timely Voice — Home"
-                    style={{ ...logoStyle, ...logoBadgeCommon, position: "relative", zIndex: 2 }}
-                  >
-                    The Timely Voice
-                  </Link>
-
-                  <div
+                  <img
+                    src="/images/google-news.png"
+                    alt="Google News"
                     style={{
-                      position: "absolute",
-                      right: "-48px",
-                      top: "70%",
-                      transform: "translateY(-50%) rotate(3deg)",
-                      background: "#ffffff",
-                      borderRadius: "10px",
-                      border: "3px solid #000",
-                      boxShadow: "6px 8px 0 #000",
-                      padding: "4px",
-                      zIndex: 3,
+                      display: "block",
+                      width: "45px",
+                      height: "auto",
+                      pointerEvents: "none",
+                      userSelect: "none",
                     }}
-                  >
-                    <img
-                      src="/images/google-news.png"
-                      alt="Google News"
-                      style={{
-                        display: "block",
-                        width: "45px",
-                        height: "auto",
-                        pointerEvents: "none",
-                        userSelect: "none",
-                      }}
-                    />
-                  </div>
+                  />
                 </div>
               </div>
+            </div>
 
-              <nav
-                aria-label="Language selection"
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-end",
-                  flexWrap: "wrap",
-                  justifyContent: "flex-end",
-                  gap: 0,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                  {languages.map((l, i) => (
-                    <span key={l.code} style={{ display: "inline-flex", alignItems: "center" }}>
-                      <Link to={langHref(l.code)} aria-label={`Switch to ${l.aria}`} style={langLinkStyle}>
-                        {l.label}
-                      </Link>
-                      {i < languages.length - 1 && <span style={langSepStyle}>|</span>}
-                    </span>
-                  ))}
-                </div>
-              </nav>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                aria-label="Open menu"
-                onClick={() => setMobileMenuOpen(true)}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  background: "rgba(255,255,255,0.12)",
-                  color: "#fff",
-                  border: "1px solid rgba(255,255,255,0.18)",
-                }}
-              >
-                ☰
-              </button>
+            <nav aria-label="Language selection" style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", flexWrap: "wrap", justifyContent: "flex-end", gap: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                {languages.map((l, i) => (
+                  <span key={l.code} style={{ display: "inline-flex", alignItems: "center" }}>
+                    <Link to={langHref(l.code)} aria-label={`Switch to ${l.aria}`} style={langLinkStyle}>
+                      {l.label}
+                    </Link>
+                    {i < languages.length - 1 && <span style={langSepStyle}>|</span>}
+                  </span>
+                ))}
+              </div>
+            </nav>
+          </div>
+        ) : (
+          <div style={topGridStyle}>
+            <button
+              type="button"
+              aria-label="Open menu"
+              onClick={() => setMobileMenuOpen(true)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                background: "rgba(255,255,255,0.12)",
+                color: "#fff",
+                border: "1px solid rgba(255,255,255,0.18)",
+              }}
+            >
+              ☰
+            </button>
 
-              <div style={{ textAlign: "center", minWidth: 0 }}>
-                <div style={{ position: "relative", display: "inline-block" }}>
-                  <Link
-                    to="/"
-                    aria-label="The Timely Voice — Home"
-                    style={{ ...logoStyle, ...logoBadgeCommon, position: "relative", zIndex: 2 }}
-                  >
-                    The Timely Voice
-                  </Link>
+            <div style={{ textAlign: "center", minWidth: 0 }}>
+              <div style={{ position: "relative", display: "inline-block" }}>
+                <Link
+                  to="/"
+                  aria-label="The Timely Voice — Home"
+                  style={{ ...logoStyle, ...logoBadgeCommon, position: "relative", zIndex: 2 }}
+                >
+                  The Timely Voice
+                </Link>
 
-                  <div
+                <div
+                  style={{
+                    position: "absolute",
+                    right: "-38px",
+                    top: "70%",
+                    transform: "translateY(-50%) rotate(3deg)",
+                    background: "#ffffff",
+                    borderRadius: "10px",
+                    border: "3px solid #000",
+                    boxShadow: "6px 8px 0 #000",
+                    padding: "4px",
+                    zIndex: 3,
+                  }}
+                >
+                  <img
+                    src="/images/google-news.png"
+                    alt="Google News"
                     style={{
-                      position: "absolute",
-                      right: "-38px",
-                      top: "70%",
-                      transform: "translateY(-50%) rotate(3deg)",
-                      background: "#ffffff",
-                      borderRadius: "10px",
-                      border: "3px solid #000",
-                      boxShadow: "6px 8px 0 #000",
-                      padding: "4px",
-                      zIndex: 3,
+                      display: "block",
+                      width: "36px",
+                      height: "auto",
+                      pointerEvents: "none",
+                      userSelect: "none",
                     }}
-                  >
-                    <img
-                      src="/images/google-news.png"
-                      alt="Google News"
-                      style={{
-                        display: "block",
-                        width: "36px",
-                        height: "auto",
-                        pointerEvents: "none",
-                        userSelect: "none",
-                      }}
-                    />
-                  </div>
+                  />
                 </div>
               </div>
+            </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }} />
-            </>
-          )}
-        </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }} />
+          </div>
+        )}
       </div>
 
-      {/* PRIMARY NAV (keep background full width, constrain inner width) */}
-      <div style={{ background: "#001f56" }}>
-        <div className="site-container">
-          <PrimaryNav />
-        </div>
-      </div>
+      <PrimaryNav />
 
       {/* regions row — hidden */}
       {!HIDE_REGION_NAV ? (
-        <div
-          style={{
-            width: "100%",
-            background: " #001431ff ",
-            color: "#fff",
-            fontSize: 14,
-            userSelect: "none",
-            borderBottom: "1px solid rgba(0,0,0,0.06)",
-          }}
-        >
-          <div className="site-container" style={{ padding: isMobile ? "8px 8px" : "0 12px" }}>
+        <div style={{ width: "100%", background: " #001431ff ", color: "#fff", fontSize: 14, userSelect: "none", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+          <div style={{ ...container, padding: isMobile ? "8px 8px" : "0 12px" }}>
             {/* (your existing regions UI remains unchanged if you ever enable it) */}
           </div>
         </div>
       ) : null}
 
-      {/* BREAKING (constrain inner width) */}
-      <div style={{ background: "#001431ff" }}>
-        <div className="site-container">
-          <BreakingNewsBar items={breaking} />
-        </div>
-      </div>
+      <BreakingNewsBar items={breaking} />
 
       {isMobile && mobileMenuOpen && <MobileSheet />}
     </header>
