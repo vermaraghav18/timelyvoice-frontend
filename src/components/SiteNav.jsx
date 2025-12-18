@@ -125,6 +125,7 @@ export default function SiteNav() {
 
   const container = { maxWidth: 1120, margin: "0 auto" };
 
+  // Languages removed from UI, but we keep this noop list/href in case you want it back later.
   const languages = useMemo(
     () => [
       { code: "en", label: "ENGLISH", aria: "English" },
@@ -141,36 +142,6 @@ export default function SiteNav() {
     sp.set("lang", code);
     const qs = sp.toString();
     return `${loc.pathname}${qs ? `?${qs}` : ""}`;
-  };
-
-  const langLinkStyle = {
-    fontSize: 12,
-    fontWeight: 700,
-    lineHeight: 1,
-    textDecoration: "none",
-    color: "#fff",
-    opacity: 0.95,
-    whiteSpace: "nowrap",
-  };
-  const langSepStyle = {
-    margin: "0 6px",
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 12,
-    userSelect: "none",
-  };
-
-  const chip = {
-    width: 26,
-    height: 26,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 999,
-    background: "rgba(255,255,255,0.16)",
-    color: "#fff",
-    textDecoration: "none",
-    fontWeight: 800,
-    fontSize: 11,
   };
 
   // Regions list (only meaningful when region nav is enabled)
@@ -255,7 +226,7 @@ export default function SiteNav() {
     };
   }, [regions, isMobile]);
 
-  // --- Mobile full-screen sheet (regions section stays hidden when HIDE_REGION_NAV) ---
+  // --- Mobile full-screen sheet (languages removed, regions stays hidden when HIDE_REGION_NAV) ---
   const MobileSheet = () => (
     <div
       role="dialog"
@@ -312,31 +283,7 @@ export default function SiteNav() {
           </button>
         </div>
 
-        <div style={{ margin: "10px 0 14px" }}>
-          <div style={{ opacity: 0.8, fontSize: 12, marginBottom: 6 }}>
-            Languages
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {languages.map((l) => (
-              <Link
-                key={l.code}
-                to={langHref(l.code)}
-                onClick={() => setMobileMenuOpen(false)}
-                style={{
-                  padding: "8px 10px",
-                  borderRadius: 8,
-                  border: "1px solid rgba(255,255,255,0.18)",
-                  textDecoration: "none",
-                  color: "#fff",
-                  fontWeight: 700,
-                  fontSize: 12,
-                }}
-              >
-                {l.label}
-              </Link>
-            ))}
-          </div>
-        </div>
+        {/* Languages removed */}
 
         {!HIDE_REGION_NAV && (
           <div style={{ marginTop: 8 }}>
@@ -459,14 +406,9 @@ export default function SiteNav() {
       <div style={topBarStyle}>
         {!isMobile ? (
           <div style={topGridStyle}>
+            {/* LEFT AREA (social removed) */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-start" }}>
-              <div style={{ display: "flex", gap: 8, opacity: condensed ? 0.9 : 1, transition: "opacity 180ms ease" }}>
-                {["X", "IG", "TG", "YT"].map((t) => (
-                  <a key={t} href="#" style={chip} aria-label={t}>
-                    {t}
-                  </a>
-                ))}
-              </div>
+              {/* social chips removed */}
             </div>
 
             {/* Logo with Google News overlay */}
@@ -509,18 +451,10 @@ export default function SiteNav() {
               </div>
             </div>
 
-            <nav aria-label="Language selection" style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", flexWrap: "wrap", justifyContent: "flex-end", gap: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                {languages.map((l, i) => (
-                  <span key={l.code} style={{ display: "inline-flex", alignItems: "center" }}>
-                    <Link to={langHref(l.code)} aria-label={`Switch to ${l.aria}`} style={langLinkStyle}>
-                      {l.label}
-                    </Link>
-                    {i < languages.length - 1 && <span style={langSepStyle}>|</span>}
-                  </span>
-                ))}
-              </div>
-            </nav>
+            {/* RIGHT AREA (languages removed) */}
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              {/* language buttons removed */}
+            </div>
           </div>
         ) : (
           <div style={topGridStyle}>
