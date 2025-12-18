@@ -170,39 +170,7 @@ export default function PublicHome() {
       {/* ✅ Wrap all homepage content so PageShell can render left/right page-skin ads */}
       <PageShell>
         {/* HOMEPAGE INTRO */}
-        <section
-          aria-label="The Timely Voice overview"
-          style={{
-            padding: "12px 0 18px",
-            // ✅ removed the underline line
-            marginBottom: 12,
-          }}
-        >
-          <h1
-            style={{
-              margin: 0,
-              fontSize: "clamp(20px, 2.2vw, 26px)",
-              fontWeight: 700,
-              color: "#e5f0ff",
-            }}
-          >
-            The Timely Voice – Latest India & World News, Explained Clearly
-          </h1>
-          <p
-            style={{
-              marginTop: 6,
-              maxWidth: "60rem",
-              fontSize: 15,
-              lineHeight: 1.6,
-              color: "#cbd5f5",
-            }}
-          >
-            Timely Voice News curates important developments from India and around the world
-            and rewrites them in clear, exam-friendly language. Follow concise updates on
-            politics, economy, science, technology and global affairs, backed by verified
-            sources and editorial checks.
-          </p>
-        </section>
+       
 
         {sectionsLoading && !sections.length ? (
           <div style={{ padding: 12 }}>Loading sections…</div>
