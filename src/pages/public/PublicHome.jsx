@@ -169,17 +169,12 @@ export default function PublicHome() {
 
       {/* ✅ Wrap all homepage content so PageShell can render left/right page-skin ads */}
       <PageShell>
-        {/* top spacer under nav */}
-        <div style={styles.nav}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }} />
-        </div>
-
         {/* HOMEPAGE INTRO */}
         <section
           aria-label="The Timely Voice overview"
           style={{
             padding: "12px 0 18px",
-            borderBottom: "1px solid rgba(148, 163, 184, 0.25)",
+            // ✅ removed the underline line
             marginBottom: 12,
           }}
         >
