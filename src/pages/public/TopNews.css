@@ -1,8 +1,60 @@
+/* ---------- Page-skin layout (TopNews) ---------- */
+.tn-shell{
+  position: relative;
+  min-height: 60vh;
+}
+
+/* content column */
+.tn-container{
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 14px 12px 30px;
+}
+
+/* left/right skins */
+.tn-skin{
+  position: fixed;
+  top: 110px;            /* below your navbar */
+  width: 160px;          /* typical skin width */
+  height: calc(100vh - 140px);
+  z-index: 10;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.tn-skin--left{ left: 12px; }
+.tn-skin--right{ right: 12px; }
+
+.tn-skin ins.adsbygoogle{
+  display: block;
+  width: 160px;
+  min-height: 600px;
+}
+
+/* Hide skins on smaller screens */
+@media (max-width: 1200px){
+  .tn-skin{ display: none; }
+  .tn-container{ max-width: 960px; }
+}
+
+/* ---------- Your existing styles (kept) ---------- */
 .tn-title {
   margin: 0 0 10px;
   font-weight: 800;
-  font-size: 0px;
+  font-size: 28px; /* was 0px */
   color: #fff;
+}
+
+.tn-status {
+  color: #ddd;
+  padding: 10px 0;
+}
+
+.tn-error {
+  color: #ff6b6b;
+  padding: 10px 0;
 }
 
 .tn-list {
@@ -53,7 +105,6 @@
   text-overflow: ellipsis;
 }
 
-/* Divider line */
 .tn-divider {
   height: 1px;
   background: rgba(255, 255, 255, 0.15);
@@ -61,8 +112,6 @@
   border: none;
 }
 
-/* Meta section */
-/* Meta section: centers the source text */
 .tn-meta {
   margin-top: 10px;
   display: flex;
@@ -71,9 +120,8 @@
   text-align: center;
 }
 
-/* Plain centered source text */
 .tn-source {
-  color: rgb(201, 201, 201);         /* soft neutral tone */
+  color: rgb(201, 201, 201);
   font-weight: 400;
   font-size: 14px;
   background: none;
@@ -82,7 +130,6 @@
   padding: 0;
 }
 
-/* Category tag pill overlay */
 .tn-pill {
   color: #000000;
   font-weight: 700;
@@ -115,10 +162,6 @@
   pointer-events: none;
 }
 
-.tn-badge .tn-pill {
-  pointer-events: auto;
-}
-
 .tn-thumb img,
 .tn-thumb.ph {
   width: 100%;
@@ -126,34 +169,12 @@
   object-fit: cover;
 }
 
-/* ✅ Video overlay (NEW) */
-.tn-video {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  width: 46%;
-  height: 46%;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.25);
-  background: #000;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
-  pointer-events: none; /* keep the whole card clickable */
-}
-
-/* Responsive */
 @media (max-width: 720px) {
   .tn-item {
     grid-template-columns: 1fr;
     grid-template-areas: "thumb" "left";
   }
   .tn-thumb {
-    height: 280px; /* was 220px */
-  }
-
-  /* ✅ keep overlay nice on mobile */
-  .tn-video {
-    width: 55%;
-    height: 40%;
+    height: 280px;
   }
 }

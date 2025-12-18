@@ -2,16 +2,63 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { api, cachedGet } from "../../lib/publicApi.js";
+import { cachedGet } from "../../lib/publicApi.js";
 import { upsertTag, removeManagedHeadTags } from "../../lib/seoHead.js";
+import { ensureRenderableImage } from "../../lib/images.js";
+
+// ✅ AdSense helper (already used elsewhere in your project)
+import { pushAd } from "../../lib/adsense.js";
 
 import SiteNav from "../../components/SiteNav.jsx";
 import SiteFooter from "../../components/SiteFooter.jsx";
 import "./TopNews.css";
 
-import { ensureRenderableImage } from "../../lib/images.js";
-
 const FALLBACK_HERO_IMAGE = "/tv-default-hero.jpg";
+
+/* ---------- AdSense (TopNews page-skin) ---------- */
+const ADS_CLIENT = "ca-pub-8472487092329023";
+const ADS_SLOT_SKIN_LEFT = "1900265755";
+const ADS_SLOT_SKIN_RIGHT = "6961020746";
+
+/* Load AdSense script once (safe in SPA) */
+function ensureAdsenseScript(client) {
+  if (typeof document === "undefined") return;
+
+  const src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`;
+  const exists = Array.from(document.scripts).some((s) => s.src === src);
+  if (exists) return;
+
+  const s = document.createElement("script");
+  s.async = true;
+  s.src = src;
+  s.crossOrigin = "anonymous";
+  document.head.appendChild(s);
+}
+
+function PageSkinAd({ side, slot }) {
+  useEffect(() => {
+    ensureAdsenseScript(ADS_CLIENT);
+
+    // SPA timing: push now + delayed push
+    pushAd();
+    const t = setTimeout(() => pushAd(), 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slot]);
+
+  return (
+    <aside className={`tn-skin tn-skin--${side}`} aria-label={`Ad ${side}`}>
+      <ins
+        className="adsbygoogle"
+        style={{ display: "block" }}
+        data-ad-client={ADS_CLIENT}
+        data-ad-slot={slot}
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
+    </aside>
+  );
+}
 
 const CAT_COLORS = {
   World: "linear-gradient(135deg, #3B82F6 0%, #0073ff 100%)",
@@ -32,27 +79,13 @@ function optimizeCloudinary(url, width = 520) {
 }
 
 /* ---------- Video helpers ---------- */
-function getDriveFileId(url = "") {
-  const s = String(url || "").trim();
-  if (!s) return "";
-  const byPath = s.match(/\/file\/d\/([^/]+)/);
-  const byParam = s.match(/[?&]id=([^&]+)/);
-  return (byPath && byPath[1]) || (byParam && byParam[1]) || "";
-}
-
 function getVideoPreview(url = "") {
   const raw = String(url || "").trim();
   if (!raw) return { kind: "none", src: "" };
 
-  // Only allow real mp4 streams
-  if (raw.endsWith(".mp4")) {
-    return { kind: "direct", src: raw };
-  }
-
-  // Disable Drive videos (not preview-safe)
+  if (raw.endsWith(".mp4")) return { kind: "direct", src: raw };
   return { kind: "none", src: "" };
 }
-
 
 /* ---------- utils ---------- */
 function articleHref(slug) {
@@ -84,8 +117,7 @@ function normalizeTopNews(items = []) {
 
 function getCategoryName(a) {
   const raw =
-    a?.category?.name ??
-    (typeof a?.category === "string" ? a.category : "General");
+    a?.category?.name ?? (typeof a?.category === "string" ? a.category : "General");
   const map = {
     world: "World",
     politics: "Politics",
@@ -132,13 +164,10 @@ export default function TopNews() {
         const data = await cachedGet(
           "/top-news",
           { params: { page: 1, limit: 50, mode: "public" } },
-          30_000 // ✅ 30s cache
+          30_000
         );
 
-        if (!cancel) {
-          const sorted = normalizeTopNews(data?.items || []);
-          setItems(sorted);
-        }
+        if (!cancel) setItems(normalizeTopNews(data?.items || []));
       } catch (e) {
         if (!cancel) setErr("Failed to load top news");
       } finally {
@@ -155,85 +184,87 @@ export default function TopNews() {
     <>
       <SiteNav />
 
-      <main className="container">
-        <h1 className="tn-title">Top News</h1>
+      {/* ✅ Left/Right skins (no chips) */}
+      <div className="tn-shell">
+        <PageSkinAd side="left" slot={ADS_SLOT_SKIN_LEFT} />
+        <PageSkinAd side="right" slot={ADS_SLOT_SKIN_RIGHT} />
 
-        {loading && <div className="tn-status">Loading…</div>}
-        {err && <div className="tn-error">{err}</div>}
+        <main className="tn-container">
+          <h1 className="tn-title">Top News</h1>
 
-        {!loading && !err && (
-          <ul className="tn-list">
-            {items.map((a) => {
-              const href = articleHref(a.slug);
-              const catName = getCategoryName(a);
-              const color = CAT_COLORS[catName] || "#4B5563";
+          {loading && <div className="tn-status">Loading…</div>}
+          {err && <div className="tn-error">{err}</div>}
 
-              const rawImage = ensureRenderableImage(a);
-              const thumbSrc = optimizeCloudinary(
-                rawImage || FALLBACK_HERO_IMAGE,
-                520
-              );
+          {!loading && !err && (
+            <ul className="tn-list">
+              {items.map((a) => {
+                const href = articleHref(a.slug);
+                const catName = getCategoryName(a);
+                const color = CAT_COLORS[catName] || "#4B5563";
 
-              const hasVideo = !!a.videoUrl;
-              const video = hasVideo ? getVideoPreview(a.videoUrl) : null;
+                const rawImage = ensureRenderableImage(a);
+                const thumbSrc = optimizeCloudinary(rawImage || FALLBACK_HERO_IMAGE, 520);
 
-              return (
-                <li className="tn-item" key={a._id || a.id || a.slug}>
-                  <div className="tn-left">
-                    <Link to={href} className="tn-item-title">
-                      {a.title}
-                    </Link>
+                const hasVideo = !!a.videoUrl;
+                const video = hasVideo ? getVideoPreview(a.videoUrl) : null;
 
-                    {(a.summary || a.description) && (
-                      <Link to={href} className="tn-summary">
-                        {a.summary || a.description}
+                return (
+                  <li className="tn-item" key={a._id || a.id || a.slug}>
+                    <div className="tn-left">
+                      <Link to={href} className="tn-item-title">
+                        {a.title}
                       </Link>
-                    )}
 
-                    <div className="tn-divider"></div>
+                      {(a.summary || a.description) && (
+                        <Link to={href} className="tn-summary">
+                          {a.summary || a.description}
+                        </Link>
+                      )}
 
-                    <div className="tn-meta">
-                      <span className="tn-source">The Timely Voice</span>
+                      <div className="tn-divider" />
+
+                      <div className="tn-meta">
+                        <span className="tn-source">The Timely Voice</span>
+                      </div>
                     </div>
-                  </div>
 
-                  <Link to={href} className="tn-thumb">
-                    <span className="tn-badge">
-                      <span className="tn-pill" style={{ background: color }}>
-                        {catName}
+                    <Link to={href} className="tn-thumb">
+                      <span className="tn-badge">
+                        <span className="tn-pill" style={{ background: color }}>
+                          {catName}
+                        </span>
                       </span>
-                    </span>
 
-                   {hasVideo && video.kind === "direct" ? (
-  <video
-    src={video.src}
-    autoPlay
-    muted
-    loop
-    playsInline
-    preload="metadata"
-    poster={thumbSrc}
-    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-  />
-) : (
-  <img
-    src={thumbSrc}
-    alt={a.imageAlt || a.title || "The Timely Voice"}
-    loading="lazy"
-    decoding="async"
-    onError={(e) => {
-      e.currentTarget.src = FALLBACK_HERO_IMAGE;
-    }}
-  />
-)}
-
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </main>
+                      {hasVideo && video.kind === "direct" ? (
+                        <video
+                          src={video.src}
+                          autoPlay
+                          muted
+                          loop
+                          playsInline
+                          preload="metadata"
+                          poster={thumbSrc}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      ) : (
+                        <img
+                          src={thumbSrc}
+                          alt={a.imageAlt || a.title || "The Timely Voice"}
+                          loading="lazy"
+                          decoding="async"
+                          onError={(e) => {
+                            e.currentTarget.src = FALLBACK_HERO_IMAGE;
+                          }}
+                        />
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </main>
+      </div>
 
       <SiteFooter />
     </>
