@@ -190,7 +190,7 @@ export default function TopNews() {
         <PageSkinAd side="right" slot={ADS_SLOT_SKIN_RIGHT} />
 
         <main className="tn-container">
-          <h1 className="tn-title">Top News</h1>
+        
 
           {loading && <div className="tn-status">Loading…</div>}
           {err && <div className="tn-error">{err}</div>}
