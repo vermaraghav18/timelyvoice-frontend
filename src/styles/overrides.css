@@ -1,69 +1,8 @@
-/* frontend/src/styles/overrides.css */
-/* This file MUST be imported last so it wins. */
-
-/* =========================
-   0) Global safety
-   ========================= */
-html, body { width: 100%; overflow-x: hidden; }
-* { min-width: 0; }
-img, video, iframe { max-width: 100%; }
-
-/* =========================
-   1) AdSense containment (PRODUCTION FIX)
-   Prevent filled ad iframes from breaking rails/grid
-   ========================= */
-.ad-slot {
-  width: 100%;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.ad-slot ins.adsbygoogle,
-ins.adsbygoogle {
-  display: block !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow: hidden;
-}
-
-.ad-slot iframe,
-ins.adsbygoogle iframe {
-  display: block;
-  max-width: 100% !important;
-}
-
-/* =========================
-   2) Rails safety
-   Keep rail children from forcing column width
-   ========================= */
-.rail,
-.rail-col,
-.rail-wrap,
-.rail-scroll {
-  min-width: 0;
-  max-width: 100%;
-}
-
-.rail * ,
-.rail-col *,
-.rail-wrap *,
-.rail-scroll * {
-  min-width: 0;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-/* =========================
-   3) Home grid / category grid seam fixes
-   (Your requested overrides — cleaned + valid CSS)
-   ========================= */
-
-/* 1) Absolutely remove any gap */
+/* 1) Absolutely remove any column gap (even if a later 'gap:' shorthand is set) */
 .home-grid{
   gap: 0 !important;
   column-gap: 0 !important;
-  row-gap: 0 !important;
+    row-gap: 0 !important;  /
 }
 
 /* 2) Remove any left gutter applied by the right rail wrappers */
@@ -83,11 +22,5 @@ ins.adsbygoogle iframe {
   margin-right: 0 !important;
 }
 
-/* 4) Optional: overlap rail by 1px if a border seam still shows */
+/* 4) Optional: overlap rail by 1px if the left border line still shows */
 .home-grid > aside{ margin-left: -1px; }
-
-/* =========================
-   4) Optional: reduce weird template centering if it ever leaks in
-   (harmless if already fixed)
-   ========================= */
-#root { width: 100%; margin: 0; padding: 0; }
