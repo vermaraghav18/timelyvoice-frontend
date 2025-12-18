@@ -264,7 +264,8 @@ const gridWrap = {
   gap: 16,
 };
 
-const singleColWrap = { width: "100%", maxWidth: 760, padding: "0 12px" };
+const singleColWrap = { width: "100%", maxWidth: 1200, padding: "0 12px" };
+
 
 const railCol = { minWidth: 0, position: "relative" };
 const mainCol = { minWidth: 0 };
@@ -557,21 +558,42 @@ export default function CategoryPage() {
   const [railsLoading, setRailsLoading] = useState(false);
   const [railsError, setRailsError] = useState("");
 
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 720px)").matches : false
-  );
+ const [isMobile, setIsMobile] = useState(() =>
+  typeof window !== "undefined"
+    ? window.matchMedia("(max-width: 720px)").matches
+    : false
+);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(max-width: 720px)");
-    const onChange = (e) => setIsMobile(e.matches);
-    mq.addEventListener?.("change", onChange);
-    mq.addListener?.(onChange);
-    return () => {
-      mq.removeEventListener?.("change", onChange);
-      mq.removeListener?.(onChange);
-    };
-  }, []);
+const [isNarrow, setIsNarrow] = useState(() =>
+  typeof window !== "undefined"
+    ? window.matchMedia("(max-width: 1100px)").matches
+    : false
+);
+
+useEffect(() => {
+  if (typeof window === "undefined") return;
+
+  const mqMobile = window.matchMedia("(max-width: 720px)");
+  const mqNarrow = window.matchMedia("(max-width: 1100px)");
+
+  const onMobile = (e) => setIsMobile(e.matches);
+  const onNarrow = (e) => setIsNarrow(e.matches);
+
+  mqMobile.addEventListener?.("change", onMobile);
+  mqMobile.addListener?.(onMobile);
+
+  mqNarrow.addEventListener?.("change", onNarrow);
+  mqNarrow.addListener?.(onNarrow);
+
+  return () => {
+    mqMobile.removeEventListener?.("change", onMobile);
+    mqMobile.removeListener?.(onMobile);
+
+    mqNarrow.removeEventListener?.("change", onNarrow);
+    mqNarrow.removeListener?.(onNarrow);
+  };
+}, []);
+
 
   const normalizedSlug = useMemo(() => toSlug(slug), [slug]);
 
@@ -914,7 +936,9 @@ export default function CategoryPage() {
           </div>
         ))}
 
-        {!isMobile && hasAnyRails ? (
+       {!isMobile && !isNarrow ? (
+
+
           <div style={gridWrap} ref={gridRef}>
             <aside style={railCol} ref={leftAsideRef}>
               {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
