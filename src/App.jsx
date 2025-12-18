@@ -29,6 +29,7 @@ import "./styles/home.css";
 import "./styles/aspectRatio.css";
 import "./styles/typography.css";
 import "./styles/scroll-optimizations.css";
+import "./styles/overrides.css";
 
 
 /* ===================== Shared API ===================== */

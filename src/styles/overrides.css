@@ -2,7 +2,7 @@
 .home-grid{
   gap: 0 !important;
   column-gap: 0 !important;
-    row-gap: 0 !important;  /
+  row-gap: 0 !important;
 }
 
 /* 2) Remove any left gutter applied by the right rail wrappers */
@@ -24,3 +24,13 @@
 
 /* 4) Optional: overlap rail by 1px if the left border line still shows */
 .home-grid > aside{ margin-left: -1px; }
+
+/* ------------------ AdSense containment (prevents desktop break) ------------------ */
+.adsbygoogle {
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+.adsbygoogle iframe {
+  max-width: 100% !important;
+}

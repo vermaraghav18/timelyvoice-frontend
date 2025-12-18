@@ -41,7 +41,8 @@ function AdSenseAuto({ slot, style }) {
   return (
     <ins
       className="adsbygoogle"
-      style={{ display: "block", ...style }}
+      style={{ display: "block", width: "100%", maxWidth: "100%", ...style }}
+
       data-ad-client={ADS_CLIENT}
       data-ad-slot={slot}
       data-ad-format="auto"
@@ -260,7 +261,8 @@ const gridWrap = {
   maxWidth: 1200,
   padding: "0 12px",
   display: "grid",
-  gridTemplateColumns: "260px 1fr 260px",
+ gridTemplateColumns: "260px minmax(0, 1fr) 260px",
+
   gap: 16,
 };
 
