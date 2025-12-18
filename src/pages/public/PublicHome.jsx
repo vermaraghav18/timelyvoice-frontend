@@ -1,6 +1,9 @@
 // src/pages/public/PublicHome.jsx
 import { useEffect, useState, useMemo } from "react";
 
+// ✅ NEW: wrap page to enable HT-style left/right page-skin ads
+import PageShell from "../../layouts/PageShell.jsx";
+
 // ✅ NEW: import from libs (NOT App.jsx)
 import { cachedGet } from "../../lib/publicApi.js";
 import { styles } from "../../lib/uiTokens.js";
@@ -164,7 +167,8 @@ export default function PublicHome() {
     <>
       <SiteNav />
 
-      <main className="container">
+      {/* ✅ Wrap all homepage content so PageShell can render left/right page-skin ads */}
+      <PageShell>
         {/* top spacer under nav */}
         <div style={styles.nav}>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }} />
@@ -252,7 +256,7 @@ export default function PublicHome() {
             </div>
           </>
         )}
-      </main>
+      </PageShell>
 
       <SiteFooter />
     </>

@@ -31,8 +31,6 @@ import "./styles/typography.css";
 import "./styles/scroll-optimizations.css";
 import "./styles/overrides.css";
 
-
-/* ===================== Shared API ===================== */
 /* ===================== Shared API ===================== */
 const API_BASE =
   import.meta?.env?.VITE_API_BASE_URL ||
@@ -45,7 +43,6 @@ export const api = axios.create({
   baseURL: API_BASE,
   withCredentials: false,
 });
-
 
 export function getToken() {
   try {
@@ -181,6 +178,9 @@ import { notifyRouteChange, track } from "./lib/analytics";
 /* ===================== Error Boundary ===================== */
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
+/* ===================== AdSense push helper (Step D3) ===================== */
+import { pushAd } from "./lib/adsense";
+
 /* ===================== Category Route Wrapper ===================== */
 function AnyCategoryRoute() {
   const { slug } = useParams();
@@ -200,7 +200,6 @@ function AnyCategoryRoute() {
   return <CategoryPage />;
 }
 
-
 /* ===================== App ===================== */
 export default function App() {
   const loc = useLocation();
@@ -210,21 +209,27 @@ export default function App() {
     track("page_view", { path: `${loc.pathname}${loc.search}` });
   }, [loc.pathname, loc.search]);
 
+  // ✅ Step D3: re-push AdSense after every route change (SPA navigation)
   useEffect(() => {
-  const origin = "https://timelyvoice.com";
-  addJsonLd("site", {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    name: "Timely Voice",
-    url: origin,
-    potentialAction: {
-      "@type": "SearchAction",
-      target: `${origin}/search?q={search_term_string}`,
-      "query-input": "required name=search_term_string",
-    },
-  });
-}, []);
+    pushAd();
+    const t = setTimeout(() => pushAd(), 300);
+    return () => clearTimeout(t);
+  }, [loc.pathname]);
 
+  useEffect(() => {
+    const origin = "https://timelyvoice.com";
+    addJsonLd("site", {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: "Timely Voice",
+      url: origin,
+      potentialAction: {
+        "@type": "SearchAction",
+        target: `${origin}/search?q={search_term_string}`,
+        "query-input": "required name=search_term_string",
+      },
+    });
+  }, []);
 
   useEffect(() => {
     upsertTag("link", {
@@ -239,16 +244,16 @@ export default function App() {
         <Routes>
           <Route path="/" element={<PublicHome />} />
           <Route path="/top-news" element={<TopNews />} />
-          <Route
-  path="/health"
-  element={
-    <FinanceCategoryPage
-      categorySlug="health"
-      displayName="Health"
-    />
-  }
-/>
 
+          <Route
+            path="/health"
+            element={
+              <FinanceCategoryPage
+                categorySlug="health"
+                displayName="Health"
+              />
+            }
+          />
 
           <Route path="/category/:slug" element={<AnyCategoryRoute />} />
 

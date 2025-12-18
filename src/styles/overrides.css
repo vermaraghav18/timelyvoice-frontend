@@ -1,3 +1,5 @@
+/* ================== HOME GRID: remove gaps + gutters ================== */
+
 /* 1) Absolutely remove any column gap (even if a later 'gap:' shorthand is set) */
 .home-grid{
   gap: 0 !important;
@@ -25,12 +27,64 @@
 /* 4) Optional: overlap rail by 1px if the left border line still shows */
 .home-grid > aside{ margin-left: -1px; }
 
-/* ------------------ AdSense containment (prevents desktop break) ------------------ */
-.adsbygoogle {
+
+/* ================== ADSENSE CONTAINMENT (prevents layout blowups) ================== */
+
+.ads-wrap{
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.adsbygoogle{
+  width: 100% !important;
   max-width: 100% !important;
   overflow: hidden !important;
 }
 
-.adsbygoogle iframe {
+.adsbygoogle iframe{
   max-width: 100% !important;
+}
+
+
+/* ================== PAGE SKIN / SIDE BANNERS (HT-style) ================== */
+
+/* Fixed center content width */
+.site-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+}
+
+/* Page skin ads */
+.page-skin {
+  position: fixed;
+  top: 120px; /* below header */
+  width: 160px;
+  z-index: 1;
+}
+
+/* 1200/2=600 + 160 = 760 */
+.left-skin {
+  left: calc(50% - 760px);
+}
+
+.right-skin {
+  right: calc(50% - 760px);
+}
+
+/* Hide skins on smaller screens (prevents overlap on laptops) */
+@media (max-width: 1400px) {
+  .page-skin {
+    display: none;
+  }
+}
+
+/* Optional: if your header height changes on mobile, you can adjust top.
+   Keep hidden anyway under 1400px, so this mostly affects wide screens. */
+@media (min-width: 1401px) and (max-height: 750px) {
+  .page-skin {
+    top: 100px;
+  }
 }
