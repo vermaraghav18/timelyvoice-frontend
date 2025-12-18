@@ -26,16 +26,20 @@ const WRAP_STYLE = {
   borderBottom: "1px solid rgba(0,0,0,0.2)",
 };
 
+/**
+ * ✅ KEY CHANGE:
+ * - Do NOT use maxWidth here.
+ * - Let SiteNav wrap PrimaryNav inside <div className="site-container">.
+ */
 const OUTER_STYLE = {
-  maxWidth: 1120,
-  margin: "0 auto",
-  padding: "0 12px",
+  width: "100%",
   height: 40,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  overflowX: "hidden",
-  overflowY: "hidden",
+  overflow: "hidden",
+  padding: "0 12px",
+  boxSizing: "border-box",
 };
 
 const SCROLLER_STYLE = {
