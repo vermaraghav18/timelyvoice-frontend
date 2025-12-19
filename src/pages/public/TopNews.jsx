@@ -1,5 +1,5 @@
 // frontend/src/pages/public/TopNews.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { cachedGet } from "../../lib/publicApi.js";
@@ -15,10 +15,16 @@ import "./TopNews.css";
 
 const FALLBACK_HERO_IMAGE = "/tv-default-hero.jpg";
 
-/* ---------- AdSense (TopNews page-skin) ---------- */
+/* ---------- AdSense (TopNews page-skin + in-feed) ---------- */
 const ADS_CLIENT = "ca-pub-8472487092329023";
+
+// page-skin (already working)
 const ADS_SLOT_SKIN_LEFT = "1900265755";
 const ADS_SLOT_SKIN_RIGHT = "6961020746";
+
+// ✅ In-feed units between cards (from your screenshots)
+const ADS_SLOT_INFEED_DESKTOP = "8428632191"; // TopNews InFeed Desktop
+const ADS_SLOT_INFEED_MOBILE = "6748719010"; // TopNews InFeed Mobile
 
 /* Load AdSense script once (safe in SPA) */
 function ensureAdsenseScript(client) {
@@ -60,17 +66,85 @@ function PageSkinAd({ side, slot }) {
   );
 }
 
+/* ✅ In-feed AdSense block (between cards) */
+function useIsMobile(breakpointPx = 720) {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia?.(`(max-width: ${breakpointPx}px)`)?.matches ?? false;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+
+    const mq = window.matchMedia(`(max-width: ${breakpointPx}px)`);
+    const onChange = () => setIsMobile(mq.matches);
+
+    setIsMobile(mq.matches);
+
+    if (mq.addEventListener) mq.addEventListener("change", onChange);
+    else mq.addListener(onChange);
+
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener("change", onChange);
+      else mq.removeListener(onChange);
+    };
+  }, [breakpointPx]);
+
+  return isMobile;
+}
+
+function InFeedAd() {
+  const isMobile = useIsMobile(720);
+  const slot = isMobile ? ADS_SLOT_INFEED_MOBILE : ADS_SLOT_INFEED_DESKTOP;
+
+  useEffect(() => {
+    ensureAdsenseScript(ADS_CLIENT);
+
+    // SPA timing: push now + delayed push
+    pushAd();
+    const t = setTimeout(() => pushAd(), 450);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slot, isMobile]);
+
+  return (
+    <li className="tn-ad">
+      <div className="tn-ad-inner" aria-label="Advertisement">
+        <ins
+          className="adsbygoogle"
+          style={{ display: "block" }}
+          data-ad-client={ADS_CLIENT}
+          data-ad-slot={slot}
+          data-ad-format="auto"
+          data-full-width-responsive="true"
+        />
+      </div>
+    </li>
+  );
+}
+
 const CAT_COLORS = {
   World: "linear-gradient(135deg, #3B82F6 0%, #0073ff 100%)",
   Politics: "linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)",
   Business: "linear-gradient(135deg, #10B981 0%, #34D399 100%)",
   Entertainment: "linear-gradient(135deg, #A855F7 0%, rgb(119, 0, 255))",
-  General: "linear-gradient(135deg, #6B7280 0%, #9CA3AF 100%)",
-  Health: "linear-gradient(135deg, #EF4444 0%, #F87171 100%)",
-  Science: "linear-gradient(135deg, #22D3EE 0%, #67E8F9 100%)",
-  Sports: "linear-gradient(135deg, #abcc16 0%, #9dff00 100%)",
-  Tech: "linear-gradient(135deg, #FB7185 0%, #FDA4AF 100%)",
+  Sports: "linear-gradient(135deg, #EF4444 0%, #F87171 100%)",
+  Health: "linear-gradient(135deg, #06B6D4 0%, #22D3EE 100%)",
+  Technology: "linear-gradient(135deg, #6366F1 0%, #818CF8 100%)",
+  Science: "linear-gradient(135deg, #14B8A6 0%, #2DD4BF 100%)",
+  India: "linear-gradient(135deg, #F97316 0%, #FB923C 100%)",
 };
+
+function getCategoryName(a) {
+  // Works for: {categoryName}, {category: {name}}, {categorySlug}, etc.
+  if (a?.categoryName) return String(a.categoryName);
+  if (a?.category?.name) return String(a.category.name);
+  if (a?.categorySlug) {
+    const s = String(a.categorySlug);
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  return "World";
+}
 
 /* ---------- Cloudinary optimizer ---------- */
 function optimizeCloudinary(url, width = 520) {
@@ -82,7 +156,6 @@ function optimizeCloudinary(url, width = 520) {
 function getVideoPreview(url = "") {
   const raw = String(url || "").trim();
   if (!raw) return { kind: "none", src: "" };
-
   if (raw.endsWith(".mp4")) return { kind: "direct", src: raw };
   return { kind: "none", src: "" };
 }
@@ -115,24 +188,6 @@ function normalizeTopNews(items = []) {
     .sort((a, b) => (b._ts === a._ts ? a._idx - b._idx : b._ts - a._ts));
 }
 
-function getCategoryName(a) {
-  const raw =
-    a?.category?.name ?? (typeof a?.category === "string" ? a.category : "General");
-  const map = {
-    world: "World",
-    politics: "Politics",
-    business: "Business",
-    entertainment: "Entertainment",
-    general: "General",
-    health: "Health",
-    science: "Science",
-    sports: "Sports",
-    tech: "Tech",
-    technology: "Tech",
-  };
-  return map[String(raw).toLowerCase()] || "General";
-}
-
 export default function TopNews() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -141,7 +196,6 @@ export default function TopNews() {
   /* ---------- SEO ---------- */
   useEffect(() => {
     removeManagedHeadTags();
-
     document.title = "Top News — The Timely Voice";
     const canonical = `${window.location.origin}/top-news`;
 
@@ -180,6 +234,22 @@ export default function TopNews() {
     };
   }, []);
 
+  // ✅ Insert one in-feed ad after every N cards
+  const AD_EVERY = 5;
+
+  const listWithAds = useMemo(() => {
+    const out = [];
+    for (let i = 0; i < items.length; i++) {
+      out.push({ kind: "article", item: items[i], idx: i });
+
+      const isAfterN = (i + 1) % AD_EVERY === 0;
+      const notLast = i !== items.length - 1;
+
+      if (isAfterN && notLast) out.push({ kind: "ad", idx: i });
+    }
+    return out;
+  }, [items]);
+
   return (
     <>
       <SiteNav />
@@ -190,14 +260,17 @@ export default function TopNews() {
         <PageSkinAd side="right" slot={ADS_SLOT_SKIN_RIGHT} />
 
         <main className="tn-container">
-        
-
           {loading && <div className="tn-status">Loading…</div>}
           {err && <div className="tn-error">{err}</div>}
 
           {!loading && !err && (
             <ul className="tn-list">
-              {items.map((a) => {
+              {listWithAds.map((row) => {
+                if (row.kind === "ad") {
+                  return <InFeedAd key={`ad-${row.idx}`} />;
+                }
+
+                const a = row.item;
                 const href = articleHref(a.slug);
                 const catName = getCategoryName(a);
                 const color = CAT_COLORS[catName] || "#4B5563";

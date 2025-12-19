@@ -39,11 +39,37 @@
   .tn-container{ max-width: 960px; }
 }
 
-/* ---------- Your existing styles (kept) ---------- */
+/* ---------- In-feed ads (between cards) ---------- */
+.tn-ad{
+  list-style: none;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 1px;
+  padding: 12px;
+}
+
+.tn-ad-inner{
+  width: 100%;
+}
+
+.tn-ad ins.adsbygoogle{
+  display: block;
+  width: 100%;
+  min-height: 120px; /* desktop: horizontal/square */
+}
+
+/* Mobile: taller (square-ish) */
+@media (max-width: 720px){
+  .tn-ad ins.adsbygoogle{
+    min-height: 250px;
+  }
+}
+
+/* ---------- Existing styles ---------- */
 .tn-title {
   margin: 0 0 10px;
   font-weight: 800;
-  font-size: 28px; /* was 0px */
+  font-size: 28px;
   color: #fff;
 }
 
@@ -130,20 +156,6 @@
   padding: 0;
 }
 
-.tn-pill {
-  color: #000000;
-  font-weight: 700;
-  border-radius: 1px;
-  padding: 2px 8px;
-  font-size: 14px;
-  line-height: 1.3;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--pill-gradient, #3B82F6);
-  box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.7);
-}
-
 .tn-thumb {
   position: relative;
   display: block;
@@ -154,14 +166,6 @@
   grid-area: thumb;
 }
 
-.tn-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 2;
-  pointer-events: none;
-}
-
 .tn-thumb img,
 .tn-thumb.ph {
   width: 100%;
@@ -169,6 +173,26 @@
   object-fit: cover;
 }
 
+/* Category badge */
+.tn-badge{
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+}
+
+.tn-pill{
+  display: inline-block;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+  backdrop-filter: blur(6px);
+}
+
+/* Mobile layout */
 @media (max-width: 720px) {
   .tn-item {
     grid-template-columns: 1fr;
