@@ -23,6 +23,10 @@ const ADS_SLOT_FLUID_KEY = "1442744724";
 const ADS_SLOT_IN_ARTICLE = "9569163673";
 const ADS_SLOT_AUTORELAXED = "2545424475";
 
+/* ✅ NEW: Desktop rail (page-skin style) slots you created */
+const ADS_SLOT_LEFT_RAIL = "7102575252";  // TV_DESKTOP_LEFT_RAIL
+const ADS_SLOT_RIGHT_RAIL = "4599700848"; // TV_DESKTOP_RIGHT_RAIL
+
 /**
  * ✅ IMPORTANT SWITCH:
  * If false => mobile will NOT render rails anywhere (not aside, not infeed).
@@ -947,11 +951,17 @@ export default function CategoryPage() {
         {/* ✅ Desktop ONLY 3-col layout (rails visible) */}
         {!isMobile && !isNarrow ? (
           <div style={gridWrap} ref={gridRef}>
+            {/* ================= LEFT RAIL ================= */}
             <aside style={railCol} ref={leftAsideRef}>
               {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
               {!railsLoading && railsError && <div style={{ padding: 8, color: "crimson" }}>{railsError}</div>}
               {!railsLoading && !railsError && (
                 <div ref={leftRailRef} style={leftRailStyle}>
+                  {/* ✅ NEW: AdSense vertical rail ad (top) */}
+                  <div style={{ marginBottom: 12 }}>
+                    <AdSenseAuto slot={ADS_SLOT_LEFT_RAIL} />
+                  </div>
+
                   {leftRails.map((sec, i) => (
                     <div key={sec._id || sec.id || sec.slug || i} style={{ marginTop: i === 0 ? 0 : 12 }}>
                       <SectionRenderer section={sec} />
@@ -961,6 +971,7 @@ export default function CategoryPage() {
               )}
             </aside>
 
+            {/* ================= MAIN ================= */}
             <main style={mainCol}>
               {loading && <p>Loading…</p>}
 
@@ -1059,11 +1070,17 @@ export default function CategoryPage() {
               )}
             </main>
 
+            {/* ================= RIGHT RAIL ================= */}
             <aside style={railCol} ref={rightAsideRef}>
               {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
               {!railsLoading && railsError && <div style={{ padding: 8, color: "crimson" }}>{railsError}</div>}
               {!railsLoading && !railsError && (
                 <div ref={rightRailRef} style={rightRailStyle}>
+                  {/* ✅ NEW: AdSense vertical rail ad (top) */}
+                  <div style={{ marginBottom: 12 }}>
+                    <AdSenseAuto slot={ADS_SLOT_RIGHT_RAIL} />
+                  </div>
+
                   {rightRails.map((sec, i) => (
                     <div key={sec._id || sec.id || sec.slug || i} style={{ marginTop: i === 0 ? 0 : 12 }}>
                       <SectionRenderer section={sec} />
