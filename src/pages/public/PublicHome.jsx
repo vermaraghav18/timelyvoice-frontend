@@ -68,6 +68,51 @@ function HomeAd({ slot, style }) {
   );
 }
 
+/* =========================
+   Rails: deterministic order + chip blocking
+   (Fixes: “sometimes chips, sometimes banner”)
+   ========================= */
+function sortByPlacement(a, b) {
+  return (a?.placementIndex ?? 0) - (b?.placementIndex ?? 0);
+}
+
+function isChipRail(sec) {
+  const t = String(sec?.template || "").toLowerCase();
+  const slug = String(sec?.slug || "").toLowerCase();
+  const name = String(sec?.name || sec?.title || "").toLowerCase();
+
+  return (
+    t.includes("chip") ||
+    slug.includes("chip") ||
+    name.includes("chip") ||
+    slug.includes("discover") ||
+    name.includes("discover") ||
+    name.includes("discover more")
+  );
+}
+
+function buildRails(sections = [], blockChips = true) {
+  const rails = (Array.isArray(sections) ? sections : [])
+    .filter((s) => s?.template?.startsWith?.("rail_") && s?.enabled !== false)
+    .filter((s) => (blockChips ? !isChipRail(s) : true))
+    .slice()
+    .sort(sortByPlacement);
+
+  const hasSide = rails.some((r) => r?.side === "left" || r?.side === "right");
+
+  if (hasSide) {
+    const leftRails = rails.filter((r) => (r?.side || "right") === "left");
+    const rightRails = rails.filter((r) => (r?.side || "right") === "right");
+    return { rails, leftRails, rightRails };
+  }
+
+  // fallback: stable alternating split AFTER sorting
+  const rightRails = rails.filter((_, i) => i % 2 === 0);
+  const leftRails = rails.filter((_, i) => i % 2 === 1);
+  return { rails, leftRails, rightRails };
+}
+/* ========================= */
+
 export default function PublicHome() {
   const [sections, setSections] = useState([]);
   const [sectionsLoading, setSectionsLoading] = useState(true);
@@ -135,13 +180,19 @@ export default function PublicHome() {
       property: "og:site_name",
       content: "The Timely Voice",
     });
-    upsertTag("meta", { property: "og:image", content: `${origin}/logo-512.png` });
+    upsertTag("meta", {
+      property: "og:image",
+      content: `${origin}/logo-512.png`,
+    });
 
     // Twitter
     upsertTag("meta", { name: "twitter:card", content: "summary_large_image" });
     upsertTag("meta", { name: "twitter:title", content: title });
     upsertTag("meta", { name: "twitter:description", content: desc });
-    upsertTag("meta", { name: "twitter:image", content: `${origin}/logo-512.png` });
+    upsertTag("meta", {
+      name: "twitter:image",
+      content: `${origin}/logo-512.png`,
+    });
 
     // JSON-LD: WebSite + NewsMediaOrganization
     setJsonLd({
@@ -213,10 +264,12 @@ export default function PublicHome() {
   }, []);
 
   const mains = sections.filter((s) => MAIN_TEMPLATES.has(s.template));
-  const rails = sections.filter((s) => s.template?.startsWith?.("rail_"));
   const others = sections.filter(
     (s) => !MAIN_TEMPLATES.has(s.template) && !s.template?.startsWith?.("rail_")
   );
+
+  // ✅ FIX: rails are now stable + chips blocked (so it won't randomly flip)
+  const { rightRails: rails } = useMemo(() => buildRails(sections, true), [sections]);
 
   return (
     <>
@@ -224,8 +277,6 @@ export default function PublicHome() {
 
       {/* ✅ Wrap all homepage content so PageShell can render left/right page-skin ads */}
       <PageShell>
-        {/* HOMEPAGE INTRO */}
-
         {sectionsLoading && !sections.length ? (
           <div style={{ padding: 12 }}>Loading sections…</div>
         ) : sectionsError ? (
@@ -235,7 +286,11 @@ export default function PublicHome() {
             {/* FULL-WIDTH main blocks */}
             {mains.map((sec, idx) => (
               <Fragment
-                key={sec._id || sec.id || `${sec.slug}|${sec.template}|${sec.placementIndex}`}
+                key={
+                  sec._id ||
+                  sec.id ||
+                  `${sec.slug}|${sec.template}|${sec.placementIndex}`
+                }
               >
                 <div className="fullwidth-section" style={{ marginBottom: 24 }}>
                   <SectionRenderer section={sec} />
@@ -255,7 +310,11 @@ export default function PublicHome() {
                 ) : (
                   others.map((sec, idx) => (
                     <Fragment
-                      key={sec._id || sec.id || `${sec.slug}|${sec.template}|${sec.placementIndex}`}
+                      key={
+                        sec._id ||
+                        sec.id ||
+                        `${sec.slug}|${sec.template}|${sec.placementIndex}`
+                      }
                     >
                       <SectionRenderer section={sec} />
 
@@ -272,7 +331,11 @@ export default function PublicHome() {
                 ) : (
                   rails.map((sec) => (
                     <SectionRenderer
-                      key={sec._id || sec.id || `${sec.slug}|${sec.template}|${sec.placementIndex}`}
+                      key={
+                        sec._id ||
+                        sec.id ||
+                        `${sec.slug}|${sec.template}|${sec.placementIndex}`
+                      }
                       section={sec}
                     />
                   ))
