@@ -3,11 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 
 import { api, cachedGet } from "../../lib/publicApi.js";
-import {
-  removeManagedHeadTags,
-  upsertTag,
-  setJsonLd,
-} from "../../lib/seoHead.js";
+import { removeManagedHeadTags, upsertTag, setJsonLd } from "../../lib/seoHead.js";
 
 import SiteNav from "../../components/SiteNav.jsx";
 import SiteFooter from "../../components/SiteFooter.jsx";
@@ -42,7 +38,6 @@ function AdSenseAuto({ slot, style }) {
     <ins
       className="adsbygoogle"
       style={{ display: "block", width: "100%", maxWidth: "100%", ...style }}
-
       data-ad-client={ADS_CLIENT}
       data-ad-slot={slot}
       data-ad-format="auto"
@@ -128,7 +123,10 @@ function parseTs(v) {
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
   const s = String(v).trim();
   if (/^\d+$/.test(s)) return Number(s);
-  const withT = s.replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/, "$1T$2");
+  const withT = s.replace(
+    /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/,
+    "$1T$2"
+  );
   const t = Date.parse(withT);
   return Number.isFinite(t) ? t : 0;
 }
@@ -219,7 +217,8 @@ const CATEGORY_COPY_STATIC = {
 
 function getCategoryCopy(slug, category) {
   const key = String(slug || "").toLowerCase();
-  const baseName = category?.name || humanizeSlug(key || "News").trim() || "News";
+  const baseName =
+    category?.name || humanizeSlug(key || "News").trim() || "News";
 
   const fallbackMetaTitle = `${baseName} News & Analysis — ${BRAND_NAME}`;
   const fallbackMetaDescription = `Latest ${baseName.toLowerCase()} stories, context and exam-ready explainers from ${BRAND_NAME}.`;
@@ -261,13 +260,11 @@ const gridWrap = {
   maxWidth: 1200,
   padding: "0 12px",
   display: "grid",
- gridTemplateColumns: "260px minmax(0, 1fr) 260px",
-
+  gridTemplateColumns: "260px minmax(0, 1fr) 260px",
   gap: 16,
 };
 
 const singleColWrap = { width: "100%", maxWidth: 1200, padding: "0 12px" };
-
 
 const railCol = { minWidth: 0, position: "relative" };
 const mainCol = { minWidth: 0 };
@@ -372,7 +369,9 @@ function LeadCard({ a }) {
     a.excerpt ||
     a.description ||
     a.seoDescription ||
-    (typeof a.body === "string" ? a.body.replace(/<[^>]*>/g, "").slice(0, 220) : "");
+    (typeof a.body === "string"
+      ? a.body.replace(/<[^>]*>/g, "").slice(0, 220)
+      : "");
 
   return (
     <div style={leadCardWrap}>
@@ -404,7 +403,8 @@ function LeadCard({ a }) {
 
 /* ---------- Article Row (rest) ---------- */
 function getCategoryName(a) {
-  const raw = typeof a?.category === "string" ? a.category : a?.category?.name ?? "General";
+  const raw =
+    typeof a?.category === "string" ? a.category : a?.category?.name ?? "General";
   const map = {
     world: "World",
     politics: "Politics",
@@ -418,7 +418,9 @@ function getCategoryName(a) {
     technology: "Tech",
     india: "India",
   };
-  return map[String(raw || "General").trim().toLowerCase()] || (raw || "General");
+  return (
+    map[String(raw || "General").trim().toLowerCase()] || (raw || "General")
+  );
 }
 
 function ArticleRow({ a }) {
@@ -467,7 +469,8 @@ function interleaveAfterEveryN(items, inserts, n) {
   let j = 0;
   for (let i = 0; i < items.length; i++) {
     out.push({ type: "article", data: items[i] });
-    if ((i + 1) % n === 0 && j < inserts.length) out.push({ type: "rail", data: inserts[j++] });
+    if ((i + 1) % n === 0 && j < inserts.length)
+      out.push({ type: "rail", data: inserts[j++] });
   }
   while (j < inserts.length) out.push({ type: "rail", data: inserts[j++] });
   return out;
@@ -518,7 +521,9 @@ function useBottomPin(containerRef, childRef, offset = 16) {
       const prev = styleState.current;
       const changed =
         Object.keys(nextStyle).length !== Object.keys(prev || {}).length ||
-        Object.keys(nextStyle).some((k) => String(nextStyle[k]) !== String(prev[k]));
+        Object.keys(nextStyle).some(
+          (k) => String(nextStyle[k]) !== String(prev[k])
+        );
       if (changed) {
         styleState.current = nextStyle;
         setStyle(nextStyle);
@@ -560,52 +565,57 @@ export default function CategoryPage() {
   const [railsLoading, setRailsLoading] = useState(false);
   const [railsError, setRailsError] = useState("");
 
- const [isMobile, setIsMobile] = useState(() =>
-  typeof window !== "undefined"
-    ? window.matchMedia("(max-width: 720px)").matches
-    : false
-);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(max-width: 720px)").matches
+      : false
+  );
 
-const [isNarrow, setIsNarrow] = useState(() =>
-  typeof window !== "undefined"
-    ? window.matchMedia("(max-width: 1100px)").matches
-    : false
-);
+  const [isNarrow, setIsNarrow] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(max-width: 1100px)").matches
+      : false
+  );
 
-useEffect(() => {
-  if (typeof window === "undefined") return;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
-  const mqMobile = window.matchMedia("(max-width: 720px)");
-  const mqNarrow = window.matchMedia("(max-width: 1100px)");
+    const mqMobile = window.matchMedia("(max-width: 720px)");
+    const mqNarrow = window.matchMedia("(max-width: 1100px)");
 
-  const onMobile = (e) => setIsMobile(e.matches);
-  const onNarrow = (e) => setIsNarrow(e.matches);
+    const onMobile = (e) => setIsMobile(e.matches);
+    const onNarrow = (e) => setIsNarrow(e.matches);
 
-  mqMobile.addEventListener?.("change", onMobile);
-  mqMobile.addListener?.(onMobile);
+    mqMobile.addEventListener?.("change", onMobile);
+    mqMobile.addListener?.(onMobile);
 
-  mqNarrow.addEventListener?.("change", onNarrow);
-  mqNarrow.addListener?.(onNarrow);
+    mqNarrow.addEventListener?.("change", onNarrow);
+    mqNarrow.addListener?.(onNarrow);
 
-  return () => {
-    mqMobile.removeEventListener?.("change", onMobile);
-    mqMobile.removeListener?.(onMobile);
+    return () => {
+      mqMobile.removeEventListener?.("change", onMobile);
+      mqMobile.removeListener?.(onMobile);
 
-    mqNarrow.removeEventListener?.("change", onNarrow);
-    mqNarrow.removeListener?.(onNarrow);
-  };
-}, []);
-
+      mqNarrow.removeEventListener?.("change", onNarrow);
+      mqNarrow.removeListener?.(onNarrow);
+    };
+  }, []);
 
   const normalizedSlug = useMemo(() => toSlug(slug), [slug]);
 
   // ✅ Canonical: simple + correct
   const canonical = useMemo(() => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://timelyvoice.com";
+    const origin =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "https://timelyvoice.com";
     return `${origin}/category/${encodeURIComponent(normalizedSlug)}`;
   }, [normalizedSlug]);
 
-  const categoryCopy = useMemo(() => getCategoryCopy(normalizedSlug, category), [normalizedSlug, category]);
+  const categoryCopy = useMemo(
+    () => getCategoryCopy(normalizedSlug, category),
+    [normalizedSlug, category]
+  );
 
   // normalize the visible path
   useEffect(() => {
@@ -637,9 +647,6 @@ useEffect(() => {
           5 * 60_000
         );
 
-        // cachedGet returns data, but we need status for redirect; so fallback to api if redirect logic is needed
-        // If your backend sends redirects here, we must use api.get to read status.
-        // We'll do a lightweight check: if response shape includes redirectTo, treat as redirect.
         if (cRes?.redirectTo) {
           const newSlug = extractCanonicalSlugFromRedirect({ data: cRes });
           if (newSlug) {
@@ -652,12 +659,10 @@ useEffect(() => {
 
         let effectiveSlug = normalizedSlug;
 
-        // If backend returns slug in data, keep it canonical
         if (cRes && cRes.slug) {
           setCategory(cRes);
           effectiveSlug = cRes.slug;
         } else if (cRes && cRes.status === 404) {
-          // If your API returns {status:404} in body, handle it
           setCategory(null);
           setNotFound(true);
           setArticles([]);
@@ -673,7 +678,6 @@ useEffect(() => {
           25_000
         );
 
-        // handle redirect shape (same approach)
         if (aData?.redirectTo) {
           const newSlug = extractCanonicalSlugFromRedirect({ data: aData });
           if (newSlug) {
@@ -715,11 +719,18 @@ useEffect(() => {
 
     upsertTag("title", {}, { textContent: metaTitle });
 
-    upsertTag("meta", { name: "description", content: metaDescription || "Browse latest stories on The Timely Voice." });
+    upsertTag("meta", {
+      name: "description",
+      content: metaDescription || "Browse latest stories on The Timely Voice.",
+    });
 
     upsertTag("link", { rel: "canonical", href: canonical });
 
-    upsertTag("meta", { name: "robots", content: "index,follow", "data-managed": "robots" });
+    upsertTag("meta", {
+      name: "robots",
+      content: "index,follow",
+      "data-managed": "robots",
+    });
 
     if (slug) {
       upsertTag("link", {
@@ -840,7 +851,10 @@ useEffect(() => {
         const data = await cachedGet(
           "/sections/plan",
           {
-            params: { sectionType: "category", sectionValue: String(slug || "").toLowerCase() },
+            params: {
+              sectionType: "category",
+              sectionValue: String(slug || "").toLowerCase(),
+            },
             validateStatus: () => true,
           },
           60_000
@@ -865,7 +879,6 @@ useEffect(() => {
 
   const lead = articles?.[0] || null;
   const rest = Array.isArray(articles) && articles.length > 1 ? articles.slice(1) : [];
-  const hasAnyRails = leftRails.length > 0 || rightRails.length > 0;
 
   const [isMobileState, setIsMobileState] = useState(false);
   useEffect(() => {
@@ -878,7 +891,9 @@ useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobileState, rest, rails]);
 
-  const isWorldCategory = String(slug || "").toLowerCase() === "world";
+  // ✅ CHANGE: Ads in EVERY category (mobile + desktop)
+  const isWorldCategory = String(slug || "").toLowerCase() === "world"; // keep (you asked to keep syntax)
+  const isAdEnabledCategory = true; // ✅ enable ads for all categories
 
   const renderInsetAfter = (idx) => {
     const blocks = insetBlocks.filter((b) => b.__after === idx);
@@ -938,13 +953,13 @@ useEffect(() => {
           </div>
         ))}
 
-       {!isMobile && !isNarrow ? (
-
-
+        {!isMobile && !isNarrow ? (
           <div style={gridWrap} ref={gridRef}>
             <aside style={railCol} ref={leftAsideRef}>
               {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-              {!railsLoading && railsError && <div style={{ padding: 8, color: "crimson" }}>{railsError}</div>}
+              {!railsLoading && railsError && (
+                <div style={{ padding: 8, color: "crimson" }}>{railsError}</div>
+              )}
               {!railsLoading && !railsError && (
                 <div ref={leftRailRef} style={leftRailStyle}>
                   {leftRails.map((sec, i) => (
@@ -1001,7 +1016,8 @@ useEffect(() => {
                               <ArticleRow a={a} />
                               {renderInsetAfter(pos)}
 
-                              {isWorldCategory && [6, 9, 13, 17].includes(pos) && (
+                              {/* ✅ CHANGE: show ads in EVERY category on desktop */}
+                              {isAdEnabledCategory && [6, 9, 13, 17].includes(pos) && (
                                 <>
                                   {pos === 6 && (
                                     <div style={{ margin: "12px 0", textAlign: "center" }}>
@@ -1043,7 +1059,8 @@ useEffect(() => {
                         )}
                       </div>
 
-                      {isWorldCategory && (
+                      {/* ✅ CHANGE: AutoRelaxed for EVERY category (desktop) */}
+                      {isAdEnabledCategory && (
                         <div style={{ margin: "16px 0" }}>
                           <AdSenseAutoRelaxed />
                         </div>
@@ -1056,7 +1073,9 @@ useEffect(() => {
 
             <aside style={railCol} ref={rightAsideRef}>
               {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-              {!railsLoading && railsError && <div style={{ padding: 8, color: "crimson" }}>{railsError}</div>}
+              {!railsLoading && railsError && (
+                <div style={{ padding: 8, color: "crimson" }}>{railsError}</div>
+              )}
               {!railsLoading && !railsError && (
                 <div ref={rightRailRef} style={rightRailStyle}>
                   {rightRails.map((sec, i) => (
@@ -1077,7 +1096,8 @@ useEffect(() => {
                 <h1>{categoryCopy.displayName}</h1>
                 {renderCategoryIntro()}
                 <p style={{ marginTop: 8 }}>
-                  We’re updating this section. You can read our latest <Link to="/top-news">top stories</Link> in the meantime.
+                  We’re updating this section. You can read our latest <Link to="/top-news">top stories</Link> in the
+                  meantime.
                 </p>
               </>
             )}
@@ -1113,7 +1133,8 @@ useEffect(() => {
                               <ArticleRow a={block.data} />
                               {renderInsetAfter(idx + 1)}
 
-                              {isWorldCategory && [7, 11, 15, 19].includes(idx + 1) && (
+                              {/* ✅ CHANGE: show ads in EVERY category on mobile */}
+                              {isAdEnabledCategory && [7, 11, 15, 19].includes(idx + 1) && (
                                 <>
                                   {idx + 1 === 7 && (
                                     <div style={{ margin: "12px 0", textAlign: "center" }}>
@@ -1139,7 +1160,10 @@ useEffect(() => {
                               )}
                             </div>
                           ) : (
-                            <div key={(block.data._id || block.data.id || block.data.slug || idx) + "-r"} style={{ margin: "4px 0" }}>
+                            <div
+                              key={(block.data._id || block.data.id || block.data.slug || idx) + "-r"}
+                              style={{ margin: "4px 0" }}
+                            >
                               <SectionRenderer section={block.data} />
                             </div>
                           )
@@ -1154,7 +1178,8 @@ useEffect(() => {
                               <ArticleRow a={a} />
                               {renderInsetAfter(pos)}
 
-                              {isWorldCategory && [6, 9, 13, 17].includes(pos) && (
+                              {/* ✅ CHANGE: show ads in EVERY category (single-col non-mobile case) */}
+                              {isAdEnabledCategory && [6, 9, 13, 17].includes(pos) && (
                                 <>
                                   {pos === 6 && (
                                     <div style={{ margin: "12px 0", textAlign: "center" }}>
@@ -1197,7 +1222,8 @@ useEffect(() => {
                       )}
                     </div>
 
-                    {isWorldCategory && (
+                    {/* ✅ CHANGE: AutoRelaxed for EVERY category on single-col layouts */}
+                    {isAdEnabledCategory && (
                       <div style={{ margin: "16px 0" }}>
                         <AdSenseAutoRelaxed />
                       </div>
