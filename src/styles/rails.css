@@ -28,7 +28,6 @@
   color: #e5edff !important;
 }
 
-
 /* ----- Two columns: MAIN + RAIL ----- */
 .home-grid{
   display: grid;
@@ -120,11 +119,30 @@
     column-gap: 0;  /* keep touching on tablets */
   }
 }
+
+/* ✅ MOBILE FIX:
+   - Do NOT show rails (aside/right rail) on mobile
+   - Main becomes full width
+*/
 @media (max-width:820px){
   .home-grid{
-    grid-template-columns: 1fr;  /* stack on mobile */
+    grid-template-columns: 1fr;  /* single column */
     column-gap: 0;
     row-gap: 16px;
+  }
+
+  /* ✅ Hide any rail/aside area completely on mobile */
+  .home-grid > aside,
+  .rail-wrap,
+  .left-rail,
+  .right-rail,
+  .home-rails > aside{
+    display: none !important;
+  }
+
+  /* ✅ Ensure main fills full width */
+  .home-grid > main{
+    width: 100% !important;
   }
 }
 
@@ -137,7 +155,7 @@
 
 /* Kill any top margin that individual rail components add */
 .rail-wrap > * {
-  margin-top: 0 !important;  /* was: 100 (invalid) */
+  margin-top: 0 !important;
 }
 
 /* Some rail components wrap their content once more; zero that too */
