@@ -217,8 +217,7 @@ const CATEGORY_COPY_STATIC = {
 
 function getCategoryCopy(slug, category) {
   const key = String(slug || "").toLowerCase();
-  const baseName =
-    category?.name || humanizeSlug(key || "News").trim() || "News";
+  const baseName = category?.name || humanizeSlug(key || "News").trim() || "News";
 
   const fallbackMetaTitle = `${baseName} News & Analysis — ${BRAND_NAME}`;
   const fallbackMetaDescription = `Latest ${baseName.toLowerCase()} stories, context and exam-ready explainers from ${BRAND_NAME}.`;
@@ -418,9 +417,7 @@ function getCategoryName(a) {
     technology: "Tech",
     india: "India",
   };
-  return (
-    map[String(raw || "General").trim().toLowerCase()] || (raw || "General")
-  );
+  return map[String(raw || "General").trim().toLowerCase()] || (raw || "General");
 }
 
 function ArticleRow({ a }) {
@@ -469,8 +466,7 @@ function interleaveAfterEveryN(items, inserts, n) {
   let j = 0;
   for (let i = 0; i < items.length; i++) {
     out.push({ type: "article", data: items[i] });
-    if ((i + 1) % n === 0 && j < inserts.length)
-      out.push({ type: "rail", data: inserts[j++] });
+    if ((i + 1) % n === 0 && j < inserts.length) out.push({ type: "rail", data: inserts[j++] });
   }
   while (j < inserts.length) out.push({ type: "rail", data: inserts[j++] });
   return out;
@@ -521,9 +517,7 @@ function useBottomPin(containerRef, childRef, offset = 16) {
       const prev = styleState.current;
       const changed =
         Object.keys(nextStyle).length !== Object.keys(prev || {}).length ||
-        Object.keys(nextStyle).some(
-          (k) => String(nextStyle[k]) !== String(prev[k])
-        );
+        Object.keys(nextStyle).some((k) => String(nextStyle[k]) !== String(prev[k]));
       if (changed) {
         styleState.current = nextStyle;
         setStyle(nextStyle);
@@ -836,7 +830,10 @@ export default function CategoryPage() {
       if (!Number.isFinite(n) || n <= 0) tops.push(s);
       else insets.push({ ...s, __after: n });
     }
-    insets.sort((a, b) => a.__after - b.__after || (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
+    insets.sort(
+      (a, b) =>
+        a.__after - b.__after || (a.placementIndex ?? 0) - (b.placementIndex ?? 0)
+    );
     return { topBlocks: tops, insetBlocks: insets };
   }, [mainBlocks]);
 
@@ -885,11 +882,17 @@ export default function CategoryPage() {
     setIsMobileState(isMobile);
   }, [isMobile]);
 
+  // ==========================================================
+  // ✅ FIX: DO NOT interleave rails into mobile feed
+  // ==========================================================
   const infeed = useMemo(() => {
     if (!isMobile) return null;
-    return interleaveAfterEveryN(rest, rails, 8);
+
+    // ✅ Only articles on mobile (NO rails)
+    // Keeping the same "block" shape so your render loop remains stable.
+    return rest.map((a) => ({ type: "article", data: a }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMobileState, rest, rails]);
+  }, [isMobileState, rest]);
 
   // ✅ CHANGE: Ads in EVERY category (mobile + desktop)
   const isWorldCategory = String(slug || "").toLowerCase() === "world"; // keep (you asked to keep syntax)
@@ -953,6 +956,7 @@ export default function CategoryPage() {
           </div>
         ))}
 
+        {/* ✅ Rails visible ONLY on laptop/desktop */}
         {!isMobile && !isNarrow ? (
           <div style={gridWrap} ref={gridRef}>
             <aside style={railCol} ref={leftAsideRef}>
@@ -1016,7 +1020,7 @@ export default function CategoryPage() {
                               <ArticleRow a={a} />
                               {renderInsetAfter(pos)}
 
-                              {/* ✅ CHANGE: show ads in EVERY category on desktop */}
+                              {/* ✅ show ads in EVERY category on desktop */}
                               {isAdEnabledCategory && [6, 9, 13, 17].includes(pos) && (
                                 <>
                                   {pos === 6 && (
@@ -1059,7 +1063,7 @@ export default function CategoryPage() {
                         )}
                       </div>
 
-                      {/* ✅ CHANGE: AutoRelaxed for EVERY category (desktop) */}
+                      {/* ✅ AutoRelaxed for EVERY category (desktop) */}
                       {isAdEnabledCategory && (
                         <div style={{ margin: "16px 0" }}>
                           <AdSenseAutoRelaxed />
@@ -1088,6 +1092,7 @@ export default function CategoryPage() {
             </aside>
           </div>
         ) : (
+          // ✅ Mobile / narrow layout: NO rails rendered anywhere
           <div style={singleColWrap}>
             {loading && <p>Loading…</p>}
 
@@ -1127,47 +1132,38 @@ export default function CategoryPage() {
 
                     {isMobile ? (
                       <div style={listStyle}>
-                        {(infeed || []).map((block, idx) =>
-                          block.type === "article" ? (
-                            <div key={(block.data._id || block.data.id || block.data.slug || idx) + "-a"}>
-                              <ArticleRow a={block.data} />
-                              {renderInsetAfter(idx + 1)}
+                        {(infeed || []).map((block, idx) => (
+                          <div key={(block.data._id || block.data.id || block.data.slug || idx) + "-a"}>
+                            <ArticleRow a={block.data} />
+                            {renderInsetAfter(idx + 1)}
 
-                              {/* ✅ CHANGE: show ads in EVERY category on mobile */}
-                              {isAdEnabledCategory && [7, 11, 15, 19].includes(idx + 1) && (
-                                <>
-                                  {idx + 1 === 7 && (
-                                    <div style={{ margin: "12px 0", textAlign: "center" }}>
-                                      <AdSenseAuto slot={ADS_SLOT_MAIN} />
-                                    </div>
-                                  )}
-                                  {idx + 1 === 11 && (
-                                    <div style={{ margin: "12px 0" }}>
-                                      <AdSenseInArticle />
-                                    </div>
-                                  )}
-                                  {idx + 1 === 15 && (
-                                    <div style={{ margin: "12px 0" }}>
-                                      <AdSenseFluidKey />
-                                    </div>
-                                  )}
-                                  {idx + 1 === 19 && (
-                                    <div style={{ margin: "12px 0", textAlign: "center" }}>
-                                      <AdSenseAuto slot={ADS_SLOT_SECOND} />
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          ) : (
-                            <div
-                              key={(block.data._id || block.data.id || block.data.slug || idx) + "-r"}
-                              style={{ margin: "4px 0" }}
-                            >
-                              <SectionRenderer section={block.data} />
-                            </div>
-                          )
-                        )}
+                            {/* ✅ show ads in EVERY category on mobile */}
+                            {isAdEnabledCategory && [7, 11, 15, 19].includes(idx + 1) && (
+                              <>
+                                {idx + 1 === 7 && (
+                                  <div style={{ margin: "12px 0", textAlign: "center" }}>
+                                    <AdSenseAuto slot={ADS_SLOT_MAIN} />
+                                  </div>
+                                )}
+                                {idx + 1 === 11 && (
+                                  <div style={{ margin: "12px 0" }}>
+                                    <AdSenseInArticle />
+                                  </div>
+                                )}
+                                {idx + 1 === 15 && (
+                                  <div style={{ margin: "12px 0" }}>
+                                    <AdSenseFluidKey />
+                                  </div>
+                                )}
+                                {idx + 1 === 19 && (
+                                  <div style={{ margin: "12px 0", textAlign: "center" }}>
+                                    <AdSenseAuto slot={ADS_SLOT_SECOND} />
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       <div style={listStyle}>
@@ -1178,7 +1174,7 @@ export default function CategoryPage() {
                               <ArticleRow a={a} />
                               {renderInsetAfter(pos)}
 
-                              {/* ✅ CHANGE: show ads in EVERY category (single-col non-mobile case) */}
+                              {/* ✅ show ads in EVERY category (single-col non-mobile case) */}
                               {isAdEnabledCategory && [6, 9, 13, 17].includes(pos) && (
                                 <>
                                   {pos === 6 && (
@@ -1222,7 +1218,7 @@ export default function CategoryPage() {
                       )}
                     </div>
 
-                    {/* ✅ CHANGE: AutoRelaxed for EVERY category on single-col layouts */}
+                    {/* ✅ AutoRelaxed for EVERY category on single-col layouts */}
                     {isAdEnabledCategory && (
                       <div style={{ margin: "16px 0" }}>
                         <AdSenseAutoRelaxed />
