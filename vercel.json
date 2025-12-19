@@ -19,13 +19,14 @@
   ],
   "rewrites": [
 
+
     {
       "source": "/",
       "has": [
         {
           "type": "header",
           "key": "User-Agent",
-          "value": ".*[Gg]ooglebot.*"
+          "value": ".*(Googlebot|Mediapartners-Google).*"
         }
       ],
       "destination": "https://timelyvoice-backend.onrender.com/ssr/home"
@@ -42,13 +43,38 @@
       "destination": "https://timelyvoice-backend.onrender.com/ssr/home"
     },
 
+   
+    {
+      "source": "/top-news",
+      "has": [
+        {
+          "type": "header",
+          "key": "User-Agent",
+          "value": ".*(Googlebot|Mediapartners-Google).*"
+        }
+      ],
+      "destination": "https://timelyvoice-backend.onrender.com/ssr/top-news"
+    },
+    {
+      "source": "/top-news",
+      "has": [
+        {
+          "type": "query",
+          "key": "_bot",
+          "value": "1"
+        }
+      ],
+      "destination": "https://timelyvoice-backend.onrender.com/ssr/top-news"
+    },
+
+    
     {
       "source": "/article/:slug",
       "has": [
         {
           "type": "header",
           "key": "User-Agent",
-          "value": ".*[Gg]ooglebot.*"
+          "value": ".*(Googlebot|Mediapartners-Google).*"
         }
       ],
       "destination": "https://timelyvoice-backend.onrender.com/ssr/article/:slug"
@@ -65,13 +91,14 @@
       "destination": "https://timelyvoice-backend.onrender.com/ssr/article/:slug"
     },
 
+  
     {
       "source": "/tag/:tag",
       "has": [
         {
           "type": "header",
           "key": "User-Agent",
-          "value": ".*[Gg]ooglebot.*"
+          "value": ".*(Googlebot|Mediapartners-Google).*"
         }
       ],
       "destination": "https://timelyvoice-backend.onrender.com/ssr/tag/:tag"
@@ -87,6 +114,7 @@
       ],
       "destination": "https://timelyvoice-backend.onrender.com/ssr/tag/:tag"
     },
+
 
     {
       "source": "/api/:path*",
@@ -127,7 +155,7 @@
       "destination": "https://timelyvoice-backend.onrender.com/ssr/:path*"
     },
 
-  
+
     {
       "source": "/(.*)",
       "destination": "/"
