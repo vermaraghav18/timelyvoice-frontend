@@ -23,6 +23,12 @@ const ADS_SLOT_FLUID_KEY = "1442744724";
 const ADS_SLOT_IN_ARTICLE = "9569163673";
 const ADS_SLOT_AUTORELAXED = "2545424475";
 
+/**
+ * ✅ IMPORTANT SWITCH:
+ * If false => mobile will NOT render rails anywhere (not aside, not infeed).
+ */
+const SHOW_RAILS_ON_MOBILE = false;
+
 function useAdsPush(deps = []) {
   useEffect(() => {
     try {
@@ -45,6 +51,7 @@ function AdSenseAuto({ slot, style }) {
     ></ins>
   );
 }
+
 function AdSenseFluidKey({ style }) {
   useAdsPush([]);
   return (
@@ -58,6 +65,7 @@ function AdSenseFluidKey({ style }) {
     ></ins>
   );
 }
+
 function AdSenseInArticle({ style }) {
   useAdsPush([]);
   return (
@@ -71,6 +79,7 @@ function AdSenseInArticle({ style }) {
     ></ins>
   );
 }
+
 function AdSenseAutoRelaxed({ style }) {
   useAdsPush([]);
   return (
@@ -217,7 +226,8 @@ const CATEGORY_COPY_STATIC = {
 
 function getCategoryCopy(slug, category) {
   const key = String(slug || "").toLowerCase();
-  const baseName = category?.name || humanizeSlug(key || "News").trim() || "News";
+  const baseName =
+    category?.name || humanizeSlug(key || "News").trim() || "News";
 
   const fallbackMetaTitle = `${baseName} News & Analysis — ${BRAND_NAME}`;
   const fallbackMetaDescription = `Latest ${baseName.toLowerCase()} stories, context and exam-ready explainers from ${BRAND_NAME}.`;
@@ -293,6 +303,7 @@ const titleStyle = {
   color: "#ffffffff",
   fontFamily: "'Merriweather Sans', sans-serif",
 };
+
 const metaRow = {
   marginTop: 14,
   fontSize: 12,
@@ -302,11 +313,13 @@ const metaRow = {
   alignItems: "center",
   flexWrap: "wrap",
 };
+
 const catLink = {
   color: "#1d4ed8",
   textDecoration: "none",
   fontWeight: 600,
 };
+
 const thumbStyle = {
   width: 110,
   height: 75,
@@ -324,6 +337,7 @@ const leadCardWrap = {
   padding: 12,
   boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
 };
+
 const leadImg = {
   width: "100%",
   height: 320,
@@ -332,6 +346,7 @@ const leadImg = {
   display: "block",
   marginBottom: 10,
 };
+
 const leadH = {
   margin: "0 0 6px",
   fontSize: 21,
@@ -339,6 +354,7 @@ const leadH = {
   fontWeight: 600,
   color: "#ffffffff",
 };
+
 const leadMeta = {
   marginTop: 6,
   fontSize: 12,
@@ -348,6 +364,7 @@ const leadMeta = {
   alignItems: "center",
   flexWrap: "wrap",
 };
+
 const leadSummary = {
   fontSize: 18,
   color: "#b9b9b9ff",
@@ -560,15 +577,11 @@ export default function CategoryPage() {
   const [railsError, setRailsError] = useState("");
 
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined"
-      ? window.matchMedia("(max-width: 720px)").matches
-      : false
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 720px)").matches : false
   );
 
   const [isNarrow, setIsNarrow] = useState(() =>
-    typeof window !== "undefined"
-      ? window.matchMedia("(max-width: 1100px)").matches
-      : false
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 1100px)").matches : false
   );
 
   useEffect(() => {
@@ -597,21 +610,13 @@ export default function CategoryPage() {
 
   const normalizedSlug = useMemo(() => toSlug(slug), [slug]);
 
-  // ✅ Canonical: simple + correct
   const canonical = useMemo(() => {
-    const origin =
-      typeof window !== "undefined"
-        ? window.location.origin
-        : "https://timelyvoice.com";
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://timelyvoice.com";
     return `${origin}/category/${encodeURIComponent(normalizedSlug)}`;
   }, [normalizedSlug]);
 
-  const categoryCopy = useMemo(
-    () => getCategoryCopy(normalizedSlug, category),
-    [normalizedSlug, category]
-  );
+  const categoryCopy = useMemo(() => getCategoryCopy(normalizedSlug, category), [normalizedSlug, category]);
 
-  // normalize the visible path
   useEffect(() => {
     const want = `/category/${normalizedSlug}`;
     if (pathname !== want) {
@@ -634,7 +639,6 @@ export default function CategoryPage() {
 
     (async () => {
       try {
-        // 1) category meta (safe to cache longer)
         const cRes = await cachedGet(
           `/categories/slug/${encodeURIComponent(normalizedSlug)}`,
           { validateStatus: () => true },
@@ -643,9 +647,7 @@ export default function CategoryPage() {
 
         if (cRes?.redirectTo) {
           const newSlug = extractCanonicalSlugFromRedirect({ data: cRes });
-          if (newSlug) {
-            navigate({ pathname: `/category/${newSlug}`, search }, { replace: true });
-          }
+          if (newSlug) navigate({ pathname: `/category/${newSlug}`, search }, { replace: true });
           return;
         }
 
@@ -665,7 +667,6 @@ export default function CategoryPage() {
           setCategory(null);
         }
 
-        // 2) articles list (cache short)
         const aData = await cachedGet(
           `/public/categories/${encodeURIComponent(effectiveSlug)}/articles`,
           { params: { page, limit }, validateStatus: () => true },
@@ -674,9 +675,7 @@ export default function CategoryPage() {
 
         if (aData?.redirectTo) {
           const newSlug = extractCanonicalSlugFromRedirect({ data: aData });
-          if (newSlug) {
-            navigate({ pathname: `/category/${newSlug}`, search }, { replace: true });
-          }
+          if (newSlug) navigate({ pathname: `/category/${newSlug}`, search }, { replace: true });
           return;
         }
 
@@ -830,14 +829,11 @@ export default function CategoryPage() {
       if (!Number.isFinite(n) || n <= 0) tops.push(s);
       else insets.push({ ...s, __after: n });
     }
-    insets.sort(
-      (a, b) =>
-        a.__after - b.__after || (a.placementIndex ?? 0) - (b.placementIndex ?? 0)
-    );
+    insets.sort((a, b) => a.__after - b.__after || (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
     return { topBlocks: tops, insetBlocks: insets };
   }, [mainBlocks]);
 
-  // ✅ plan sections cached
+  /* plan sections cached */
   useEffect(() => {
     let cancel = false;
     (async () => {
@@ -877,26 +873,18 @@ export default function CategoryPage() {
   const lead = articles?.[0] || null;
   const rest = Array.isArray(articles) && articles.length > 1 ? articles.slice(1) : [];
 
-  const [isMobileState, setIsMobileState] = useState(false);
-  useEffect(() => {
-    setIsMobileState(isMobile);
-  }, [isMobile]);
-
-  // ==========================================================
-  // ✅ FIX: DO NOT interleave rails into mobile feed
-  // ==========================================================
+  // ✅ infeed: rails ONLY if you enable SHOW_RAILS_ON_MOBILE
   const infeed = useMemo(() => {
     if (!isMobile) return null;
+    if (!SHOW_RAILS_ON_MOBILE) {
+      return rest.map((a) => ({ type: "article", data: a }));
+    }
+    return interleaveAfterEveryN(rest, rails, 8);
+  }, [isMobile, rest, rails]);
 
-    // ✅ Only articles on mobile (NO rails)
-    // Keeping the same "block" shape so your render loop remains stable.
-    return rest.map((a) => ({ type: "article", data: a }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMobileState, rest]);
-
-  // ✅ CHANGE: Ads in EVERY category (mobile + desktop)
-  const isWorldCategory = String(slug || "").toLowerCase() === "world"; // keep (you asked to keep syntax)
-  const isAdEnabledCategory = true; // ✅ enable ads for all categories
+  // Ads enabled everywhere (your current behavior)
+  const isWorldCategory = String(slug || "").toLowerCase() === "world";
+  const isAdEnabledCategory = true;
 
   const renderInsetAfter = (idx) => {
     const blocks = insetBlocks.filter((b) => b.__after === idx);
@@ -908,7 +896,7 @@ export default function CategoryPage() {
     ));
   };
 
-  /* ---------- Refs + bottom pin styles ---------- */
+  /* Refs + bottom pin styles */
   const gridRef = useRef(null);
   const leftAsideRef = useRef(null);
   const rightAsideRef = useRef(null);
@@ -956,14 +944,12 @@ export default function CategoryPage() {
           </div>
         ))}
 
-        {/* ✅ Rails visible ONLY on laptop/desktop */}
+        {/* ✅ Desktop ONLY 3-col layout (rails visible) */}
         {!isMobile && !isNarrow ? (
           <div style={gridWrap} ref={gridRef}>
             <aside style={railCol} ref={leftAsideRef}>
               {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-              {!railsLoading && railsError && (
-                <div style={{ padding: 8, color: "crimson" }}>{railsError}</div>
-              )}
+              {!railsLoading && railsError && <div style={{ padding: 8, color: "crimson" }}>{railsError}</div>}
               {!railsLoading && !railsError && (
                 <div ref={leftRailRef} style={leftRailStyle}>
                   {leftRails.map((sec, i) => (
@@ -1020,7 +1006,6 @@ export default function CategoryPage() {
                               <ArticleRow a={a} />
                               {renderInsetAfter(pos)}
 
-                              {/* ✅ show ads in EVERY category on desktop */}
                               {isAdEnabledCategory && [6, 9, 13, 17].includes(pos) && (
                                 <>
                                   {pos === 6 && (
@@ -1063,7 +1048,6 @@ export default function CategoryPage() {
                         )}
                       </div>
 
-                      {/* ✅ AutoRelaxed for EVERY category (desktop) */}
                       {isAdEnabledCategory && (
                         <div style={{ margin: "16px 0" }}>
                           <AdSenseAutoRelaxed />
@@ -1077,9 +1061,7 @@ export default function CategoryPage() {
 
             <aside style={railCol} ref={rightAsideRef}>
               {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-              {!railsLoading && railsError && (
-                <div style={{ padding: 8, color: "crimson" }}>{railsError}</div>
-              )}
+              {!railsLoading && railsError && <div style={{ padding: 8, color: "crimson" }}>{railsError}</div>}
               {!railsLoading && !railsError && (
                 <div ref={rightRailRef} style={rightRailStyle}>
                   {rightRails.map((sec, i) => (
@@ -1092,7 +1074,7 @@ export default function CategoryPage() {
             </aside>
           </div>
         ) : (
-          // ✅ Mobile / narrow layout: NO rails rendered anywhere
+          /* ✅ Mobile + Narrow: single column, rails NOT rendered anywhere */
           <div style={singleColWrap}>
             {loading && <p>Loading…</p>}
 
@@ -1130,14 +1112,13 @@ export default function CategoryPage() {
                   <>
                     <LeadCard a={lead} />
 
-                    {isMobile ? (
-                      <div style={listStyle}>
-                        {(infeed || []).map((block, idx) => (
+                    <div style={listStyle}>
+                      {(infeed || []).map((block, idx) =>
+                        block.type === "article" ? (
                           <div key={(block.data._id || block.data.id || block.data.slug || idx) + "-a"}>
                             <ArticleRow a={block.data} />
                             {renderInsetAfter(idx + 1)}
 
-                            {/* ✅ show ads in EVERY category on mobile */}
                             {isAdEnabledCategory && [7, 11, 15, 19].includes(idx + 1) && (
                               <>
                                 {idx + 1 === 7 && (
@@ -1163,47 +1144,9 @@ export default function CategoryPage() {
                               </>
                             )}
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={listStyle}>
-                        {rest.map((a, idx) => {
-                          const pos = idx + 1;
-                          return (
-                            <div key={a._id || a.id || a.slug || idx}>
-                              <ArticleRow a={a} />
-                              {renderInsetAfter(pos)}
-
-                              {/* ✅ show ads in EVERY category (single-col non-mobile case) */}
-                              {isAdEnabledCategory && [6, 9, 13, 17].includes(pos) && (
-                                <>
-                                  {pos === 6 && (
-                                    <div style={{ margin: "12px 0", textAlign: "center" }}>
-                                      <AdSenseAuto slot={ADS_SLOT_MAIN} />
-                                    </div>
-                                  )}
-                                  {pos === 9 && (
-                                    <div style={{ margin: "12px 0" }}>
-                                      <AdSenseInArticle />
-                                    </div>
-                                  )}
-                                  {pos === 13 && (
-                                    <div style={{ margin: "12px 0" }}>
-                                      <AdSenseFluidKey />
-                                    </div>
-                                  )}
-                                  {pos === 17 && (
-                                    <div style={{ margin: "12px 0", textAlign: "center" }}>
-                                      <AdSenseAuto slot={ADS_SLOT_SECOND} />
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                        ) : null // ✅ rails never show here because SHOW_RAILS_ON_MOBILE = false
+                      )}
+                    </div>
 
                     <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16 }}>
                       {page > 1 && (
@@ -1218,7 +1161,6 @@ export default function CategoryPage() {
                       )}
                     </div>
 
-                    {/* ✅ AutoRelaxed for EVERY category on single-col layouts */}
                     {isAdEnabledCategory && (
                       <div style={{ margin: "16px 0" }}>
                         <AdSenseAutoRelaxed />
