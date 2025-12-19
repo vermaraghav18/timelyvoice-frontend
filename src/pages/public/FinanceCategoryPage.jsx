@@ -65,6 +65,88 @@ function getCategoryLabel(article, fallback) {
   return fallback;
 }
 
+/* =========================================================
+   ✅ Google AdSense (same approach as CategoryPage.jsx)
+   ========================================================= */
+const ADS_CLIENT = "ca-pub-8472487092329023";
+
+// Reuse your existing slots (from CategoryPage.jsx)
+const ADS_SLOT_MAIN = "3149743917";
+const ADS_SLOT_SECOND = "3149743917";
+const ADS_SLOT_FLUID_KEY = "1442744724";
+const ADS_SLOT_IN_ARTICLE = "9569163673";
+const ADS_SLOT_AUTORELAXED = "2545424475";
+
+function useAdsPush(deps = []) {
+  useEffect(() => {
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+}
+
+function AdSenseAuto({ slot, style }) {
+  useAdsPush([slot]);
+  return (
+    <ins
+      className="adsbygoogle"
+      style={{ display: "block", width: "100%", maxWidth: "100%", ...style }}
+      data-ad-client={ADS_CLIENT}
+      data-ad-slot={slot}
+      data-ad-format="auto"
+      data-full-width-responsive="true"
+    />
+  );
+}
+
+function AdSenseFluidKey({ style }) {
+  useAdsPush([]);
+  return (
+    <ins
+      className="adsbygoogle"
+      style={{ display: "block", ...style }}
+      data-ad-format="fluid"
+      data-ad-layout-key="-ge-1b-1q-el+13l"
+      data-ad-client={ADS_CLIENT}
+      data-ad-slot={ADS_SLOT_FLUID_KEY}
+    />
+  );
+}
+
+function AdSenseInArticle({ style }) {
+  useAdsPush([]);
+  return (
+    <ins
+      className="adsbygoogle"
+      style={{ display: "block", textAlign: "center", ...style }}
+      data-ad-layout="in-article"
+      data-ad-format="fluid"
+      data-ad-client={ADS_CLIENT}
+      data-ad-slot={ADS_SLOT_IN_ARTICLE}
+    />
+  );
+}
+
+function AdSenseAutoRelaxed({ style }) {
+  useAdsPush([]);
+  return (
+    <ins
+      className="adsbygoogle"
+      style={{ display: "block", ...style }}
+      data-ad-format="autorelaxed"
+      data-ad-client={ADS_CLIENT}
+      data-ad-slot={ADS_SLOT_AUTORELAXED}
+    />
+  );
+}
+
+// Insert ads even for smaller categories: after 3rd, 8th, 13th items
+function shouldShowAdAtIndex(idx0) {
+  const pos = idx0 + 1; // 1-based
+  return [3, 8, 13].includes(pos);
+}
+
 /* ---------- PAGE ---------- */
 export default function FinanceCategoryPage({
   categorySlug = "finance",
@@ -184,6 +266,13 @@ export default function FinanceCategoryPage({
           </div>
         )}
 
+        {/* ✅ Optional: a top ad under heading (kept conservative; only if not loading/error) */}
+        {!loading && !err && (
+          <div style={{ margin: "10px 0 14px", textAlign: "center" }}>
+            <AdSenseAuto slot={ADS_SLOT_MAIN} />
+          </div>
+        )}
+
         {loading && <div className="tn-status">Loading…</div>}
         {err && <div className="tn-error">{err}</div>}
 
@@ -195,7 +284,7 @@ export default function FinanceCategoryPage({
               </div>
             ) : (
               <ul className="tn-list">
-                {items.map((a) => {
+                {items.map((a, idx) => {
                   const href = articleHref(a.slug);
                   const catLabel = getCategoryLabel(a, displayName);
                   const pillBg = CAT_COLORS[catLabel] || "#4B5563";
@@ -203,66 +292,98 @@ export default function FinanceCategoryPage({
                   const summary = a.summary || a.description || a.excerpt || "";
 
                   return (
-                    <li className="tn-item" key={a._id || a.id || a.slug}>
-                      <div className="tn-left">
-                        <Link to={href} className="tn-item-title">
-                          {a.title}
-                        </Link>
-
-                        {summary ? (
-                          <Link
-                            to={href}
-                            className="tn-summary"
-                            style={{
-                              display: "block",
-                              textDecoration: "none",
-                              color: "inherit",
-                            }}
-                            aria-label={`Open: ${a.title}`}
-                          >
-                            {summary}
+                    <div key={(a._id || a.id || a.slug || idx) + "-wrap"}>
+                      <li className="tn-item" key={a._id || a.id || a.slug}>
+                        <div className="tn-left">
+                          <Link to={href} className="tn-item-title">
+                            {a.title}
                           </Link>
-                        ) : null}
 
-                        <div className="tn-divider" />
+                          {summary ? (
+                            <Link
+                              to={href}
+                              className="tn-summary"
+                              style={{
+                                display: "block",
+                                textDecoration: "none",
+                                color: "inherit",
+                              }}
+                              aria-label={`Open: ${a.title}`}
+                            >
+                              {summary}
+                            </Link>
+                          ) : null}
 
-                        <div className="tn-meta">
-                          <span className="tn-source">
-                            The Timely Voice • Updated{" "}
-                            {timeAgo(
-                              a.updatedAt ||
-                                a.publishedAt ||
-                                a.publishAt ||
-                                a.createdAt
-                            )}
-                          </span>
+                          <div className="tn-divider" />
+
+                          <div className="tn-meta">
+                            <span className="tn-source">
+                              The Timely Voice • Updated{" "}
+                              {timeAgo(
+                                a.updatedAt ||
+                                  a.publishedAt ||
+                                  a.publishAt ||
+                                  a.createdAt
+                              )}
+                            </span>
+                          </div>
                         </div>
-                      </div>
 
-                      <Link to={href} className="tn-thumb">
-                        <span className="tn-badge">
-                          <span
-                            className="tn-pill"
-                            style={{ background: pillBg }}
-                          >
-                            {catLabel}
+                        <Link to={href} className="tn-thumb">
+                          <span className="tn-badge">
+                            <span
+                              className="tn-pill"
+                              style={{ background: pillBg }}
+                            >
+                              {catLabel}
+                            </span>
                           </span>
-                        </span>
 
-                        {a.imageUrl ? (
-                          <img
-                            src={a.imageUrl}
-                            alt={a.imageAlt || a.title || ""}
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="tn-thumb ph" />
-                        )}
-                      </Link>
-                    </li>
+                          {a.imageUrl ? (
+                            <img
+                              src={a.imageUrl}
+                              alt={a.imageAlt || a.title || ""}
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="tn-thumb ph" />
+                          )}
+                        </Link>
+                      </li>
+
+                      {/* ✅ In-feed ads (Finance + Health) */}
+                      {shouldShowAdAtIndex(idx) && (
+                        <>
+                          {idx + 1 === 3 && (
+                            <div style={{ margin: "12px 0", textAlign: "center" }}>
+                              <AdSenseInArticle />
+                            </div>
+                          )}
+
+                          {idx + 1 === 8 && (
+                            <div style={{ margin: "12px 0" }}>
+                              <AdSenseFluidKey />
+                            </div>
+                          )}
+
+                          {idx + 1 === 13 && (
+                            <div style={{ margin: "12px 0", textAlign: "center" }}>
+                              <AdSenseAuto slot={ADS_SLOT_SECOND} />
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   );
                 })}
               </ul>
+            )}
+
+            {/* ✅ Bottom relaxed ad */}
+            {items.length >= 6 && (
+              <div style={{ margin: "16px 0" }}>
+                <AdSenseAutoRelaxed />
+              </div>
             )}
           </>
         )}
