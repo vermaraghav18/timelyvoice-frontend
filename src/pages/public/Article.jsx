@@ -27,12 +27,12 @@ import '../../styles/rails.css';
 
 import { ensureRenderableImage } from '../../lib/images';
 
-/* ===========================
-   ✅ AdSense constants
-=========================== */
+/* =========================================================
+   AdSense slots (from your screenshots)
+   ========================================================= */
 const ADS_CLIENT = 'ca-pub-8472487092329023';
 
-// Page-skin (desktop)
+// Side “page skin” (desktop only)
 const ADS_ARTICLE_SKIN_LEFT = '4645299855';
 const ADS_ARTICLE_SKIN_RIGHT = '9565635808';
 
@@ -40,27 +40,53 @@ const ADS_ARTICLE_SKIN_RIGHT = '9565635808';
 const ADS_ARTICLE_INCONTENT_DESKTOP = '9270940575';
 const ADS_ARTICLE_INCONTENT_MOBILE = '4494817112';
 
-/** ✅ safe "push" for adsense (doesn't crash SSR) */
+/* ---------------- AdSense helpers ---------------- */
 function pushAd() {
   try {
     if (typeof window === 'undefined') return;
-    (window.adsbygoogle = window.adsbygoogle || []).push({});
+    window.adsbygoogle = window.adsbygoogle || [];
+    window.adsbygoogle.push({});
   } catch {}
 }
 
-/** ✅ In-article AdSense slot (one slot at a time) */
+/** Simple viewport hook: returns true when width < breakpoint */
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
+  );
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < breakpoint);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [breakpoint]);
+  return isMobile;
+}
+
+/** Ad unit component
+ * - On mobile: can render “full-bleed” (100vw) using wrapper class
+ * - Always clears floats so it never gets squeezed by the floated hero
+ */
 function AdSlot({
-  slotId = 'in-article',
+  slotId,
+  slot,
   client = ADS_CLIENT,
-  slot = ADS_ARTICLE_INCONTENT_DESKTOP,
+  fullBleedOnMobile = false,
+  isMobile = false,
   minHeight = 90,
 }) {
   useEffect(() => {
     pushAd();
   }, []);
 
+  const wrapClass = [
+    'ad-slot',
+    fullBleedOnMobile && isMobile ? 'ad-slot--fullbleed' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', margin: '18px 0' }}>
+    <div className={wrapClass} aria-label="Advertisement">
       <ins
         className="adsbygoogle"
         style={{ display: 'block', width: '100%', minHeight, textAlign: 'center' }}
@@ -74,24 +100,31 @@ function AdSlot({
   );
 }
 
-/** ✅ Page-skin ad (desktop only) */
-function SkinAd({ side = 'left', slot }) {
+/** Side skin ad (desktop only) */
+function SideSkinAd({ side = 'left', slot, client = ADS_CLIENT }) {
   useEffect(() => {
     pushAd();
   }, []);
 
+  const cls = side === 'left' ? 'skin-ad skin-ad--left' : 'skin-ad skin-ad--right';
+
   return (
-    <aside className={`article-skin article-skin-${side}`}>
+    <div className={cls} aria-label={`Advertisement ${side}`}>
       <ins
         className="adsbygoogle"
-        style={{ display: 'block', width: 160, minHeight: 600 }}
-        data-ad-client={ADS_CLIENT}
+        style={{ display: 'block', width: '100%', height: '100%' }}
+        data-ad-client={client}
         data-ad-slot={slot}
         data-ad-format="auto"
+        data-full-width-responsive="true"
       />
-    </aside>
+    </div>
   );
 }
+
+/* =========================================================
+   Article helpers
+   ========================================================= */
 
 // --- Video helpers (Drive share -> direct playable url) ---
 function getDriveFileId(url = '') {
@@ -102,15 +135,15 @@ function getDriveFileId(url = '') {
   return (byPath && byPath[1]) || (byParam && byParam[1]) || '';
 }
 
-function toPlayableVideoSrc(url = "") {
-  const raw = String(url || "").trim();
-  if (!raw) return "";
+function toPlayableVideoSrc(url = '') {
+  const raw = String(url || '').trim();
+  if (!raw) return '';
 
   // ✅ allow mp4 OR Cloudinary video URLs
   if (/\.mp4(\?|#|$)/i.test(raw)) return raw;
-  if (raw.includes("/video/upload/")) return raw;
+  if (raw.includes('/video/upload/')) return raw;
 
-  return "";
+  return '';
 }
 
 // --- Publisher/site constants (used in JSON-LD) ---
@@ -130,19 +163,6 @@ function estimateReadingTime(text = '', wpm = 200) {
   const words = plain.trim().split(/\s+/).filter(Boolean).length;
   const minutes = Math.max(1, Math.ceil(words / wpm));
   return { minutes, words };
-}
-
-/** Simple viewport hook: returns true when width < breakpoint */
-function useIsMobile(breakpoint = 768) {
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
-  );
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < breakpoint);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, [breakpoint]);
-  return isMobile;
 }
 
 /** Normalize article body:
@@ -324,18 +344,15 @@ function AuthorBox({ article }) {
           fontFamily: 'Arial, sans-serif',
         }}
       >
-        Timely Voice News relies on information from government releases,
-        regulators, courts, accredited media and other publicly available
-        sources. While editorial checks are applied for accuracy, clarity and
-        neutrality, all content is provided strictly on an “as is” basis for
-        general information and educational purposes only. It does not
-        constitute financial, legal, medical or any other professional advice.
-        The Timely Voice, its editors and contributors make no representation or
-        warranty as to the completeness, timeliness or reliability of the
-        information and accept no liability for any loss arising from reliance
-        on it. Readers are advised to verify facts with original documents or
-        consult a qualified professional before acting on any information
-        contained herein.
+        Timely Voice News relies on information from government releases, regulators, courts,
+        accredited media and other publicly available sources. While editorial checks are applied
+        for accuracy, clarity and neutrality, all content is provided strictly on an “as is” basis
+        for general information and educational purposes only. It does not constitute financial,
+        legal, medical or any other professional advice. The Timely Voice, its editors and
+        contributors make no representation or warranty as to the completeness, timeliness or
+        reliability of the information and accept no liability for any loss arising from reliance
+        on it. Readers are advised to verify facts with original documents or consult a qualified
+        professional before acting on any information contained herein.
       </p>
     </section>
   );
@@ -366,7 +383,6 @@ export default function ReaderArticle() {
       `/public/articles/${encodeURIComponent(articleSlug)}/comments`,
       { validateStatus: () => true }
     );
-
     setComments(Array.isArray(data) ? data : []);
   }
 
@@ -378,8 +394,7 @@ export default function ReaderArticle() {
   });
 
   const canonical = useMemo(
-    () =>
-      buildCanonicalFromLocation(['article', String(slug || '').toLowerCase()]),
+    () => buildCanonicalFromLocation(['article', String(slug || '').toLowerCase()]),
     [slug]
   );
 
@@ -428,13 +443,10 @@ export default function ReaderArticle() {
       try {
         setStatus('loading');
 
-        const res = await api.get(
-          `/articles/slug/${encodeURIComponent(slug)}`,
-          {
-            validateStatus: (s) => (s >= 200 && s < 300) || s === 308,
-            headers: { 'Cache-Control': 'no-cache' },
-          }
-        );
+        const res = await api.get(`/articles/slug/${encodeURIComponent(slug)}`, {
+          validateStatus: (s) => (s >= 200 && s < 300) || s === 308,
+          headers: { 'Cache-Control': 'no-cache' },
+        });
         if (!alive) return;
 
         if (res.status === 308 && res.data?.redirectTo) {
@@ -453,8 +465,7 @@ export default function ReaderArticle() {
         // ---- SEO
         removeManagedHeadTags();
 
-        const title =
-          (doc.metaTitle && doc.metaTitle.trim()) || doc.title || 'Article';
+        const title = (doc.metaTitle && doc.metaTitle.trim()) || doc.title || 'Article';
         const desc =
           (doc.metaDesc && doc.metaDesc.trim()) ||
           buildDescriptionClient({ bodyHtml, summary: doc.summary });
@@ -471,11 +482,7 @@ export default function ReaderArticle() {
           doc.publishedAt || doc.publishAt || doc.createdAt || Date.now()
         ).toISOString();
         const modifiedIso = new Date(
-          doc.updatedAt ||
-            doc.publishedAt ||
-            doc.publishAt ||
-            doc.createdAt ||
-            Date.now()
+          doc.updatedAt || doc.publishedAt || doc.publishAt || doc.createdAt || Date.now()
         ).toISOString();
         upsertTag('meta', {
           property: 'article:published_time',
@@ -488,9 +495,6 @@ export default function ReaderArticle() {
 
         // Open Graph / Twitter
         const ogImage = ensureRenderableImage(doc);
-
-        // Prefer metaTitle for social titles (falls back to page <title>)
-        const ogTitle = (doc.metaTitle && doc.metaTitle.trim()) || title;
 
         // Brand on social
         upsertTag('meta', { property: 'og:site_name', content: SITE_NAME });
@@ -515,7 +519,7 @@ export default function ReaderArticle() {
         });
         if (ogImage) upsertTag('meta', { name: 'twitter:image', content: ogImage });
 
-        // Optional author meta (helps some parsers) – prefers doc.author only
+        // Optional author meta
         const authorNameMeta =
           (doc.author && String(doc.author).trim()) || 'Timely Voice News';
         upsertTag('meta', { name: 'author', content: authorNameMeta });
@@ -531,15 +535,11 @@ export default function ReaderArticle() {
             ? categoryObj.slug || categoryName
             : categoryName;
 
-        const authorName =
-          (doc.author && String(doc.author).trim()) || 'Timely Voice News';
+        const authorName = (doc.author && String(doc.author).trim()) || 'Timely Voice News';
 
         const authorNode = authorName.toLowerCase().includes('timely voice')
           ? { '@type': 'Organization', name: authorName }
           : { '@type': 'Person', name: authorName };
-
-        const datePublishedISO = publishedIso;
-        const dateModifiedISO = modifiedIso;
 
         const publisherNode = {
           '@type': 'Organization',
@@ -560,8 +560,8 @@ export default function ReaderArticle() {
           headline: doc.title,
           description: String(desc).slice(0, 200),
           image: ogImage ? [ogImage] : undefined,
-          datePublished: datePublishedISO,
-          dateModified: dateModifiedISO,
+          datePublished: publishedIso,
+          dateModified: modifiedIso,
           author: [authorNode],
           publisher: publisherNode,
           articleSection: categoryName,
@@ -587,9 +587,7 @@ export default function ReaderArticle() {
                     '@type': 'ListItem',
                     position: 2,
                     name: categoryName,
-                    item: `${SITE_URL}/category/${encodeURIComponent(
-                      categorySlug
-                    )}`,
+                    item: `${SITE_URL}/category/${encodeURIComponent(categorySlug)}`,
                   },
                 ]
               : []),
@@ -666,10 +664,7 @@ export default function ReaderArticle() {
 
   /* ---------- derived ---------- */
   const displayDate =
-    article?.updatedAt ||
-    article?.publishedAt ||
-    article?.publishAt ||
-    article?.createdAt;
+    article?.updatedAt || article?.publishedAt || article?.publishAt || article?.createdAt;
 
   const rawImageUrl = ensureRenderableImage(article);
   const imageAlt = article?.imageAlt || article?.title || '';
@@ -687,6 +682,7 @@ export default function ReaderArticle() {
     marginTop: isMobile ? 16 : 32,
     marginBottom: isMobile ? 24 : 40,
     fontFamily: "'Newsreader', serif",
+    position: 'relative',
   };
 
   const mainWrapper = {
@@ -704,19 +700,6 @@ export default function ReaderArticle() {
     flex: isMobile ? '1 1 auto' : '0 0 740px',
     width: isMobile ? '100%' : 'auto',
   };
-  const rightColumn = { flex: '0 0 260px' };
-
-  const railWrapFix = { display: 'flow-root', marginTop: 0, paddingTop: 0 };
-
-  const renderRails = (items) =>
-    items.map((sec, i) => (
-      <div
-        key={sec.id || sec._id || sec.slug}
-        style={{ marginTop: i === 0 ? 0 : 12 }}
-      >
-        <SectionRenderer section={sec} />
-      </div>
-    ));
 
   /* ---------- article styles ---------- */
   const titleH1 = {
@@ -778,6 +761,15 @@ export default function ReaderArticle() {
   );
   const paragraphs = useMemo(() => splitParagraphs(normalizedBody), [normalizedBody]);
 
+  // Decide where to insert in-content ads
+  const shouldInsertInContentAd = (i, total) => {
+    // Only start after paragraph 2, then every 4 paragraphs
+    if (total < 3) return false;
+    if (i === 1) return true; // after 2nd paragraph
+    if (i > 1 && (i - 1) % 4 === 0) return true; // 5, 9, 13...
+    return false;
+  };
+
   // --- 404 SEO handling (must always define hooks in same order) ---
   useEffect(() => {
     if (status === 'notfound') {
@@ -814,36 +806,13 @@ export default function ReaderArticle() {
     );
   }
 
-  // ✅ Decide which in-content slot to use (mobile vs desktop)
-  const INCONTENT_SLOT = isMobile ? ADS_ARTICLE_INCONTENT_MOBILE : ADS_ARTICLE_INCONTENT_DESKTOP;
-
   return (
     <>
-      {/* ✅ Desktop page-skin ads (fixed) */}
-      {!isMobile && (
-        <>
-          <SkinAd side="left" slot={ADS_ARTICLE_SKIN_LEFT} />
-          <SkinAd side="right" slot={ADS_ARTICLE_SKIN_RIGHT} />
-        </>
-      )}
-
-      {/* Styles scoped to .article-body for professional rhythm */}
+      {/* Styles scoped to this page */}
       <style>{`
-  /* ✅ Page skin positioning */
-  .article-skin{
-    position: fixed;
-    top: 140px;
-    width: 160px;
-    z-index: 9;
-  }
-  .article-skin-left{ left: 10px; }
-  .article-skin-right{ right: 10px; }
-
-  /* hide skins on smaller screens just in case */
-  @media (max-width: 1024px){
-    .article-skin{ display: none !important; }
-  }
-
+  /* =========================
+     Article typography
+     ========================= */
   .article-body p {
     margin: 1.25em 0;
     line-height: 1.85;
@@ -911,7 +880,7 @@ export default function ReaderArticle() {
     margin: 0 18px 10px 0;
   }
 
-  /* ✅ Bigger HERO when it's a video (only affects video) */
+  /* Bigger HERO when it's a video */
   .article-hero-inline.article-hero-video {
     width: 62%;
     max-width: 520px;
@@ -925,7 +894,6 @@ export default function ReaderArticle() {
     background: #f1f5f9;
   }
 
-  /* ✅ NEW: hero video uses same layout as hero image */
   .article-hero-inline video {
     display: block;
     width: 100%;
@@ -954,9 +922,75 @@ export default function ReaderArticle() {
       max-width: 100%;
     }
   }
+
+  /* =========================
+     ✅ ADS: Never squeezed, full-bleed option on mobile
+     ========================= */
+  .article-body .ad-slot {
+    clear: both;               /* key: prevents float squeezing */
+    width: 100%;
+    display: block;
+    margin: 18px 0;
+  }
+
+  .article-body .ad-slot ins.adsbygoogle {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .article-body .ad-slot iframe {
+    max-width: 100% !important;
+  }
+
+  /* ✅ full-screen / edge-to-edge on mobile */
+  .article-body .ad-slot--fullbleed {
+    width: 100vw;
+    max-width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* Optional: give the ad a tiny breathing space on mobile edges */
+  @media (max-width: 767px) {
+    .article-body .ad-slot--fullbleed {
+      padding: 0 8px;
+      box-sizing: border-box;
+    }
+  }
+
+  /* =========================
+     ✅ Desktop Page-Skin ads (left/right)
+     ========================= */
+  .skin-ad {
+    position: fixed;
+    top: 120px;               /* below your header/nav */
+    width: 160px;             /* typical skyscraper width */
+    height: 600px;            /* typical skyscraper height */
+    z-index: 40;
+  }
+
+  .skin-ad--left { left: 10px; }
+  .skin-ad--right { right: 10px; }
+
+  /* Hide skins on small screens + on narrow desktop where it would overlap content */
+  @media (max-width: 1200px) {
+    .skin-ad { display: none !important; }
+  }
 `}</style>
 
       <SiteNav />
+
+      {/* Desktop skins (only render on non-mobile; CSS also hides under 1200px) */}
+      {!isMobile && (
+        <>
+          <SideSkinAd side="left" slot={ADS_ARTICLE_SKIN_LEFT} />
+          <SideSkinAd side="right" slot={ADS_ARTICLE_SKIN_RIGHT} />
+        </>
+      )}
+
       <div style={outerContainer}>
         <div style={mainWrapper}>
           {/* CENTER ARTICLE */}
@@ -1001,17 +1035,12 @@ export default function ReaderArticle() {
 
               {article.summary && <div style={summaryBox}>{article.summary}</div>}
 
-              {/* NEW: inline hero floated left inside article body */}
-              <div
-                ref={bodyRef}
-                className="article-body"
-                style={{ ...prose, ...articleBodyWrapper }}
-              >
-                {/* ✅ FIX: If video exists, it REPLACES the hero image */}
+              {/* Inline hero floated left inside article body */}
+              <div ref={bodyRef} className="article-body" style={{ ...prose, ...articleBodyWrapper }}>
+                {/* If video exists, it REPLACES the hero image */}
                 {(() => {
                   const playable = toPlayableVideoSrc(article?.videoUrl);
 
-                  // If video exists, show only video (bigger)
                   if (playable) {
                     return (
                       <figure className="article-hero-inline article-hero-video">
@@ -1027,22 +1056,21 @@ export default function ReaderArticle() {
                     );
                   }
 
-                  // Otherwise show hero image
                   if (!heroSrc) return null;
 
                   return (
                     <figure className="article-hero-inline">
                       <img
                         src={heroSrc}
-                        alt={imageAlt || "The Timely Voice"}
+                        alt={imageAlt || 'The Timely Voice'}
                         fetchPriority="high"
                         decoding="async"
                         loading="eager"
                         width="640"
                         height="360"
                         onError={(e) => {
-                          if (e.currentTarget.dataset.fallback !== "1") {
-                            e.currentTarget.dataset.fallback = "1";
+                          if (e.currentTarget.dataset.fallback !== '1') {
+                            e.currentTarget.dataset.fallback = '1';
                             e.currentTarget.src = FALLBACK_HERO_IMAGE;
                           }
                         }}
@@ -1052,29 +1080,38 @@ export default function ReaderArticle() {
                   );
                 })()}
 
+                {/* ✅ In-content ads: after paragraph 2, then every 4 paras.
+                    ✅ On mobile: full-bleed (edge-to-edge).
+                    ✅ On desktop: normal width inside the article column.
+                */}
                 {paragraphs.length === 0
                   ? null
-                  : paragraphs.map((html, i) => {
-                      // ✅ Insert ads:
-                      // 1) after paragraph 2 (i===1)
-                      // 2) then every 4 paragraphs (after 6,10,14...) => i===5,9,13...
-                      const showAd = i === 1 || (i > 1 && (i - 1) % 4 === 0);
+                  : paragraphs.map((html, i) => (
+                      <div key={`p-${i}`}>
+                        <div dangerouslySetInnerHTML={{ __html: html }} />
 
-                      return (
-                        <div key={`p-${i}`}>
-                          <div dangerouslySetInnerHTML={{ __html: html }} />
+                        {shouldInsertInContentAd(i, paragraphs.length) && (
+                          <AdSlot
+                            slotId={`article-incontent-${i}`}
+                            slot={isMobile ? ADS_ARTICLE_INCONTENT_MOBILE : ADS_ARTICLE_INCONTENT_DESKTOP}
+                            isMobile={isMobile}
+                            fullBleedOnMobile={true}
+                            minHeight={isMobile ? 250 : 90}
+                          />
+                        )}
+                      </div>
+                    ))}
 
-                          {showAd && (
-                            <AdSlot
-                              slotId={`in-article-${i}`}
-                              slot={INCONTENT_SLOT}
-                              client={ADS_CLIENT}
-                              minHeight={isMobile ? 250 : 90}
-                            />
-                          )}
-                        </div>
-                      );
-                    })}
+                {/* Optional: one more ad after content if article is long */}
+                {paragraphs.length >= 10 && (
+                  <AdSlot
+                    slotId="article-incontent-end"
+                    slot={isMobile ? ADS_ARTICLE_INCONTENT_MOBILE : ADS_ARTICLE_INCONTENT_DESKTOP}
+                    isMobile={isMobile}
+                    fullBleedOnMobile={true}
+                    minHeight={isMobile ? 250 : 90}
+                  />
+                )}
               </div>
 
               <AuthorBox article={article} />
@@ -1123,6 +1160,7 @@ export default function ReaderArticle() {
           )}
         </div>
       </div>
+
       <SiteFooter />
     </>
   );
