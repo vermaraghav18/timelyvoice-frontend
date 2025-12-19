@@ -69,32 +69,37 @@ function HomeAd({ slot, style }) {
 }
 
 /* =========================
-   Rails: deterministic order + chip blocking
-   (Fixes: “sometimes chips, sometimes banner”)
+   Rails + Chip-blocking (deterministic)
+   Fixes: “sometimes chips, sometimes banner”
    ========================= */
 function sortByPlacement(a, b) {
   return (a?.placementIndex ?? 0) - (b?.placementIndex ?? 0);
 }
 
-function isChipRail(sec) {
+/**
+ * IMPORTANT:
+ * Chips can arrive as:
+ * - rail_* sections
+ * - non-rail sections injected into main/others
+ * So we block them globally (not only rails).
+ */
+function isChipSection(sec) {
   const t = String(sec?.template || "").toLowerCase();
   const slug = String(sec?.slug || "").toLowerCase();
   const name = String(sec?.name || sec?.title || "").toLowerCase();
 
-  return (
-    t.includes("chip") ||
-    slug.includes("chip") ||
-    name.includes("chip") ||
-    slug.includes("discover") ||
-    name.includes("discover") ||
-    name.includes("discover more")
+  const blob = `${t} ${slug} ${name}`;
+
+  // covers: chips/pills/tags/topics/discover blocks
+  return /(chip|chips|pill|pills|tag|tags|topic|topics|discover|discover more)/i.test(
+    blob
   );
 }
 
 function buildRails(sections = [], blockChips = true) {
   const rails = (Array.isArray(sections) ? sections : [])
     .filter((s) => s?.template?.startsWith?.("rail_") && s?.enabled !== false)
-    .filter((s) => (blockChips ? !isChipRail(s) : true))
+    .filter((s) => (blockChips ? !isChipSection(s) : true))
     .slice()
     .sort(sortByPlacement);
 
@@ -263,13 +268,22 @@ export default function PublicHome() {
     };
   }, []);
 
-  const mains = sections.filter((s) => MAIN_TEMPLATES.has(s.template));
-  const others = sections.filter(
-    (s) => !MAIN_TEMPLATES.has(s.template) && !s.template?.startsWith?.("rail_")
-  );
+  // ✅ BLOCK CHIPS GLOBALLY (not only rails)
+  const mains = sections
+    .filter((s) => MAIN_TEMPLATES.has(s.template))
+    .filter((s) => !isChipSection(s));
 
-  // ✅ FIX: rails are now stable + chips blocked (so it won't randomly flip)
-  const { rightRails: rails } = useMemo(() => buildRails(sections, true), [sections]);
+  const others = sections
+    .filter(
+      (s) => !MAIN_TEMPLATES.has(s.template) && !s.template?.startsWith?.("rail_")
+    )
+    .filter((s) => !isChipSection(s));
+
+  // ✅ rails are stable + chips blocked
+  const { rightRails: rails } = useMemo(
+    () => buildRails(sections, true),
+    [sections]
+  );
 
   return (
     <>
