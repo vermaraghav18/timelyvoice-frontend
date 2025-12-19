@@ -878,7 +878,11 @@ useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobileState, rest, rails]);
 
-  const isWorldCategory = String(slug || "").toLowerCase() === "world";
+ const isAdEnabledCategory = ["world", "india", "business", "health"].includes(
+  String(slug || "").toLowerCase()
+);
+
+
 
   const renderInsetAfter = (idx) => {
     const blocks = insetBlocks.filter((b) => b.__after === idx);
@@ -1001,7 +1005,8 @@ useEffect(() => {
                               <ArticleRow a={a} />
                               {renderInsetAfter(pos)}
 
-                              {isWorldCategory && [6, 9, 13, 17].includes(pos) && (
+                              {isAdEnabledCategory && [6, 9, 13, 17].includes(pos) && (
+
                                 <>
                                   {pos === 6 && (
                                     <div style={{ margin: "12px 0", textAlign: "center" }}>
@@ -1154,7 +1159,8 @@ useEffect(() => {
                               <ArticleRow a={a} />
                               {renderInsetAfter(pos)}
 
-                              {isWorldCategory && [6, 9, 13, 17].includes(pos) && (
+                             {isAdEnabledCategory && [6, 9, 13, 17].includes(pos) && (
+
                                 <>
                                   {pos === 6 && (
                                     <div style={{ margin: "12px 0", textAlign: "center" }}>
