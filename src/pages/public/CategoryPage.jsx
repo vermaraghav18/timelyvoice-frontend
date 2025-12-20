@@ -589,14 +589,14 @@ export default function CategoryPage() {
   );
 
   const [isNarrow, setIsNarrow] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 1200px)").matches : false
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 1150px)").matches : false
   );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const mqMobile = window.matchMedia("(max-width: 720px)");
-    const mqNarrow = window.matchMedia("(max-width: 1200px)");
+    const mqNarrow = window.matchMedia("(max-width: 1150px)");
 
     const onMobile = (e) => setIsMobile(e.matches);
     const onNarrow = (e) => setIsNarrow(e.matches);
