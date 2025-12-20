@@ -52,6 +52,8 @@
 /* Center content stays above skins */
 .site-container{
   max-width: 1200px;
+  width: 100%;                 /* ✅ NEW */
+  box-sizing: border-box;      /* ✅ NEW */
   margin: 0 auto;
   position: relative;
   z-index: 2;
@@ -85,8 +87,9 @@
     display: block;
   }
 
-  /* prevent content under ads: 160px + 10px breathing room */
+  /* ✅ FIX: give container enough width so 170px+170px padding doesn't crush content */
   .site-container{
+    max-width: 1540px;          /* ✅ NEW: 1200 + 170 + 170 */
     padding-left: 170px;
     padding-right: 170px;
   }
@@ -98,6 +101,7 @@
     display: none;
   }
   .site-container{
+    max-width: 1200px;          /* ✅ keep normal cap */
     padding-left: 0;
     padding-right: 0;
   }
