@@ -66,37 +66,58 @@
    * - Optional full-bleed wrapper on mobile
    */
   function InArticleAd({
-    slotId,
-    slot,
-    client = ADS_CLIENT,
-    fullBleedOnMobile = false,
-    isMobile = false,
-  }) {
-    useEffect(() => {
-      pushAd();
-    }, []);
+  slotId,
+  slot,
+  client = ADS_CLIENT,
+  fullBleedOnMobile = false,
+  isMobile = false,
+}) {
+  const insRef = useRef(null);
 
-    const wrapClass = [
-      'tv-inarticle-wrap',
-      fullBleedOnMobile && isMobile ? 'tv-inarticle-wrap--fullbleed' : '',
-    ]
-      .filter(Boolean)
-      .join(' ');
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
 
-    return (
-      <div className={wrapClass} aria-label="Advertisement">
-        <ins
-          className="adsbygoogle"
-          style={{ display: 'block', textAlign: 'center' }}
-          data-ad-layout="in-article"
-          data-ad-format="fluid"
-          data-ad-client={client}
-          data-ad-slot={slot}
-          id={slotId}
-        />
-      </div>
-    );
-  }
+    const ins = insRef.current;
+    if (!ins) return;
+
+    // ✅ If AdSense already processed this ins, DO NOT push again
+    if (ins.getAttribute('data-adsbygoogle-status') === 'done') return;
+
+    // ✅ Mark as "requested" so React re-renders don't double-push
+    if (ins.dataset.requested === '1') return;
+    ins.dataset.requested = '1';
+
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (e) {
+      // keep quiet in prod; useful for debugging
+      // console.log("ads push error", e);
+    }
+  }, [slot]);
+
+  const wrapClass = [
+    'tv-inarticle-wrap',
+    fullBleedOnMobile && isMobile ? 'tv-inarticle-wrap--fullbleed' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return (
+    <div className={wrapClass} aria-label="Advertisement">
+      <ins
+        ref={insRef}
+        className="adsbygoogle"
+        style={{ display: 'block', textAlign: 'center' }}
+        data-ad-layout="in-article"
+        data-ad-format="fluid"
+        data-ad-client={client}
+        data-ad-slot={slot}
+        id={slotId}
+      />
+    </div>
+  );
+}
+
 
   /* =========================================================
     Article helpers
@@ -1062,28 +1083,33 @@
                   })()}
 
                   {/* ✅ ONLY In-article (fluid) ads inserted at fixed positions */}
-                 {paragraphs.length === 0
-  ? null
-  : paragraphs.map((html, i) => {
-      const slots = inArticleSlotsAfterIndex(i, paragraphs.length); // ✅ total passed
+                {paragraphs.length === 0 ? null : (
+  paragraphs.map((html, i) => {
+    // ✅ total passed; function must return an array: [] | [slot] | [slot, slot]
+    const slots = inArticleSlotsAfterIndex(i, paragraphs.length) || [];
 
-      return (
-        <div key={`p-${i}`}>
-          <div dangerouslySetInnerHTML={{ __html: html }} />
+    // ✅ safety: remove null/undefined + avoid duplicate slot in same position
+    const uniqSlots = Array.from(new Set(slots.filter(Boolean)));
 
-          {/* ✅ render 0, 1, or 2 ads after this paragraph */}
-          {slots.map((slot, k) => (
-            <InArticleAd
-              key={`ad-${i}-${k}-${slot}`}
-              slotId={`tv-inarticle-${i}-${k}`}
-              slot={slot}
-              isMobile={isMobile}
-              fullBleedOnMobile={true}
-            />
-          ))}
-        </div>
-      );
-    })}
+    return (
+      <div key={`p-${i}`}>
+        <div dangerouslySetInnerHTML={{ __html: html }} />
+
+        {/* ✅ render 0, 1, or 2 ads after this paragraph */}
+        {uniqSlots.map((slot, k) => (
+          <InArticleAd
+            key={`ad-${i}-${k}-${slot}`}
+            slotId={`tv-inarticle-${slot}-${i}-${k}`}   // ✅ stable + unique per slot
+            slot={slot}
+            isMobile={isMobile}
+            fullBleedOnMobile={true}
+          />
+        ))}
+      </div>
+    );
+  })
+)}
+
 
                 </div>
 
