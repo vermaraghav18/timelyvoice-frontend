@@ -270,12 +270,13 @@ const pageWrap = {
 
 const gridWrap = {
   width: "100%",
-  maxWidth: 1500,          // ✅ was 1200 (too small for 3 columns)
+  maxWidth: 1400,
   padding: "0 12px",
   display: "grid",
-  gridTemplateColumns: "260px minmax(0, 1fr) 260px",
+  gridTemplateColumns: "220px minmax(0, 1fr) 220px", // ✅ rails smaller (was 260)
   gap: 16,
 };
+
 
 const singleColWrap = {
   width: "100%",
@@ -589,14 +590,14 @@ export default function CategoryPage() {
   );
 
   const [isNarrow, setIsNarrow] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 1150px)").matches : false
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 1200px)").matches : false
   );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const mqMobile = window.matchMedia("(max-width: 720px)");
-    const mqNarrow = window.matchMedia("(max-width: 1150px)");
+    const mqNarrow = window.matchMedia("(max-width: 1200px)");
 
     const onMobile = (e) => setIsMobile(e.matches);
     const onNarrow = (e) => setIsNarrow(e.matches);
