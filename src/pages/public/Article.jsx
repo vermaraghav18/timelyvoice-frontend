@@ -11,6 +11,8 @@ import {
   buildCanonicalFromLocation,
 } from '../../lib/seoHead.js';
 
+import { pushAd } from '../../lib/adsense.js';
+
 import SiteNav from '../../components/SiteNav.jsx';
 import SiteFooter from '../../components/SiteFooter.jsx';
 import CommentThread from '../../components/comments/CommentThread.jsx';
@@ -27,27 +29,29 @@ import '../../styles/rails.css';
 
 import { ensureRenderableImage } from '../../lib/images';
 
-/* =========================================================
-   AdSense slots (from your screenshots)
-   ========================================================= */
+// --- Video helpers (Drive share -> direct playable url) ---
+function getDriveFileId(url = '') {
+  const s = String(url || '');
+  const m = s.match(/\/d\/([^/]+)/) || s.match(/[?&]id=([^&]+)/);
+  return m ? m[1] : '';
+}
+function toDriveDirectUrl(url = '') {
+  const id = getDriveFileId(url);
+  if (!id) return url;
+  return `https://drive.google.com/uc?export=download&id=${id}`;
+}
+
+/* ---------- Brand constant ---------- */
+const BRAND_NAME = 'The Timely Voice';
+
+/* ---------- Google AdSense (Article page ONLY: in-article fluid) ---------- */
 const ADS_CLIENT = 'ca-pub-8472487092329023';
 
-// Side “page skin” (desktop only)
-const ADS_ARTICLE_SKIN_LEFT = '4645299855';
-const ADS_ARTICLE_SKIN_RIGHT = '9565635808';
-
-// In-content
-const ADS_ARTICLE_INCONTENT_DESKTOP = '9270940575';
-const ADS_ARTICLE_INCONTENT_MOBILE = '4494817112';
-
-/* ---------------- AdSense helpers ---------------- */
-function pushAd() {
-  try {
-    if (typeof window === 'undefined') return;
-    window.adsbygoogle = window.adsbygoogle || [];
-    window.adsbygoogle.push({});
-  } catch {}
-}
+// In-article (fluid) slots
+const ADS_ARTICLE_INARTICLE_1 = '6745877256';
+const ADS_ARTICLE_INARTICLE_2 = '2220308886';
+const ADS_ARTICLE_INARTICLE_3 = '7281063871';
+const ADS_ARTICLE_INARTICLE_4 = '5967982203';
 
 /** Simple viewport hook: returns true when width < breakpoint */
 function useIsMobile(breakpoint = 768) {
@@ -62,88 +66,25 @@ function useIsMobile(breakpoint = 768) {
   return isMobile;
 }
 
-/** Ad unit component
- * - On mobile: can render “full-bleed” (100vw) using wrapper class
- * - Always clears floats so it never gets squeezed by the floated hero
- */
-function AdSlot({
-  slotId,
-  slot,
-  client = ADS_CLIENT,
-  fullBleedOnMobile = false,
-  isMobile = false,
-  minHeight = 90,
-}) {
+/* ---------------- In-article (fluid) AdSense ---------------- */
+function InArticleAd({ slot, id }) {
   useEffect(() => {
     pushAd();
   }, []);
 
-  const wrapClass = [
-    'ad-slot',
-    fullBleedOnMobile && isMobile ? 'ad-slot--fullbleed' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-
   return (
-    <div className={wrapClass} aria-label="Advertisement">
+    <div className="tv-inarticle-ad" aria-label="advertisement">
       <ins
         className="adsbygoogle"
-        style={{ display: 'block', width: '100%', minHeight, textAlign: 'center' }}
-        data-ad-client={client}
+        style={{ display: 'block', textAlign: 'center' }}
+        data-ad-layout="in-article"
+        data-ad-format="fluid"
+        data-ad-client={ADS_CLIENT}
         data-ad-slot={slot}
-        data-ad-format="auto"
-        data-full-width-responsive="true"
-        id={slotId}
+        id={id}
       />
     </div>
   );
-}
-
-/** Side skin ad (desktop only) */
-function SideSkinAd({ side = 'left', slot, client = ADS_CLIENT }) {
-  useEffect(() => {
-    pushAd();
-  }, []);
-
-  const cls = side === 'left' ? 'skin-ad skin-ad--left' : 'skin-ad skin-ad--right';
-
-  return (
-    <div className={cls} aria-label={`Advertisement ${side}`}>
-      <ins
-        className="adsbygoogle"
-        style={{ display: 'block', width: '100%', height: '100%' }}
-        data-ad-client={client}
-        data-ad-slot={slot}
-        data-ad-format="auto"
-        data-full-width-responsive="true"
-      />
-    </div>
-  );
-}
-
-/* =========================================================
-   Article helpers
-   ========================================================= */
-
-// --- Video helpers (Drive share -> direct playable url) ---
-function getDriveFileId(url = '') {
-  const s = String(url || '').trim();
-  if (!s) return '';
-  const byPath = s.match(/\/file\/d\/([^/]+)/);
-  const byParam = s.match(/[?&]id=([^&]+)/);
-  return (byPath && byPath[1]) || (byParam && byParam[1]) || '';
-}
-
-function toPlayableVideoSrc(url = '') {
-  const raw = String(url || '').trim();
-  if (!raw) return '';
-
-  // ✅ allow mp4 OR Cloudinary video URLs
-  if (/\.mp4(\?|#|$)/i.test(raw)) return raw;
-  if (raw.includes('/video/upload/')) return raw;
-
-  return '';
 }
 
 // --- Publisher/site constants (used in JSON-LD) ---
@@ -158,616 +99,178 @@ const SITE_LOGO = `${SITE_URL}/logo-512.png`;
 const FALLBACK_HERO_IMAGE = '/tv-default-hero.jpg';
 
 /* ---------- helpers ---------- */
-function estimateReadingTime(text = '', wpm = 200) {
-  const plain = String(text).replace(/<[^>]*>/g, ' ');
-  const words = plain.trim().split(/\s+/).filter(Boolean).length;
-  const minutes = Math.max(1, Math.ceil(words / wpm));
-  return { minutes, words };
+const toTitleCase = (s = '') =>
+  s
+    ? String(s)
+        .replace(/[-_]+/g, ' ')
+        .replace(/\b\w/g, (m) => m.toUpperCase())
+        .trim()
+    : '';
+
+function stripHtml(html = '') {
+  return String(html || '')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<\/?[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
-/** Normalize article body:
- * - If it already contains HTML (<p>, <h2>, <ul>…), keep it as-is.
- * - Otherwise interpret simple markdown-like syntax:
- *   # Heading     → <h2>
- *   ## Subhead    → <h3>
- *   - item / * / • → <ul><li>item</li>…>
- *   1. item       → <ol><li>item</li>…>
- *   Blank lines   → paragraphs (<p>…</p>)
- */
-function normalizeBody(htmlOrText = '') {
-  let s = String(htmlOrText || '').trim();
-  if (!s) return '';
+function splitParagraphs(htmlOrText = '') {
+  const raw = String(htmlOrText || '').trim();
+  if (!raw) return [];
 
-  // 1) Strip markdown-style heading hashes at the start of lines.
-  s = s.replace(/^#{1,6}\s*/gm, '');
-
-  // 2) Strip markdown bold/italic markers but keep the inner text.
-  s = s.replace(/\*\*(.+?)\*\*/g, '$1');
-  s = s.replace(/\*(.+?)\*/g, '$1');
-
-  // 3) If it already looks like HTML, return cleaned string directly.
-  if (/(<(p|h1|h2|h3|h4|h5|ul|ol|li|blockquote|br|span|div|mark)[\s>])/i.test(s)) {
-    return s;
+  // If already contains <p>, split by <p> blocks
+  if (/<p[\s>]/i.test(raw)) {
+    const parts = raw
+      .split(/<\/p>/i)
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .map((x) => (/<p[\s>]/i.test(x) ? `${x}</p>` : `<p>${x}</p>`));
+    return parts;
   }
 
-  // 4) Otherwise, treat it as simple markdown-ish text and build HTML
-  const lines = s.replace(/\r\n?/g, '\n').split('\n');
-
-  const blocks = [];
-  let paraLines = [];
-  let listItems = [];
-  let listType = null; // 'ul' or 'ol'
-
-  const flushParagraph = () => {
-    if (!paraLines.length) return;
-    const text = paraLines.join(' ').trim();
-    if (text) blocks.push(`<p>${text}</p>`);
-    paraLines = [];
-  };
-
-  const flushList = () => {
-    if (!listItems.length) return;
-    const tag = listType === 'ol' ? 'ol' : 'ul';
-    const inner = listItems.map((li) => `<li>${li}</li>`).join('');
-    blocks.push(`<${tag}>${inner}</${tag}>`);
-    listItems = [];
-    listType = null;
-  };
-
-  for (const raw of lines) {
-    const line = raw.trim();
-
-    if (!line) {
-      flushParagraph();
-      flushList();
-      continue;
-    }
-
-    // Headings: #, ##, ### -> h2, h3, h4
-    const headingMatch = line.match(/^(#{1,3})\s+(.*)$/);
-    if (headingMatch) {
-      flushParagraph();
-      flushList();
-      const hashes = headingMatch[1].length;
-      const text = headingMatch[2].trim();
-      const hLevel = Math.min(4, hashes + 1); // # → h2, ## → h3, ### → h4
-      blocks.push(`<h${hLevel}>${text}</h${hLevel}>`);
-      continue;
-    }
-
-    // Bullets: -, *, •
-    const bulletMatch = line.match(/^([-*•])\s+(.*)$/);
-    // Ordered: 1. item / 1) item
-    const orderedMatch = line.match(/^(\d+)[.)]\s+(.*)$/);
-
-    if (bulletMatch || orderedMatch) {
-      flushParagraph();
-      const text = (bulletMatch ? bulletMatch[2] : orderedMatch[2]).trim();
-      const nextType = orderedMatch ? 'ol' : 'ul';
-
-      if (!listType) {
-        listType = nextType;
-      } else if (listType !== nextType) {
-        flushList();
-        listType = nextType;
-      }
-
-      listItems.push(text);
-      continue;
-    }
-
-    // Normal text line
-    if (listType) {
-      flushList();
-    }
-    paraLines.push(line);
-  }
-
-  // Flush any trailing structures
-  flushParagraph();
-  flushList();
-
-  let html = blocks.join('');
-  html = html.replace(/<p>\s*<\/p>/gi, '');
-  if (!html) {
-    return s ? `<p>${s}</p>` : '';
-  }
-  return html;
-}
-
-/** Split normalized HTML into array of paragraph HTML strings */
-function splitParagraphs(normalizedHtml = '') {
-  if (!normalizedHtml) return [];
-  return normalizedHtml
-    .split(/<\/p>/i)
-    .map((chunk) => chunk.trim())
+  // Otherwise split by blank lines
+  return raw
+    .split(/\n\s*\n+/)
+    .map((x) => x.trim())
     .filter(Boolean)
-    .map((chunk) => (chunk.endsWith('</p>') ? chunk : `${chunk}</p>`));
+    .map((x) => `<p>${x}</p>`);
 }
 
-/** 🔧 Helper to choose the visible byline:
- * - Prefer author if present
- * - Otherwise use source (but ignore "Automation")
- * - Otherwise fall back to "News Desk"
- */
-const BRAND_NEWS_DESK = 'Timely Voice News Desk';
-
-function pickByline(doc = {}) {
-  const author = (doc.author ?? '').toString().trim();
-  const source = (doc.source ?? '').toString().trim();
-
-  if (author) return author;
-  if (source && source.toLowerCase() !== 'automation') {
-    return source;
+function safeUrl(u = '') {
+  try {
+    const s = String(u || '').trim();
+    if (!s) return '';
+    // If already absolute URL
+    if (/^https?:\/\//i.test(s)) return s;
+    // If relative, prefix with origin
+    if (typeof window !== 'undefined') return new URL(s, window.location.origin).toString();
+    return s;
+  } catch {
+    return '';
   }
-  return BRAND_NEWS_DESK;
 }
 
-function AuthorBox({ article }) {
-  if (!article) return null;
+function isoOrNull(d) {
+  try {
+    const dt = d ? new Date(d) : null;
+    if (!dt || isNaN(dt)) return null;
+    return dt.toISOString();
+  } catch {
+    return null;
+  }
+}
 
-  const byline = pickByline(article);
-  const isBrand = byline.toLowerCase().includes('timely voice');
-  const displayName = isBrand ? 'Timely Voice News' : byline;
+function getCategoryName(article) {
+  const c = article?.category;
+  if (!c) return 'General';
+  if (typeof c === 'string') return toTitleCase(c);
+  return c?.name ? String(c.name) : 'General';
+}
 
+function getAuthorName(article) {
   return (
-    <section
-      style={{
-        marginTop: 24,
-        marginBottom: 16,
-        padding: 16,
-        borderRadius: 0,
-        border: '1px solid rgba(148,163,184,0.6)',
-        background:
-          'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,64,175,0.9))',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
-      }}
-    >
-      <div
-        style={{
-          fontFamily: 'Arial, sans-serif',
-          fontWeight: 'bold',
-          fontSize: 16,
-          color: '#e5f0ff',
-          marginBottom: 10,
-        }}
-      >
-        Reported by {displayName}
-      </div>
-
-      <p
-        style={{
-          margin: 0,
-          fontSize: 14,
-          lineHeight: 1.7,
-          color: '#cbd5f5',
-          fontFamily: 'Arial, sans-serif',
-        }}
-      >
-        Timely Voice News relies on information from government releases, regulators, courts,
-        accredited media and other publicly available sources. While editorial checks are applied
-        for accuracy, clarity and neutrality, all content is provided strictly on an “as is” basis
-        for general information and educational purposes only. It does not constitute financial,
-        legal, medical or any other professional advice. The Timely Voice, its editors and
-        contributors make no representation or warranty as to the completeness, timeliness or
-        reliability of the information and accept no liability for any loss arising from reliance
-        on it. Readers are advised to verify facts with original documents or consult a qualified
-        professional before acting on any information contained herein.
-      </p>
-    </section>
+    article?.author?.name ||
+    article?.author ||
+    article?.byline ||
+    article?.source ||
+    BRAND_NAME
   );
 }
 
-/* ----------------------------------- */
+/* ---------- Author box ---------- */
+function AuthorBox({ article }) {
+  const authorName = getAuthorName(article);
+  const createdAt = article?.createdAt || article?.publishedAt || article?.date;
+  const updatedAt = article?.updatedAt;
 
-export default function ReaderArticle() {
+  return (
+    <div className="card" style={{ padding: 14, marginTop: 16 }}>
+      <div style={{ fontWeight: 700, marginBottom: 6 }}>About the author</div>
+      <div style={{ opacity: 0.9 }}>{authorName}</div>
+      <div style={{ opacity: 0.7, marginTop: 6, fontSize: 13 }}>
+        {createdAt ? `Published: ${new Date(createdAt).toLocaleString()}` : ''}
+        {updatedAt ? ` • Updated: ${new Date(updatedAt).toLocaleString()}` : ''}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Main page ---------- */
+export default function Article() {
   const { slug } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const isMobile = useIsMobile(768); // rails hidden below 768px
 
   const [article, setArticle] = useState(null);
-  const [status, setStatus] = useState('loading'); // 'loading' | 'ok' | 'notfound'
-  const [related, setRelated] = useState([]);
-  const [reading, setReading] = useState({ minutes: 0, words: 0 });
-  const [comments, setComments] = useState([]);
+  const [status, setStatus] = useState('loading'); // loading | ok | notfound | error
+  const [errMsg, setErrMsg] = useState('');
 
-  // homepage rails plan
-  const [homeSections, setHomeSections] = useState([]);
-  const [railsLoading, setRailsLoading] = useState(true);
-  const [railsError, setRailsError] = useState('');
+  const isMobile = useIsMobile(900);
 
-  // Comments loader
-  async function loadComments(articleSlug) {
-    const { data } = await api.get(
-      `/public/articles/${encodeURIComponent(articleSlug)}/comments`,
-      { validateStatus: () => true }
-    );
-    setComments(Array.isArray(data) ? data : []);
-  }
+  const didTrackRef = useRef(false);
 
-  const bodyRef = useRef(null);
-  useReadComplete({
-    id: article?.id || article?._id,
-    slug: article?.slug,
-    title: article?.title,
-  });
+  // read complete tracking
+  useReadComplete({ enabled: true });
 
-  const canonical = useMemo(
-    () => buildCanonicalFromLocation(['article', String(slug || '').toLowerCase()]),
-    [slug]
-  );
-
-  // Ensure the initial HTML never says "Article not found" (prevents Soft 404)
+  // Fetch article
   useEffect(() => {
-    removeManagedHeadTags();
-    upsertTag('title', {}, { textContent: `Loading… — ${SITE_NAME}` });
-    upsertTag('meta', { name: 'robots', content: 'index,follow' });
-  }, [slug]);
+    let mounted = true;
 
-  /* ---------- fetch homepage rails plan for sidebars ---------- */
-  useEffect(() => {
-    let cancel = false;
-    (async () => {
-      try {
-        setRailsLoading(true);
-        const res = await api.get('/sections/plan', {
-          params: { sectionType: 'homepage' },
-          validateStatus: () => true,
-        });
-
-        if (!cancel) {
-          const rows = Array.isArray(res.data) ? res.data : [];
-          setHomeSections(rows);
-          setRailsError('');
-        }
-      } catch (e) {
-        if (!cancel) {
-          setHomeSections([]);
-          setRailsError('Failed to load rails');
-        }
-      } finally {
-        if (!cancel) setRailsLoading(false);
-      }
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, []);
-
-  /* ---------- fetch article ---------- */
-  useEffect(() => {
-    let alive = true;
-
-    (async () => {
+    async function load() {
       try {
         setStatus('loading');
+        setErrMsg('');
 
-        const res = await api.get(`/articles/slug/${encodeURIComponent(slug)}`, {
-          validateStatus: (s) => (s >= 200 && s < 300) || s === 308,
-          headers: { 'Cache-Control': 'no-cache' },
-        });
-        if (!alive) return;
+        const res = await api.get(`/articles/slug/${slug}`);
+        const a = res?.data;
 
-        if (res.status === 308 && res.data?.redirectTo) {
-          navigate(res.data.redirectTo, { replace: true });
+        if (!mounted) return;
+
+        if (!a || a?.error || a?.message === 'Article not found') {
+          setArticle(null);
+          setStatus('notfound');
           return;
         }
 
-        const doc = res.data;
-        setArticle(doc);
+        setArticle(a);
         setStatus('ok');
-
-        const bodyHtml = doc.bodyHtml || doc.body || '';
-        const rt = estimateReadingTime(bodyHtml || doc.summary || '');
-        setReading(rt);
-
-        // ---- SEO
-        removeManagedHeadTags();
-
-        const title = (doc.metaTitle && doc.metaTitle.trim()) || doc.title || 'Article';
-        const desc =
-          (doc.metaDesc && doc.metaDesc.trim()) ||
-          buildDescriptionClient({ bodyHtml, summary: doc.summary });
-
-        upsertTag('title', {}, { textContent: `${title} — ${SITE_NAME}` });
-        upsertTag('meta', {
-          name: 'description',
-          content: String(desc).slice(0, 155),
-        });
-        upsertTag('link', { rel: 'canonical', href: canonical });
-
-        // Article date metas for FB/OG/SEO
-        const publishedIso = new Date(
-          doc.publishedAt || doc.publishAt || doc.createdAt || Date.now()
-        ).toISOString();
-        const modifiedIso = new Date(
-          doc.updatedAt || doc.publishedAt || doc.publishAt || doc.createdAt || Date.now()
-        ).toISOString();
-        upsertTag('meta', {
-          property: 'article:published_time',
-          content: publishedIso,
-        });
-        upsertTag('meta', {
-          property: 'article:modified_time',
-          content: modifiedIso,
-        });
-
-        // Open Graph / Twitter
-        const ogImage = ensureRenderableImage(doc);
-
-        // Brand on social
-        upsertTag('meta', { property: 'og:site_name', content: SITE_NAME });
-
-        upsertTag('meta', { property: 'og:type', content: 'article' });
-        upsertTag('meta', { property: 'og:title', content: title });
-        upsertTag('meta', {
-          property: 'og:description',
-          content: String(desc).slice(0, 200),
-        });
-        upsertTag('meta', { property: 'og:url', content: canonical });
-        if (ogImage) upsertTag('meta', { property: 'og:image', content: ogImage });
-
-        upsertTag('meta', {
-          name: 'twitter:card',
-          content: ogImage ? 'summary_large_image' : 'summary',
-        });
-        upsertTag('meta', { name: 'twitter:title', content: title });
-        upsertTag('meta', {
-          name: 'twitter:description',
-          content: String(desc).slice(0, 200),
-        });
-        if (ogImage) upsertTag('meta', { name: 'twitter:image', content: ogImage });
-
-        // Optional author meta
-        const authorNameMeta =
-          (doc.author && String(doc.author).trim()) || 'Timely Voice News';
-        upsertTag('meta', { name: 'author', content: authorNameMeta });
-
-        // ---------- JSON-LD: Strong NewsArticle + Breadcrumb ----------
-        const categoryObj = doc.category ?? null;
-        const categoryName =
-          categoryObj && typeof categoryObj === 'object'
-            ? categoryObj.name || 'General'
-            : categoryObj || 'General';
-        const categorySlug =
-          categoryObj && typeof categoryObj === 'object'
-            ? categoryObj.slug || categoryName
-            : categoryName;
-
-        const authorName = (doc.author && String(doc.author).trim()) || 'Timely Voice News';
-
-        const authorNode = authorName.toLowerCase().includes('timely voice')
-          ? { '@type': 'Organization', name: authorName }
-          : { '@type': 'Person', name: authorName };
-
-        const publisherNode = {
-          '@type': 'Organization',
-          name: SITE_NAME,
-          url: SITE_URL,
-          logo: {
-            '@type': 'ImageObject',
-            url: SITE_LOGO,
-            width: 512,
-            height: 512,
-          },
-        };
-
-        const articleNode = {
-          '@context': 'https://schema.org',
-          '@type': 'NewsArticle',
-          mainEntityOfPage: { '@type': 'WebPage', '@id': canonical },
-          headline: doc.title,
-          description: String(desc).slice(0, 200),
-          image: ogImage ? [ogImage] : undefined,
-          datePublished: publishedIso,
-          dateModified: modifiedIso,
-          author: [authorNode],
-          publisher: publisherNode,
-          articleSection: categoryName,
-          url: canonical,
-          isAccessibleForFree: true,
-          wordCount: rt?.words || undefined,
-          timeRequired: `PT${Math.max(1, rt?.minutes || 1)}M`,
-        };
-
-        const breadcrumbNode = {
-          '@context': 'https://schema.org',
-          '@type': 'BreadcrumbList',
-          itemListElement: [
-            {
-              '@type': 'ListItem',
-              position: 1,
-              name: 'Home',
-              item: `${SITE_URL}/`,
-            },
-            ...(categoryName
-              ? [
-                  {
-                    '@type': 'ListItem',
-                    position: 2,
-                    name: categoryName,
-                    item: `${SITE_URL}/category/${encodeURIComponent(categorySlug)}`,
-                  },
-                ]
-              : []),
-            {
-              '@type': 'ListItem',
-              position: categoryName ? 3 : 2,
-              name: doc.title,
-              item: canonical,
-            },
-          ],
-        };
-
-        addJsonLd({
-          '@context': 'https://schema.org',
-          '@graph': [articleNode, breadcrumbNode],
-        });
-
-        // analytics
-        try {
-          track('page_view', {
-            view: 'article_detail',
-            article: {
-              slug: doc.slug,
-              id: doc._id || doc.id,
-              title: doc.title,
-              category: categoryName,
-              hasImage: !!ogImage,
-              reading: { minutes: rt.minutes, words: rt.words },
-            },
-          });
-        } catch {}
-
-        // related
-        try {
-          const r1 = await api.get('/articles', {
-            params: { page: 1, limit: 8, category: categoryName },
-            validateStatus: () => true,
-          });
-          let pool = (r1.data?.items || []).filter((a) => a.slug !== doc.slug);
-
-          if (pool.length < 4) {
-            const r2 = await api.get('/articles', {
-              params: { page: 1, limit: 8 },
-              validateStatus: () => true,
-            });
-            const extra = (r2.data?.items || []).filter(
-              (a) => a.slug !== doc.slug && !pool.find((p) => p.slug === a.slug)
-            );
-            pool = [...pool, ...extra];
-          }
-
-          setRelated(pool.slice(0, 4));
-        } catch {
-          setRelated([]);
-        }
-      } catch {
-        if (!alive) return;
-        setStatus('notfound');
+      } catch (e) {
+        if (!mounted) return;
+        const msg =
+          e?.response?.data?.message ||
+          e?.message ||
+          'Failed to load story. Please try again.';
+        setErrMsg(msg);
+        setStatus(e?.response?.status === 404 ? 'notfound' : 'error');
       }
-    })();
+    }
 
+    if (slug) load();
     return () => {
-      document.title = SITE_NAME;
-      removeManagedHeadTags();
-      alive = false;
+      mounted = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug, location.key, navigate]);
+  }, [slug]);
 
-  // load comments
-  useEffect(() => {
-    if (article?.slug) loadComments(article.slug);
-  }, [article?.slug]);
+  // Build canonical
+  const canonical = useMemo(() => buildCanonicalFromLocation(location), [location]);
 
-  /* ---------- derived ---------- */
-  const displayDate =
-    article?.updatedAt || article?.publishedAt || article?.publishAt || article?.createdAt;
-
-  const rawImageUrl = ensureRenderableImage(article);
-  const imageAlt = article?.imageAlt || article?.title || '';
-
-  const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
-
-  // rails: alternate right, left, right, left…
-  const rails = homeSections.filter((s) => s.template?.startsWith('rail_'));
-  const rightRails = rails.filter((_, i) => i % 2 === 0);
-
-  /* ---------- layout ---------- */
-  const outerContainer = {
-    display: 'flex',
-    justifyContent: 'center',
-    marginTop: isMobile ? 16 : 32,
-    marginBottom: isMobile ? 24 : 40,
-    fontFamily: "'Newsreader', serif",
-    position: 'relative',
-  };
-
-  const mainWrapper = {
-    display: 'flex',
-    flexDirection: isMobile ? 'column' : 'row',
-    justifyContent: 'center',
-    alignItems: isMobile ? 'stretch' : 'flex-start',
-    gap: isMobile ? 12 : 8,
-    width: '100%',
-    maxWidth: isMobile ? 640 : 1040,
-    padding: '0 12px',
-  };
-
-  const centerColumn = {
-    flex: isMobile ? '1 1 auto' : '0 0 740px',
-    width: isMobile ? '100%' : 'auto',
-  };
-
-  /* ---------- article styles ---------- */
-  const titleH1 = {
-    margin: '0 0 8px',
-    fontSize: isMobile ? 'clamp(18px, 5.5vw, 26px)' : 'clamp(18px, 2vw, 28px)',
-    lineHeight: 1.3,
-    fontWeight: 600,
-  };
-
-  const sourceRow = {
-    margin: isMobile ? '6px 0 12px' : '10px 0 20px',
-    fontSize: isMobile ? 14 : 15,
-    color: '#00ffbfff',
-    fontWeight: 500,
-  };
-
-  const timeShareBar = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: 6,
-    borderTop: '1px solid #e5e7eb',
-    borderBottom: '1px solid #e5e7eb',
-    padding: isMobile ? '10px 0' : '12px 0',
-    margin: isMobile ? '2px 0 8px' : '4px 0 8px',
-    lineHeight: 1,
-  };
-
-  const timeText = {
-    color: '#ffffffff',
-    fontSize: isMobile ? 14 : 15,
-    fontWeight: 500,
-  };
-
-  const summaryBox = {
-    background: '#003a7cff',
-    border: '0',
-    color: '#ffffff',
-    borderRadius: 0,
-    padding: isMobile ? 12 : 16,
-    fontSize: isMobile ? 17 : 18,
-    lineHeight: 1.75,
-    margin: '0 0 16px',
-    boxShadow: '0 8px 20px 0 #000, 0 0 0 1px rgba(255,255,255,0.06)',
-  };
-
-  const articleBodyWrapper = { maxWidth: '70ch', margin: '0 auto' };
-
-  const prose = {
-    fontSize: isMobile ? 19 : 'clamp(19px, 2.2vw, 22px)',
-    lineHeight: 1.9,
-    color: '#ffffffff',
-  };
-
-  // ---- BODY PREP ----
+  // Normalize body HTML
   const normalizedBody = useMemo(
-    () => normalizeBody(article?.bodyHtml || article?.body || ''),
+    () => (article?.bodyHtml || article?.body || ''),
     [article?.bodyHtml, article?.body]
   );
   const paragraphs = useMemo(() => splitParagraphs(normalizedBody), [normalizedBody]);
 
-  // Decide where to insert in-content ads
-  const shouldInsertInContentAd = (i, total) => {
-    // Only start after paragraph 2, then every 4 paragraphs
-    if (total < 3) return false;
-    if (i === 1) return true; // after 2nd paragraph
-    if (i > 1 && (i - 1) % 4 === 0) return true; // 5, 9, 13...
-    return false;
+  // Decide where to insert in-article ads (4 slots max)
+  const getInArticleSlotForIndex = (i) => {
+    // Insert AFTER paragraph #2, #6, #10, #14 (if they exist)
+    if (i === 1) return ADS_ARTICLE_INARTICLE_1; // after 2nd
+    if (i === 5) return ADS_ARTICLE_INARTICLE_2; // after 6th
+    if (i === 9) return ADS_ARTICLE_INARTICLE_3; // after 10th
+    if (i === 13) return ADS_ARTICLE_INARTICLE_4; // after 14th
+    return null;
   };
 
   // --- 404 SEO handling (must always define hooks in same order) ---
@@ -775,393 +278,309 @@ export default function ReaderArticle() {
     if (status === 'notfound') {
       removeManagedHeadTags();
       upsertTag('meta', { name: 'robots', content: 'noindex, follow' });
-      upsertTag('title', {}, { textContent: `Story not found — ${SITE_NAME}` });
+      upsertTag('title', {}, { textContent: `Story not found | ${BRAND_NAME}` });
     }
   }, [status]);
 
+  // SEO tags + JSON-LD
+  useEffect(() => {
+    if (status !== 'ok' || !article) return;
+
+    try {
+      removeManagedHeadTags();
+
+      const title = article?.title || 'Story';
+      const categoryName = getCategoryName(article);
+      const authorName = getAuthorName(article);
+
+      const desc =
+        article?.summary ||
+        buildDescriptionClient(stripHtml(article?.bodyHtml || article?.body || ''), 160) ||
+        `Read the latest story on ${BRAND_NAME}.`;
+
+      // Find best hero image
+      const hero =
+        ensureRenderableImage(article?.imageUrl || article?.image || '') ||
+        FALLBACK_HERO_IMAGE;
+
+      const ogImage = safeUrl(hero);
+
+      upsertTag('title', {}, { textContent: `${title} | ${BRAND_NAME}` });
+      upsertTag('meta', { name: 'description', content: desc });
+
+      upsertTag('link', { rel: 'canonical', href: canonical });
+
+      upsertTag('meta', { property: 'og:type', content: 'article' });
+      upsertTag('meta', { property: 'og:title', content: `${title} | ${BRAND_NAME}` });
+      upsertTag('meta', { property: 'og:description', content: desc });
+      upsertTag('meta', { property: 'og:url', content: canonical });
+      upsertTag('meta', { property: 'og:image', content: ogImage });
+
+      upsertTag('meta', { name: 'twitter:card', content: 'summary_large_image' });
+      upsertTag('meta', { name: 'twitter:title', content: `${title} | ${BRAND_NAME}` });
+      upsertTag('meta', { name: 'twitter:description', content: desc });
+      upsertTag('meta', { name: 'twitter:image', content: ogImage });
+
+      // JSON-LD NewsArticle
+      const publishedTime = isoOrNull(article?.createdAt || article?.publishedAt || article?.date);
+      const modifiedTime = isoOrNull(article?.updatedAt) || publishedTime;
+
+      const videoUrlRaw = article?.videoUrl || article?.video || '';
+      const videoUrl = videoUrlRaw ? safeUrl(toDriveDirectUrl(videoUrlRaw)) : '';
+
+      const jsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'NewsArticle',
+        mainEntityOfPage: {
+          '@type': 'WebPage',
+          '@id': canonical,
+        },
+        headline: title,
+        description: desc,
+        image: [ogImage],
+        datePublished: publishedTime || new Date().toISOString(),
+        dateModified: modifiedTime || publishedTime || new Date().toISOString(),
+        author: [
+          {
+            '@type': 'Person',
+            name: authorName,
+          },
+        ],
+        publisher: {
+          '@type': 'NewsMediaOrganization',
+          name: SITE_NAME,
+          logo: {
+            '@type': 'ImageObject',
+            url: SITE_LOGO,
+          },
+        },
+        articleSection: categoryName,
+      };
+
+      if (videoUrl) {
+        jsonLd.video = {
+          '@type': 'VideoObject',
+          name: title,
+          description: desc,
+          uploadDate: publishedTime || new Date().toISOString(),
+          contentUrl: videoUrl,
+        };
+      }
+
+      addJsonLd(jsonLd);
+    } catch (e) {
+      // no-op
+    }
+  }, [status, article, canonical]);
+
+  // Track view once
+  useEffect(() => {
+    if (status !== 'ok' || !article) return;
+    if (didTrackRef.current) return;
+    didTrackRef.current = true;
+
+    try {
+      track('article_view', {
+        slug: article?.slug || slug,
+        title: article?.title || '',
+        category: getCategoryName(article),
+      });
+    } catch {
+      // no-op
+    }
+  }, [status, article, slug]);
+
+  // Layout styles
+  const outerContainer = useMemo(
+    () => ({
+      ...styles.page,
+      paddingTop: 10,
+    }),
+    []
+  );
+
+  const mainWrapper = useMemo(
+    () => ({
+      display: 'flex',
+      gap: 16,
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+      width: '100%',
+      maxWidth: 1200,
+      margin: '0 auto',
+      padding: isMobile ? '0 10px' : '0 12px',
+    }),
+    [isMobile]
+  );
+
+  const centerColumn = useMemo(
+    () => ({
+      flex: 1,
+      minWidth: 0,
+      maxWidth: 860,
+    }),
+    []
+  );
+
+  // 404 UI
   if (status === 'notfound') {
     return (
-      <>
+      <div style={styles.page}>
         <SiteNav />
-        <main id="content" className="container">
-          <div style={{ padding: 24 }}>
-            <h1 style={{ fontWeight: 700, marginBottom: 8 }}>Story Not Available</h1>
-            <p>This story isn’t available right now. Explore the latest headlines below.</p>
-          </div>
-        </main>
+        <div className="card" style={{ maxWidth: 900, margin: '20px auto', padding: 18 }}>
+          <h1 style={{ marginTop: 0 }}>Story not found</h1>
+          <p style={{ opacity: 0.85 }}>
+            The story you’re looking for doesn’t exist or was removed.
+          </p>
+          <button className="btn" onClick={() => navigate('/')}>
+            Go home
+          </button>
+        </div>
         <SiteFooter />
-      </>
-    );
-  }
-
-  if (!article) {
-    return (
-      <>
-        <SiteNav />
-        <main id="content" className="container">
-          <div style={{ padding: 24 }}>Loading…</div>
-        </main>
-        <SiteFooter />
-      </>
+      </div>
     );
   }
 
   return (
-    <>
-      {/* Styles scoped to this page */}
+    <div style={outerContainer}>
       <style>{`
-  /* =========================
-     Article typography
-     ========================= */
-  .article-body p {
-    margin: 1.25em 0;
-    line-height: 1.85;
-    font-size: 19px;
-    color: #e8ecf1;
-  }
+  /* Make sure video/hero doesn't cause odd overflow */
+  .article-hero img { max-width: 100%; height: auto; display: block; }
 
-  .article-body p:first-of-type::first-letter {
-    font-size: 2.6em;
-    font-weight: 700;
-    float: left;
-    line-height: 1;
-    margin-right: 8px;
-    color: #00bfff;
-  }
+  /* Prevent long words/urls from breaking layout */
+  .article-body { overflow-wrap: anywhere; word-break: break-word; }
 
-  /* MAIN HEADLINES (h2) – orange highlight bar */
-  .article-body h2 {
-    font-size: 22px;
-    margin-top: 1.8em;
-    margin-bottom: 0.8em;
-    padding: 6px 10px;
-    color: #000000;
-    background-color: #ff9800;
-    display: inline-block;
-    border-radius: 3px;
-    border-left: none;
-  }
-
-  /* Optional: smaller subheads (h3) – lighter style */
-  .article-body h3 {
-    font-size: 19px;
-    margin-top: 1.6em;
-    margin-bottom: 0.6em;
-    color: #ffdd73;
-  }
-
-  .article-body a {
-    color: #61dafb;
-    text-decoration: underline;
-  }
-
-  .article-body blockquote {
-    border-left: 4px solid #00bfff;
-    padding-left: 12px;
-    margin: 1.6em 0;
-    font-style: italic;
-    color: #d4d4d4;
-  }
-
-  /* INLINE HIGHLIGHT: yellow for important words */
-  .article-body .hl-key,
-  .article-body mark {
-    background-color: #ffe766;
-    color: #000000;
-    padding: 0 2px;
-    border-radius: 2px;
-  }
-
-  /* INLINE HERO IMAGE – FLOAT LEFT ON DESKTOP */
-  .article-hero-inline {
-    float: left;
-    width: 40%;
-    max-width: 320px;
-    margin: 0 18px 10px 0;
-  }
-
-  /* Bigger HERO when it's a video */
-  .article-hero-inline.article-hero-video {
-    width: 62%;
-    max-width: 520px;
-  }
-
-  .article-hero-inline img {
-    display: block;
-    width: 100%;
-    height: auto;
-    border-radius: 1px;
-    background: #f1f5f9;
-  }
-
-  .article-hero-inline video {
-    display: block;
-    width: 100%;
-    height: auto;
-    border-radius: 1px;
-    background: #000;
-    object-fit: cover;
-  }
-
-  .article-hero-inline figcaption {
-    color: #64748b;
-    font-size: 14px;
-    margin-top: 4px;
-  }
-
-  @media (max-width: 767px) {
-    .article-hero-inline {
-      float: none;
-      width: 100%;
-      max-width: 100%;
-      margin: 0 0 12px 0;
-    }
-
-    .article-hero-inline.article-hero-video {
-      width: 100%;
-      max-width: 100%;
-    }
-  }
-
-  /* =========================
-     ✅ ADS: Never squeezed, full-bleed option on mobile
-     ========================= */
-  .article-body .ad-slot {
-    clear: both;               /* key: prevents float squeezing */
-    width: 100%;
-    display: block;
-    margin: 18px 0;
-  }
-
-  .article-body .ad-slot ins.adsbygoogle {
-    display: block !important;
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  .article-body .ad-slot iframe {
-    max-width: 100% !important;
-  }
-
-  /* ✅ full-screen / edge-to-edge on mobile */
-  .article-body .ad-slot--fullbleed {
-    width: 100vw;
-    max-width: 100vw;
-    margin-left: calc(50% - 50vw);
-    margin-right: calc(50% - 50vw);
-    padding-left: 0;
-    padding-right: 0;
-  }
-
-  /* Optional: give the ad a tiny breathing space on mobile edges */
-  @media (max-width: 767px) {
-    .article-body .ad-slot--fullbleed {
-      padding: 0 8px;
-      box-sizing: border-box;
-    }
-  }
-
-  /* =========================
-     ✅ Desktop Page-Skin ads (left/right)
-     ========================= */
-  .skin-ad {
-    position: fixed;
-    top: 120px;               /* below your header/nav */
-    width: 160px;             /* typical skyscraper width */
-    height: 600px;            /* typical skyscraper height */
-    z-index: 40;
-  }
-
-  .skin-ad--left { left: 10px; }
-  .skin-ad--right { right: 10px; }
-
-  /* Hide skins on small screens + on narrow desktop where it would overlap content */
-  @media (max-width: 1200px) {
-    .skin-ad { display: none !important; }
-  }
+  /* In-article ad spacing */
+  .tv-inarticle-ad{ margin: 14px 0; }
+  @media (max-width: 768px){ .tv-inarticle-ad{ margin: 12px 0; } }
 `}</style>
 
       <SiteNav />
-
-      {/* Desktop skins (only render on non-mobile; CSS also hides under 1200px) */}
-      {!isMobile && (
-        <>
-          <SideSkinAd side="left" slot={ADS_ARTICLE_SKIN_LEFT} />
-          <SideSkinAd side="right" slot={ADS_ARTICLE_SKIN_RIGHT} />
-        </>
-      )}
 
       <div style={outerContainer}>
         <div style={mainWrapper}>
           {/* CENTER ARTICLE */}
           <main style={centerColumn}>
-            <article
-              className="card"
-              style={{
-                ...styles.card,
-                padding: isMobile ? 12 : 16,
-                marginTop: 0,
-                backgroundColor: '#001236ff',
-                color: '#FFFFFF',
-                border: 'none',
-                boxShadow: '0 0 0 0 transparent',
-              }}
-            >
-              <h1 style={titleH1}>{article.title}</h1>
+            <article className="card" style={{ padding: isMobile ? 14 : 18 }}>
+              {status === 'loading' && (
+                <div style={{ padding: 8, opacity: 0.8 }}>Loading story…</div>
+              )}
 
-              <div style={sourceRow}>By {pickByline(article)}</div>
+              {status === 'error' && (
+                <div style={{ padding: 8 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Something went wrong</div>
+                  <div style={{ opacity: 0.85 }}>{errMsg}</div>
+                </div>
+              )}
 
-              <div style={timeShareBar}>
-                <small style={timeText}>
-                  {displayDate ? `Updated on: ${new Date(displayDate).toLocaleString()}` : ''}
-                  {reading.minutes ? (
-                    <>
-                      {' • '}
-                      <span
-                        style={{
-                          color: '#ee6affff',
-                          fontWeight: 500,
-                          fontSize: isMobile ? 16 : 18,
-                        }}
-                      >
-                        {reading.minutes} min read
-                      </span>
-                    </>
-                  ) : (
-                    ''
-                  )}
-                </small>
-              </div>
+              {status === 'ok' && article && (
+                <>
+                  <header>
+                    <h1 style={{ margin: '0 0 10px 0', lineHeight: 1.15 }}>
+                      {article.title}
+                    </h1>
 
-              {article.summary && <div style={summaryBox}>{article.summary}</div>}
+                    <div style={{ opacity: 0.7, fontSize: 13, marginBottom: 10 }}>
+                      {getCategoryName(article)} •{' '}
+                      {article?.createdAt
+                        ? new Date(article.createdAt).toLocaleString()
+                        : ''}
+                    </div>
 
-              {/* Inline hero floated left inside article body */}
-              <div ref={bodyRef} className="article-body" style={{ ...prose, ...articleBodyWrapper }}>
-                {/* If video exists, it REPLACES the hero image */}
-                {(() => {
-                  const playable = toPlayableVideoSrc(article?.videoUrl);
+                    {/* HERO IMAGE */}
+                    {ensureRenderableImage(article?.imageUrl || article?.image || '') && (
+                      <div className="article-hero" style={{ marginBottom: 12 }}>
+                        <img
+                          src={ensureRenderableImage(article?.imageUrl || article?.image || '')}
+                          alt={article.title || 'Story image'}
+                          style={{
+                            width: '100%',
+                            maxHeight: 420,
+                            objectFit: 'cover',
+                            borderRadius: 10,
+                          }}
+                          loading="eager"
+                        />
+                      </div>
+                    )}
 
-                  if (playable) {
-                    return (
-                      <figure className="article-hero-inline article-hero-video">
+                    {/* VIDEO (if present) */}
+                    {article?.videoUrl && (
+                      <div style={{ marginBottom: 12 }}>
                         <video
-                          src={playable}
-                          autoPlay
-                          loop
-                          muted
+                          src={toDriveDirectUrl(article.videoUrl)}
+                          controls
                           playsInline
                           preload="metadata"
+                          style={{
+                            width: '100%',
+                            borderRadius: 10,
+                            background: '#000',
+                          }}
                         />
-                      </figure>
-                    );
-                  }
+                      </div>
+                    )}
 
-                  if (!heroSrc) return null;
+                    {/* SUMMARY */}
+                    {article?.summary && (
+                      <p style={{ marginTop: 0, opacity: 0.9, fontSize: 16 }}>
+                        {article.summary}
+                      </p>
+                    )}
+                  </header>
 
-                  return (
-                    <figure className="article-hero-inline">
-                      <img
-                        src={heroSrc}
-                        alt={imageAlt || 'The Timely Voice'}
-                        fetchPriority="high"
-                        decoding="async"
-                        loading="eager"
-                        width="640"
-                        height="360"
-                        onError={(e) => {
-                          if (e.currentTarget.dataset.fallback !== '1') {
-                            e.currentTarget.dataset.fallback = '1';
-                            e.currentTarget.src = FALLBACK_HERO_IMAGE;
-                          }
-                        }}
-                      />
-                      {article.imageAlt ? <figcaption>{article.imageAlt}</figcaption> : null}
-                    </figure>
-                  );
-                })()}
-
-                {/* ✅ In-content ads: after paragraph 2, then every 4 paras.
-                    ✅ On mobile: full-bleed (edge-to-edge).
-                    ✅ On desktop: normal width inside the article column.
-                */}
-                {paragraphs.length === 0
-                  ? null
-                  : paragraphs.map((html, i) => (
+                  {/* BODY */}
+                  <div className="article-body" style={{ marginTop: 14 }}>
+                    {paragraphs.map((html, i) => (
                       <div key={`p-${i}`}>
                         <div dangerouslySetInnerHTML={{ __html: html }} />
 
-                        {shouldInsertInContentAd(i, paragraphs.length) && (
-                          <AdSlot
-                            slotId={`article-incontent-${i}`}
-                            slot={isMobile ? ADS_ARTICLE_INCONTENT_MOBILE : ADS_ARTICLE_INCONTENT_DESKTOP}
-                            isMobile={isMobile}
-                            fullBleedOnMobile={true}
-                            minHeight={isMobile ? 250 : 90}
-                          />
-                        )}
+                        {(() => {
+                          const slot = getInArticleSlotForIndex(i);
+                          return slot ? (
+                            <InArticleAd id={`article-inarticle-${i}`} slot={slot} />
+                          ) : null;
+                        })()}
                       </div>
                     ))}
+                  </div>
 
-                {/* Optional: one more ad after content if article is long */}
-                {paragraphs.length >= 10 && (
-                  <AdSlot
-                    slotId="article-incontent-end"
-                    slot={isMobile ? ADS_ARTICLE_INCONTENT_MOBILE : ADS_ARTICLE_INCONTENT_DESKTOP}
-                    isMobile={isMobile}
-                    fullBleedOnMobile={true}
-                    minHeight={isMobile ? 250 : 90}
+                  <AuthorBox article={article} />
+
+                  <RelatedStories
+                    currentSlug={article.slug}
+                    category={
+                      article?.category?.name ??
+                      (typeof article?.category === 'string' ? article.category : 'General')
+                    }
+                    title="Related stories"
+                    dense={false}
                   />
-                )}
-              </div>
-
-              <AuthorBox article={article} />
-
-              <RelatedStories
-                currentSlug={article.slug}
-                category={
-                  article?.category?.name ??
-                  (typeof article?.category === 'string' ? article.category : 'General')
-                }
-                title="Related stories"
-                dense={false}
-              />
+                </>
+              )}
             </article>
 
-            {/* Leave a comment MUST be the last visible section */}
-            <section style={{ marginTop: 24 }}>
-              <CommentForm slug={article.slug} onSubmitted={() => loadComments(article.slug)} />
-              <CommentThread comments={comments} />
-            </section>
+            {/* Comments */}
+            {status === 'ok' && article && (
+              <div className="card" style={{ padding: 18, marginTop: 16 }}>
+                <div style={{ fontWeight: 800, marginBottom: 10 }}>Comments</div>
+                <CommentForm articleId={article._id} />
+                <div style={{ height: 12 }} />
+                <CommentThread articleId={article._id} />
+              </div>
+            )}
           </main>
 
-          {/* RIGHT RAILS (even indices) — hidden on mobile */}
+          {/* Right rail (sections) */}
           {!isMobile && (
-            <aside style={{ flex: '0 0 260px' }}>
-              <div className="rail-wrap" style={{ display: 'flow-root', marginTop: 0, paddingTop: 0 }}>
-                {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-                {!railsLoading && railsError && (
-                  <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>
-                )}
-                {!railsLoading &&
-                  !railsError &&
-                  homeSections
-                    .filter((s) => s.template?.startsWith('rail_'))
-                    .filter((_, i) => i % 2 === 0)
-                    .map((sec, i) => (
-                      <div
-                        key={sec.id || sec._id || sec.slug}
-                        style={{ marginTop: i === 0 ? 0 : 12 }}
-                      >
-                        <SectionRenderer section={sec} />
-                      </div>
-                    ))}
-              </div>
+            <aside style={{ width: 320 }}>
+              <SectionRenderer variant="rail" />
             </aside>
           )}
         </div>
       </div>
 
       <SiteFooter />
-    </>
+    </div>
   );
 }
