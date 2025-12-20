@@ -8,7 +8,7 @@ import { removeManagedHeadTags, upsertTag, setJsonLd } from "../../lib/seoHead.j
 import SiteNav from "../../components/SiteNav.jsx";
 import SiteFooter from "../../components/SiteFooter.jsx";
 import SectionRenderer from "../../components/sections/SectionRenderer.jsx";
-import "../../styles/rails.css";
+import "../../styles/category.css";
 
 import { ensureRenderableImage } from "../../lib/images.js";
 
@@ -935,9 +935,11 @@ export default function CategoryPage() {
     );
 
   return (
-    <>
-      <SiteNav />
+  <>
+    <SiteNav />
 
+    {/* ✅ NEW: full-width guard wrapper to prevent squeeze */}
+    <div className="category-container">
       <div style={pageWrap}>
         {headBlocks.map((sec) => (
           <div
@@ -954,16 +956,20 @@ export default function CategoryPage() {
             {/* ================= LEFT RAIL ================= */}
             <aside style={railCol} ref={leftAsideRef}>
               {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-              {!railsLoading && railsError && <div style={{ padding: 8, color: "crimson" }}>{railsError}</div>}
+              {!railsLoading && railsError && (
+                <div style={{ padding: 8, color: "crimson" }}>{railsError}</div>
+              )}
               {!railsLoading && !railsError && (
                 <div ref={leftRailRef} style={leftRailStyle}>
-                  {/* ✅ NEW: AdSense vertical rail ad (top) */}
                   <div style={{ marginBottom: 12 }}>
                     <AdSenseAuto slot={ADS_SLOT_LEFT_RAIL} />
                   </div>
 
                   {leftRails.map((sec, i) => (
-                    <div key={sec._id || sec.id || sec.slug || i} style={{ marginTop: i === 0 ? 0 : 12 }}>
+                    <div
+                      key={sec._id || sec.id || sec.slug || i}
+                      style={{ marginTop: i === 0 ? 0 : 12 }}
+                    >
                       <SectionRenderer section={sec} />
                     </div>
                   ))}
@@ -1001,8 +1007,8 @@ export default function CategoryPage() {
                       <h1>{categoryCopy.displayName}</h1>
                       {renderCategoryIntro()}
                       <p style={{ marginTop: 8, textAlign: "center" }}>
-                        New stories will appear here soon. For now, visit our <Link to="/top-news">Top News</Link> or{" "}
-                        <Link to="/world">World</Link> sections.
+                        New stories will appear here soon. For now, visit our{" "}
+                        <Link to="/top-news">Top News</Link> or <Link to="/world">World</Link> sections.
                       </p>
                     </>
                   ) : (
@@ -1073,16 +1079,20 @@ export default function CategoryPage() {
             {/* ================= RIGHT RAIL ================= */}
             <aside style={railCol} ref={rightAsideRef}>
               {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-              {!railsLoading && railsError && <div style={{ padding: 8, color: "crimson" }}>{railsError}</div>}
+              {!railsLoading && railsError && (
+                <div style={{ padding: 8, color: "crimson" }}>{railsError}</div>
+              )}
               {!railsLoading && !railsError && (
                 <div ref={rightRailRef} style={rightRailStyle}>
-                  {/* ✅ NEW: AdSense vertical rail ad (top) */}
                   <div style={{ marginBottom: 12 }}>
                     <AdSenseAuto slot={ADS_SLOT_RIGHT_RAIL} />
                   </div>
 
                   {rightRails.map((sec, i) => (
-                    <div key={sec._id || sec.id || sec.slug || i} style={{ marginTop: i === 0 ? 0 : 12 }}>
+                    <div
+                      key={sec._id || sec.id || sec.slug || i}
+                      style={{ marginTop: i === 0 ? 0 : 12 }}
+                    >
                       <SectionRenderer section={sec} />
                     </div>
                   ))}
@@ -1100,8 +1110,8 @@ export default function CategoryPage() {
                 <h1>{categoryCopy.displayName}</h1>
                 {renderCategoryIntro()}
                 <p style={{ marginTop: 8 }}>
-                  We’re updating this section. You can read our latest <Link to="/top-news">top stories</Link> in the
-                  meantime.
+                  We’re updating this section. You can read our latest{" "}
+                  <Link to="/top-news">top stories</Link> in the meantime.
                 </p>
               </>
             )}
@@ -1121,8 +1131,8 @@ export default function CategoryPage() {
                     <h1>{categoryCopy.displayName}</h1>
                     {renderCategoryIntro()}
                     <p style={{ marginTop: 8, textAlign: "center" }}>
-                      New articles for this category are coming soon. Check <Link to="/top-news">Top News</Link> or{" "}
-                      <Link to="/world">World</Link> while you wait.
+                      New articles for this category are coming soon. Check{" "}
+                      <Link to="/top-news">Top News</Link> or <Link to="/world">World</Link> while you wait.
                     </p>
                   </>
                 ) : (
@@ -1161,7 +1171,7 @@ export default function CategoryPage() {
                               </>
                             )}
                           </div>
-                        ) : null // ✅ rails never show here because SHOW_RAILS_ON_MOBILE = false
+                        ) : null
                       )}
                     </div>
 
@@ -1190,8 +1200,10 @@ export default function CategoryPage() {
           </div>
         )}
       </div>
+    </div>
 
-      <SiteFooter />
-    </>
-  );
+    <SiteFooter />
+  </>
+);
+
 }

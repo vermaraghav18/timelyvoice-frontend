@@ -1,0 +1,7 @@
+/* Full-width container for category pages to avoid squeeze with PageShell side skins */
+.category-container{
+  max-width: 100%;
+  width: 100%;
+  margin: 0 auto;
+  min-width: 0;
+}

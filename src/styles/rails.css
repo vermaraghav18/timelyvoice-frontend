@@ -4,7 +4,8 @@
 
 /* ----- Rails layout wrapper (same page width as other modules) ----- */
 .home-rails{
-  max-width: 980px;
+  max-width: 100%;
+  min-width: 0;
   margin: 1px auto;
   padding: 0;
   font-family: 'Newsreader', serif; /* no inner gutter */
