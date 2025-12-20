@@ -270,14 +270,18 @@ const pageWrap = {
 
 const gridWrap = {
   width: "100%",
-  maxWidth: 1200,
+  maxWidth: 1500,          // ✅ was 1200 (too small for 3 columns)
   padding: "0 12px",
   display: "grid",
   gridTemplateColumns: "260px minmax(0, 1fr) 260px",
   gap: 16,
 };
 
-const singleColWrap = { width: "100%", maxWidth: 1200, padding: "0 12px" };
+const singleColWrap = {
+  width: "100%",
+  maxWidth: 1200,          // ✅ keep single column at 1200 (nice readable)
+  padding: "0 12px",
+};
 
 const railCol = { minWidth: 0, position: "relative" };
 const mainCol = { minWidth: 0 };
@@ -585,14 +589,14 @@ export default function CategoryPage() {
   );
 
   const [isNarrow, setIsNarrow] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 1100px)").matches : false
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 1400px)").matches : false
   );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const mqMobile = window.matchMedia("(max-width: 720px)");
-    const mqNarrow = window.matchMedia("(max-width: 1100px)");
+    const mqNarrow = window.matchMedia("(max-width: 1400px)");
 
     const onMobile = (e) => setIsMobile(e.matches);
     const onNarrow = (e) => setIsNarrow(e.matches);
