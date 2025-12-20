@@ -738,13 +738,31 @@ export default function ReaderArticle() {
   const paragraphs = useMemo(() => splitParagraphs(normalizedBody), [normalizedBody]);
 
   // ✅ Insert 4 in-article ads after paragraph 2, 6, 10, 14 (if available)
-  const inArticleSlotAfterIndex = (i) => {
-    if (i === 1) return ADS_INARTICLE_1;  // after 2nd paragraph
-    if (i === 5) return ADS_INARTICLE_2;  // after 6th
-    if (i === 9) return ADS_INARTICLE_3;  // after 10th
-    if (i === 13) return ADS_INARTICLE_4; // after 14th
-    return null;
-  };
+ const inArticleSlotAfterIndex = (i, total) => {
+  // 1 paragraph → 2 ads
+  if (total === 1) {
+    if (i === 0) return ADS_INARTICLE_1; // after para 1
+    if (i === total - 1) return ADS_INARTICLE_2; // end
+  }
+
+  // 2–3 paragraphs → 3 ads
+  if (total >= 2 && total <= 3) {
+    if (i === 0) return ADS_INARTICLE_1; // after para 1
+    if (i === 1) return ADS_INARTICLE_2; // after para 2
+    if (i === total - 1) return ADS_INARTICLE_3; // end
+  }
+
+  // 4+ paragraphs → 4 ads
+  if (total >= 4) {
+    if (i === 0) return ADS_INARTICLE_1; // after para 1
+    if (i === 1) return ADS_INARTICLE_2; // after para 2
+    if (i === 2) return ADS_INARTICLE_3; // after para 3
+    if (i === 3) return ADS_INARTICLE_4; // after para 4
+  }
+
+  return null;
+};
+
 
   // --- 404 SEO handling (must always define hooks in same order) ---
   useEffect(() => {
