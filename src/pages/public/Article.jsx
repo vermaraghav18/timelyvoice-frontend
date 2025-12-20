@@ -28,17 +28,15 @@ import '../../styles/rails.css';
 import { ensureRenderableImage } from '../../lib/images';
 
 /* =========================================================
-   AdSense slots (from your screenshots)
+   ✅ AdSense (ONLY In-article Fluid ads for Article page)
    ========================================================= */
 const ADS_CLIENT = 'ca-pub-8472487092329023';
 
-// Side “page skin” (desktop only)
-const ADS_ARTICLE_SKIN_LEFT = '4645299855';
-const ADS_ARTICLE_SKIN_RIGHT = '9565635808';
-
-// In-content
-const ADS_ARTICLE_INCONTENT_DESKTOP = '9270940575';
-const ADS_ARTICLE_INCONTENT_MOBILE = '4494817112';
+// ✅ Your new In-article (fluid) slots
+const ADS_INARTICLE_1 = '6745877256';
+const ADS_INARTICLE_2 = '2220308886';
+const ADS_INARTICLE_3 = '7281063871';
+const ADS_INARTICLE_4 = '5967982203';
 
 /* ---------------- AdSense helpers ---------------- */
 function pushAd() {
@@ -62,25 +60,25 @@ function useIsMobile(breakpoint = 768) {
   return isMobile;
 }
 
-/** Ad unit component
- * - On mobile: can render “full-bleed” (100vw) using wrapper class
- * - Always clears floats so it never gets squeezed by the floated hero
+/** ✅ In-article (fluid) Ad unit
+ * - No <script> tags in React
+ * - Clears float so it never gets squeezed by floated hero
+ * - Optional full-bleed wrapper on mobile
  */
-function AdSlot({
+function InArticleAd({
   slotId,
   slot,
   client = ADS_CLIENT,
   fullBleedOnMobile = false,
   isMobile = false,
-  minHeight = 90,
 }) {
   useEffect(() => {
     pushAd();
   }, []);
 
   const wrapClass = [
-    'ad-slot',
-    fullBleedOnMobile && isMobile ? 'ad-slot--fullbleed' : '',
+    'tv-inarticle-wrap',
+    fullBleedOnMobile && isMobile ? 'tv-inarticle-wrap--fullbleed' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -89,34 +87,12 @@ function AdSlot({
     <div className={wrapClass} aria-label="Advertisement">
       <ins
         className="adsbygoogle"
-        style={{ display: 'block', width: '100%', minHeight, textAlign: 'center' }}
+        style={{ display: 'block', textAlign: 'center' }}
+        data-ad-layout="in-article"
+        data-ad-format="fluid"
         data-ad-client={client}
         data-ad-slot={slot}
-        data-ad-format="auto"
-        data-full-width-responsive="true"
         id={slotId}
-      />
-    </div>
-  );
-}
-
-/** Side skin ad (desktop only) */
-function SideSkinAd({ side = 'left', slot, client = ADS_CLIENT }) {
-  useEffect(() => {
-    pushAd();
-  }, []);
-
-  const cls = side === 'left' ? 'skin-ad skin-ad--left' : 'skin-ad skin-ad--right';
-
-  return (
-    <div className={cls} aria-label={`Advertisement ${side}`}>
-      <ins
-        className="adsbygoogle"
-        style={{ display: 'block', width: '100%', height: '100%' }}
-        data-ad-client={client}
-        data-ad-slot={slot}
-        data-ad-format="auto"
-        data-full-width-responsive="true"
       />
     </div>
   );
@@ -761,13 +737,13 @@ export default function ReaderArticle() {
   );
   const paragraphs = useMemo(() => splitParagraphs(normalizedBody), [normalizedBody]);
 
-  // Decide where to insert in-content ads
-  const shouldInsertInContentAd = (i, total) => {
-    // Only start after paragraph 2, then every 4 paragraphs
-    if (total < 3) return false;
-    if (i === 1) return true; // after 2nd paragraph
-    if (i > 1 && (i - 1) % 4 === 0) return true; // 5, 9, 13...
-    return false;
+  // ✅ Insert 4 in-article ads after paragraph 2, 6, 10, 14 (if available)
+  const inArticleSlotAfterIndex = (i) => {
+    if (i === 1) return ADS_INARTICLE_1;  // after 2nd paragraph
+    if (i === 5) return ADS_INARTICLE_2;  // after 6th
+    if (i === 9) return ADS_INARTICLE_3;  // after 10th
+    if (i === 13) return ADS_INARTICLE_4; // after 14th
+    return null;
   };
 
   // --- 404 SEO handling (must always define hooks in same order) ---
@@ -924,27 +900,27 @@ export default function ReaderArticle() {
   }
 
   /* =========================
-     ✅ ADS: Never squeezed, full-bleed option on mobile
+     ✅ In-article Ads (fluid)
      ========================= */
-  .article-body .ad-slot {
-    clear: both;               /* key: prevents float squeezing */
+  .article-body .tv-inarticle-wrap{
+    clear: both; /* critical: prevents float squeeze from hero */
     width: 100%;
     display: block;
     margin: 18px 0;
   }
 
-  .article-body .ad-slot ins.adsbygoogle {
+  .article-body .tv-inarticle-wrap ins.adsbygoogle{
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
   }
 
-  .article-body .ad-slot iframe {
+  .article-body .tv-inarticle-wrap iframe{
     max-width: 100% !important;
   }
 
-  /* ✅ full-screen / edge-to-edge on mobile */
-  .article-body .ad-slot--fullbleed {
+  /* Optional: edge-to-edge on mobile (keeps ads feeling app-like) */
+  .article-body .tv-inarticle-wrap--fullbleed{
     width: 100vw;
     max-width: 100vw;
     margin-left: calc(50% - 50vw);
@@ -953,43 +929,15 @@ export default function ReaderArticle() {
     padding-right: 0;
   }
 
-  /* Optional: give the ad a tiny breathing space on mobile edges */
   @media (max-width: 767px) {
-    .article-body .ad-slot--fullbleed {
+    .article-body .tv-inarticle-wrap--fullbleed{
       padding: 0 8px;
       box-sizing: border-box;
     }
   }
-
-  /* =========================
-     ✅ Desktop Page-Skin ads (left/right)
-     ========================= */
-  .skin-ad {
-    position: fixed;
-    top: 120px;               /* below your header/nav */
-    width: 160px;             /* typical skyscraper width */
-    height: 600px;            /* typical skyscraper height */
-    z-index: 40;
-  }
-
-  .skin-ad--left { left: 10px; }
-  .skin-ad--right { right: 10px; }
-
-  /* Hide skins on small screens + on narrow desktop where it would overlap content */
-  @media (max-width: 1200px) {
-    .skin-ad { display: none !important; }
-  }
 `}</style>
 
       <SiteNav />
-
-      {/* Desktop skins (only render on non-mobile; CSS also hides under 1200px) */}
-      {!isMobile && (
-        <>
-          <SideSkinAd side="left" slot={ADS_ARTICLE_SKIN_LEFT} />
-          <SideSkinAd side="right" slot={ADS_ARTICLE_SKIN_RIGHT} />
-        </>
-      )}
 
       <div style={outerContainer}>
         <div style={mainWrapper}>
@@ -1036,7 +984,11 @@ export default function ReaderArticle() {
               {article.summary && <div style={summaryBox}>{article.summary}</div>}
 
               {/* Inline hero floated left inside article body */}
-              <div ref={bodyRef} className="article-body" style={{ ...prose, ...articleBodyWrapper }}>
+              <div
+                ref={bodyRef}
+                className="article-body"
+                style={{ ...prose, ...articleBodyWrapper }}
+              >
                 {/* If video exists, it REPLACES the hero image */}
                 {(() => {
                   const playable = toPlayableVideoSrc(article?.videoUrl);
@@ -1080,38 +1032,26 @@ export default function ReaderArticle() {
                   );
                 })()}
 
-                {/* ✅ In-content ads: after paragraph 2, then every 4 paras.
-                    ✅ On mobile: full-bleed (edge-to-edge).
-                    ✅ On desktop: normal width inside the article column.
-                */}
+                {/* ✅ ONLY In-article (fluid) ads inserted at fixed positions */}
                 {paragraphs.length === 0
                   ? null
-                  : paragraphs.map((html, i) => (
-                      <div key={`p-${i}`}>
-                        <div dangerouslySetInnerHTML={{ __html: html }} />
+                  : paragraphs.map((html, i) => {
+                      const slot = inArticleSlotAfterIndex(i);
+                      return (
+                        <div key={`p-${i}`}>
+                          <div dangerouslySetInnerHTML={{ __html: html }} />
 
-                        {shouldInsertInContentAd(i, paragraphs.length) && (
-                          <AdSlot
-                            slotId={`article-incontent-${i}`}
-                            slot={isMobile ? ADS_ARTICLE_INCONTENT_MOBILE : ADS_ARTICLE_INCONTENT_DESKTOP}
-                            isMobile={isMobile}
-                            fullBleedOnMobile={true}
-                            minHeight={isMobile ? 250 : 90}
-                          />
-                        )}
-                      </div>
-                    ))}
-
-                {/* Optional: one more ad after content if article is long */}
-                {paragraphs.length >= 10 && (
-                  <AdSlot
-                    slotId="article-incontent-end"
-                    slot={isMobile ? ADS_ARTICLE_INCONTENT_MOBILE : ADS_ARTICLE_INCONTENT_DESKTOP}
-                    isMobile={isMobile}
-                    fullBleedOnMobile={true}
-                    minHeight={isMobile ? 250 : 90}
-                  />
-                )}
+                          {slot && (
+                            <InArticleAd
+                              slotId={`tv-inarticle-${i}`}
+                              slot={slot}
+                              isMobile={isMobile}
+                              fullBleedOnMobile={true}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
               </div>
 
               <AuthorBox article={article} />
@@ -1137,7 +1077,10 @@ export default function ReaderArticle() {
           {/* RIGHT RAILS (even indices) — hidden on mobile */}
           {!isMobile && (
             <aside style={{ flex: '0 0 260px' }}>
-              <div className="rail-wrap" style={{ display: 'flow-root', marginTop: 0, paddingTop: 0 }}>
+              <div
+                className="rail-wrap"
+                style={{ display: 'flow-root', marginTop: 0, paddingTop: 0 }}
+              >
                 {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
                 {!railsLoading && railsError && (
                   <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>
