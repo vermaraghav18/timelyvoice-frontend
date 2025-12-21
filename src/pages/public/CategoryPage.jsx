@@ -156,6 +156,7 @@ function getCategoryCopy(slug, category) {
     displayName: baseName,
     metaTitle: overrides.metaTitle || fallbackMetaTitle,
     metaDescription: overrides.metaDescription || fallbackMetaDescription,
+    // ✅ keep intro in data (SEO copy), but we will NOT render it on page
     intro: overrides.intro || fallbackIntro,
   };
 }
@@ -703,21 +704,6 @@ export default function CategoryPage() {
     ));
   };
 
-  const renderCategoryIntro = () =>
-    categoryCopy.intro && (
-      <p
-        style={{
-          margin: "4px 0 12px",
-          fontSize: 15,
-          lineHeight: 1.7,
-          color: "#cbd5ff",
-          maxWidth: "70ch",
-        }}
-      >
-        {categoryCopy.intro}
-      </p>
-    );
-
   return (
     <>
       <SiteNav />
@@ -740,7 +726,6 @@ export default function CategoryPage() {
             {!loading && notFound && (
               <>
                 <h1>{categoryCopy.displayName}</h1>
-                {renderCategoryIntro()}
                 <p style={{ marginTop: 8 }}>
                   We’re updating this section. You can read our latest{" "}
                   <Link to="/top-news">top stories</Link> in the meantime.
@@ -756,12 +741,9 @@ export default function CategoryPage() {
                   </div>
                 ))}
 
-                {renderCategoryIntro()}
-
                 {!articles || articles.length === 0 ? (
                   <>
                     <h1>{categoryCopy.displayName}</h1>
-                    {renderCategoryIntro()}
                     <p style={{ marginTop: 8, textAlign: "center" }}>
                       New articles for this category are coming soon. Check{" "}
                       <Link to="/top-news">Top News</Link> or <Link to="/world">World</Link> while you wait.
