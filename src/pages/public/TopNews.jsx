@@ -136,15 +136,21 @@ const CAT_COLORS = {
 };
 
 function getCategoryName(a) {
-  // Works for: {categoryName}, {category: {name}}, {categorySlug}, etc.
+  // Works for: { category: "Business" }, {categoryName}, {category: {name}}, {categorySlug}, etc.
+  if (a?.category && typeof a.category === "string" && a.category.trim()) {
+    const s = String(a.category).trim();
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
   if (a?.categoryName) return String(a.categoryName);
   if (a?.category?.name) return String(a.category.name);
   if (a?.categorySlug) {
-    const s = String(a.categorySlug);
+    const s = String(a.categorySlug).trim();
+    if (!s) return "World";
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
   return "World";
 }
+
 
 /* ---------- Cloudinary optimizer ---------- */
 function optimizeCloudinary(url, width = 520) {

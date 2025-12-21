@@ -1,3 +1,6 @@
+/* ✅ PT Serif (title only) */
+@import url("https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&display=swap");
+
 /* ---------- Page-skin layout (TopNews) ---------- */
 .tn-shell{
   position: relative;
@@ -43,8 +46,9 @@
 .tn-ad{
   list-style: none;
   background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 1px;
+  border: 1px solid #000;                /* crisp black border */
+  border-radius: 0 !important;           /* 0 corner radius */
+  box-shadow: 4px 4px 0 #000 !important; /* solid shadow, no blur */
   padding: 12px;
 }
 
@@ -98,8 +102,11 @@
   align-items: stretch;
   gap: 12px;
   background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 1px;
+
+  border: 1px solid #000;                /* crisp black border */
+  border-radius: 0 !important;           /* 0 corner radius */
+  box-shadow: 4px 4px 0 #000 !important; /* solid black shadow (no blur) */
+
   padding: 12px;
   color: #fff;
 }
@@ -109,15 +116,52 @@
   grid-area: left;
 }
 
+/* ================================
+   TITLE (PT Serif style — title only)
+   Divider below title (full width)
+   ================================ */
 .tn-item-title {
+  /* PT Serif headline look */
+  font-family: "PT Serif", Georgia, "Times New Roman", serif;
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: -0.01em;
+  line-height: 1.18;
+
+  /* keep your sizing but make it feel like the specimen */
+  font-size: clamp(22px, 2.6vw, 30px);
+
   color: #fff;
-  font-weight: 500;
   text-decoration: none;
-  line-height: 1.5;
-  font-size: clamp(19px, 2.5vw, 25px);
-  margin-bottom: 4px;
+
+  display: block;
+  width: 100%;
+
+  /* spacing for divider */
+  margin: 0;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+
+  /* better rendering */
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
 }
 
+/* Full-width divider under title (taller + crisp) */
+.tn-item-title::after{
+  content: "";
+  display: block;
+  width: 100%;
+
+  height: 3px;                 /* ✅ thicker */
+  margin-top: 10px;
+
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid #000;      /* crisp hard edge */
+  box-shadow: 2px 2px 0 #000;  /* solid shadow, no blur */
+}
+
+/* Summary stays clean without divider below it */
 .tn-summary {
   margin: 4px 0 6px;
   font-size: 16px;
@@ -131,7 +175,9 @@
   text-overflow: ellipsis;
 }
 
+/* Disable old divider completely (it was showing after summary) */
 .tn-divider {
+  display: none !important;
   height: 1px;
   background: rgba(255, 255, 255, 0.15);
   margin: 10px 0;
@@ -161,9 +207,13 @@
   display: block;
   width: 100%;
   height: 180px;
-  border-radius: 1px;
+
+  border-radius: 0 !important;  /* 0 corner radius */
   overflow: hidden;
   grid-area: thumb;
+
+  /* crisp frame so image feels "boxed" */
+  border: 1px solid #000;
 }
 
 .tn-thumb img,
@@ -187,9 +237,12 @@
   font-size: 12px;
   font-weight: 700;
   color: #fff;
-  border-radius: 999px;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.25);
-  backdrop-filter: blur(6px);
+
+  border-radius: 0 !important;           /* 0 corner radius (no pill shape) */
+  border: 1px solid #000;                /* crisp border */
+  box-shadow: 2px 2px 0 #000 !important; /* solid black shadow */
+  background: rgba(0,0,0,0.55);          /* readable on image */
+  backdrop-filter: none !important;      /* remove blur */
 }
 
 /* Mobile layout */
@@ -201,4 +254,44 @@
   .tn-thumb {
     height: 280px;
   }
+
+  /* Slightly smaller title on mobile */
+  .tn-item-title{
+    font-size: clamp(20px, 6vw, 28px);
+  }
+}
+
+/* ---------- Optional: stronger hover without blur ---------- */
+.tn-item:hover,
+.tn-ad:hover{
+  box-shadow: 6px 6px 0 #000 !important;
+  transform: none !important;
+}
+
+/* ================================
+   MOVE SOURCE INTO IMAGE (BOTTOM)
+   ================================ */
+
+/* Hide original source space */
+.tn-meta{
+  display: none;
+}
+
+/* Overlay source text on image bottom */
+.tn-thumb::after{
+  content: "The Timely Voice";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+
+  color: #fff;
+  background: rgba(0,0,0,0.7);   /* readable overlay */
+  border-top: 1px solid #000;
+  box-shadow: 0 -2px 0 #000;     /* solid, no blur */
 }
