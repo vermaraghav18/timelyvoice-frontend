@@ -156,7 +156,6 @@ function getCategoryCopy(slug, category) {
     displayName: baseName,
     metaTitle: overrides.metaTitle || fallbackMetaTitle,
     metaDescription: overrides.metaDescription || fallbackMetaDescription,
-    // ✅ keep intro in data (SEO copy), but we will NOT render it on page
     intro: overrides.intro || fallbackIntro,
   };
 }
@@ -348,23 +347,42 @@ function getCategoryName(a) {
   return map[String(raw || "General").trim().toLowerCase()] || (raw || "General");
 }
 
-function ArticleRow({ a }) {
+// ✅ NEW: compact prop to reduce desktop height only
+function ArticleRow({ a, compact = false }) {
   const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
   const categoryName = getCategoryName(a);
   const categoryUrl = `/category/${encodeURIComponent(toSlug(categoryName))}`;
   const updated = a.updatedAt || a.publishedAt || a.publishAt || a.createdAt;
 
   const thumbRaw = ensureRenderableImage(a);
-  const thumb = toCloudinaryOptimized(thumbRaw, 360);
+  const thumb = toCloudinaryOptimized(thumbRaw, compact ? 300 : 360);
+
+  // Desktop compact styles
+  const cardS = compact ? { ...cardStyle, padding: 8 } : cardStyle;
+  const titleS = compact ? { ...titleStyle, fontSize: 16, lineHeight: 1.2 } : titleStyle;
+  const metaS = compact ? { ...metaRow, marginTop: 6 } : metaRow;
+
+  const rowS = compact
+    ? {
+        display: "grid",
+        gridTemplateColumns: thumb ? "1fr 96px" : "1fr",
+        gap: 6,
+        alignItems: "center",
+      }
+    : rowLayout(!!thumb);
+
+  const thumbS = compact
+    ? { ...thumbStyle, width: 96, height: 64 }
+    : thumbStyle;
 
   return (
-    <div style={cardStyle}>
-      <div style={rowLayout(!!thumb)}>
+    <div style={cardS}>
+      <div style={rowS}>
         <div style={{ minWidth: 0 }}>
           <Link to={articleUrl} style={{ textDecoration: "none", color: "inherit" }}>
-            <h3 style={titleStyle}>{a.title}</h3>
+            <h3 style={titleS}>{a.title}</h3>
           </Link>
-          <div style={metaRow}>
+          <div style={metaS}>
             <Link to={categoryUrl} style={catLink}>
               {categoryName}
             </Link>
@@ -372,12 +390,13 @@ function ArticleRow({ a }) {
             <span>Updated {timeAgo(updated)}</span>
           </div>
         </div>
+
         {thumb && (
           <Link to={articleUrl}>
             <img
               src={thumb}
               alt={a.imageAlt || a.title || ""}
-              style={thumbStyle}
+              style={thumbS}
               loading="lazy"
               decoding="async"
             />
@@ -532,7 +551,7 @@ export default function CategoryPage() {
     return () => {
       alive = false;
     };
-  }, [slug, navigate, normalizedSlug, search]); // ✅ page/limit removed from deps
+  }, [slug, navigate, normalizedSlug, search]);
 
   /* SEO */
   useEffect(() => {
@@ -719,7 +738,6 @@ export default function CategoryPage() {
             </div>
           ))}
 
-          {/* ✅ Always single column, no rails, no pagination */}
           <div style={singleColWrap}>
             {loading && <p>Loading…</p>}
 
@@ -756,13 +774,12 @@ export default function CategoryPage() {
                     <div style={listStyle}>
                       {rest.map((a, idx) => (
                         <div key={a._id || a.id || a.slug || idx}>
-                          <ArticleRow a={a} />
+                          {/* ✅ compact ONLY on laptop/desktop */}
+                          <ArticleRow a={a} compact={!isMobile} />
                           {renderInsetAfter(idx + 1)}
                         </div>
                       ))}
                     </div>
-
-                    {/* ✅ Pagination UI removed completely */}
                   </>
                 )}
               </>
