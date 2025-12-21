@@ -43,10 +43,6 @@ const toSlug = (s = "") =>
 
 /* ---------- small utils ---------- */
 const normPath = (p = "") => String(p).trim().replace(/\/+$/, "") || "/";
-const asInt = (v, d) => {
-  const n = Number(v);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : d;
-};
 
 /* ---------- timestamp normalization & sorting (LATEST FIRST) ---------- */
 function parseTs(v) {
@@ -188,11 +184,9 @@ const pageWrap = {
 
 const singleColWrap = {
   width: "100%",
-  maxWidth: 1200, // ✅ keep single column at 1200 (nice readable)
+  maxWidth: 1200,
   padding: "0 12px",
 };
-
-const mainCol = { minWidth: 0 };
 
 const listStyle = { display: "flex", flexDirection: "column", gap: 8 };
 
@@ -393,83 +387,6 @@ function ArticleRow({ a }) {
   );
 }
 
-/* ---------- helper: interleave rails after every N items (mobile) ---------- */
-function interleaveAfterEveryN(items, inserts, n) {
-  const out = [];
-  let j = 0;
-  for (let i = 0; i < items.length; i++) {
-    out.push({ type: "article", data: items[i] });
-    if ((i + 1) % n === 0 && j < inserts.length) out.push({ type: "rail", data: inserts[j++] });
-  }
-  while (j < inserts.length) out.push({ type: "rail", data: inserts[j++] });
-  return out;
-}
-
-/* ===================== JS bottom-pin helper ===================== */
-function useBottomPin(containerRef, childRef, offset = 16) {
-  const styleState = useRef({});
-  const [style, setStyle] = useState({});
-
-  useEffect(() => {
-    function update() {
-      const container = containerRef.current;
-      const el = childRef.current;
-      if (!container || !el) return;
-
-      const cRect = container.getBoundingClientRect();
-
-      const scrollY = window.scrollY || window.pageYOffset;
-      const scrollX = window.scrollX || window.pageXOffset;
-
-      const cTop = cRect.top + scrollY;
-      const cBottom = cRect.bottom + scrollY;
-      const cLeft = cRect.left + scrollX;
-      const cWidth = cRect.width;
-
-      const eHeight = el.offsetHeight;
-
-      const viewportBottom = scrollY + window.innerHeight - offset;
-      const elBottomNatural = cTop + eHeight;
-
-      let nextStyle;
-
-      if (viewportBottom <= elBottomNatural) {
-        nextStyle = { position: "static", left: "auto", width: "auto" };
-      } else if (viewportBottom > elBottomNatural && viewportBottom < cBottom) {
-        nextStyle = {
-          position: "fixed",
-          left: `${cLeft}px`,
-          bottom: `${offset}px`,
-          width: `${cWidth}px`,
-          zIndex: 1,
-        };
-      } else {
-        nextStyle = { position: "absolute", left: 0, bottom: 0, width: "100%" };
-      }
-
-      const prev = styleState.current;
-      const changed =
-        Object.keys(nextStyle).length !== Object.keys(prev || {}).length ||
-        Object.keys(nextStyle).some((k) => String(nextStyle[k]) !== String(prev[k]));
-      if (changed) {
-        styleState.current = nextStyle;
-        setStyle(nextStyle);
-      }
-    }
-
-    update();
-    window.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
-    };
-  }, [containerRef, childRef, offset]);
-
-  return style;
-}
-/* ================================================================= */
-
 export default function CategoryPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -477,9 +394,9 @@ export default function CategoryPage() {
   const { pathname, search } = location;
   const pagePath = normPath(pathname);
 
-  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
-  const page = asInt(searchParams.get("page"), 1);
-  const limit = asInt(searchParams.get("limit"), 20);
+  // ✅ Pagination removed: always use one request, big limit
+  const page = 1;
+  const limit = 500;
 
   const [category, setCategory] = useState(null);
   const [articles, setArticles] = useState([]);
@@ -487,7 +404,6 @@ export default function CategoryPage() {
   const [notFound, setNotFound] = useState(false);
 
   const [pageSections, setPageSections] = useState([]);
-
   const [planSections, setPlanSections] = useState([]);
   const [railsLoading, setRailsLoading] = useState(false);
   const [railsError, setRailsError] = useState("");
@@ -615,7 +531,7 @@ export default function CategoryPage() {
     return () => {
       alive = false;
     };
-  }, [slug, page, limit, navigate, normalizedSlug, search]);
+  }, [slug, navigate, normalizedSlug, search]); // ✅ page/limit removed from deps
 
   /* SEO */
   useEffect(() => {
@@ -713,12 +629,6 @@ export default function CategoryPage() {
 
   const headBlocks = pageSections.filter((s) => s.template?.startsWith("head_"));
 
-  const rails = useMemo(() => {
-    return (planSections || [])
-      .filter((s) => s?.template?.startsWith("rail_") && s?.enabled !== false)
-      .sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
-  }, [planSections]);
-
   const mainBlocks = useMemo(() => {
     return (planSections || [])
       .filter(
@@ -783,16 +693,6 @@ export default function CategoryPage() {
   const lead = articles?.[0] || null;
   const rest = Array.isArray(articles) && articles.length > 1 ? articles.slice(1) : [];
 
-  // Keep logic as-is, but we will NOT render rails blocks anymore.
-  const infeed = useMemo(() => {
-    if (!isMobile) return null;
-    return rest.map((a) => ({ type: "article", data: a }));
-  }, [isMobile, rest]);
-
-  // ✅ Ads removed: keep vars but disable rendering without changing other logic
-  const isWorldCategory = String(slug || "").toLowerCase() === "world";
-  const isAdEnabledCategory = false;
-
   const renderInsetAfter = (idx) => {
     const blocks = insetBlocks.filter((b) => b.__after === idx);
     if (!blocks.length) return null;
@@ -801,25 +701,6 @@ export default function CategoryPage() {
         <SectionRenderer section={sec} />
       </div>
     ));
-  };
-
-  /* Refs + bottom pin styles (kept as-is even though rails are removed) */
-  const gridRef = useRef(null);
-  const leftAsideRef = useRef(null);
-  const rightAsideRef = useRef(null);
-  const leftRailRef = useRef(null);
-  const rightRailRef = useRef(null);
-
-  const BOTTOM_OFFSET = 16;
-  const leftRailStyle = useBottomPin(leftAsideRef, leftRailRef, BOTTOM_OFFSET);
-  const rightRailStyle = useBottomPin(rightAsideRef, rightRailRef, BOTTOM_OFFSET);
-
-  const gotoPage = (p) => {
-    const params = new URLSearchParams(search);
-    if (p <= 1) params.delete("page");
-    else params.set("page", String(p));
-    params.set("limit", String(limit || 20));
-    navigate({ pathname, search: `?${params.toString()}` }, { replace: false });
   };
 
   const renderCategoryIntro = () =>
@@ -841,7 +722,6 @@ export default function CategoryPage() {
     <>
       <SiteNav />
 
-      {/* ✅ NEW: full-width guard wrapper to prevent squeeze */}
       <div className="category-container">
         <div style={pageWrap}>
           {headBlocks.map((sec) => (
@@ -853,7 +733,7 @@ export default function CategoryPage() {
             </div>
           ))}
 
-          {/* ✅ Rails removed: always render single-column layout */}
+          {/* ✅ Always single column, no rails, no pagination */}
           <div style={singleColWrap}>
             {loading && <p>Loading…</p>}
 
@@ -892,29 +772,15 @@ export default function CategoryPage() {
                     <LeadCard a={lead} />
 
                     <div style={listStyle}>
-                      {(isMobile ? infeed || [] : rest.map((a) => ({ type: "article", data: a }))).map(
-                        (block, idx) =>
-                          block.type === "article" ? (
-                            <div key={(block.data._id || block.data.id || block.data.slug || idx) + "-a"}>
-                              <ArticleRow a={block.data} />
-                              {renderInsetAfter(idx + 1)}
-                            </div>
-                          ) : null
-                      )}
+                      {rest.map((a, idx) => (
+                        <div key={a._id || a.id || a.slug || idx}>
+                          <ArticleRow a={a} />
+                          {renderInsetAfter(idx + 1)}
+                        </div>
+                      ))}
                     </div>
 
-                    <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16 }}>
-                      {page > 1 && (
-                        <button onClick={() => gotoPage(page - 1)} style={{ padding: "6px 10px" }}>
-                          ← Newer
-                        </button>
-                      )}
-                      {rest.length + (lead ? 1 : 0) >= limit && (
-                        <button onClick={() => gotoPage(page + 1)} style={{ padding: "6px 10px" }}>
-                          Older →
-                        </button>
-                      )}
-                    </div>
+                    {/* ✅ Pagination UI removed completely */}
                   </>
                 )}
               </>
