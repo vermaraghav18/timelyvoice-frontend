@@ -677,28 +677,26 @@ export default function CategoryPage() {
         }
 
         const aData = await cachedGet(
-          `/public/categories/${encodeURIComponent(effectiveSlug)}/articles`,
-          { params: { page, limit }, validateStatus: () => true },
-          25_000
-        );
+  `/articles`,
+  {
+    params: { category: effectiveSlug, page, limit },
+    validateStatus: () => true,
+  },
+  25_000
+);
 
-        if (aData?.redirectTo) {
-          const newSlug = extractCanonicalSlugFromRedirect({ data: aData });
-          if (newSlug) navigate({ pathname: `/category/${newSlug}`, search }, { replace: true });
-          return;
-        }
+if (!alive) return;
 
-        if (!alive) return;
+if (Array.isArray(aData?.items)) {
+  const sorted = normalizeArticlesLatestFirst(aData.items);
+  setArticles(sorted);
+} else if (aData?.status === 404) {
+  setArticles([]);
+  setNotFound(true);
+} else {
+  setArticles([]);
+}
 
-        if (Array.isArray(aData?.items)) {
-          const sorted = normalizeArticlesLatestFirst(aData.items);
-          setArticles(sorted);
-        } else if (aData?.status === 404) {
-          setArticles([]);
-          setNotFound(true);
-        } else {
-          setArticles([]);
-        }
       } catch {
         if (!alive) return;
         setNotFound(true);
