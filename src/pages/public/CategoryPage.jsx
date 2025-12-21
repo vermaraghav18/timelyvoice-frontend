@@ -15,88 +15,6 @@ import { ensureRenderableImage } from "../../lib/images.js";
 /* ---------- Brand constant ---------- */
 const BRAND_NAME = "The Timely Voice";
 
-/* ---------- Google AdSense: lightweight blocks ---------- */
-const ADS_CLIENT = "ca-pub-8472487092329023";
-const ADS_SLOT_MAIN = "3149743917";
-const ADS_SLOT_SECOND = "3149743917";
-const ADS_SLOT_FLUID_KEY = "1442744724";
-const ADS_SLOT_IN_ARTICLE = "9569163673";
-const ADS_SLOT_AUTORELAXED = "2545424475";
-
-/* ✅ NEW: Desktop rail (page-skin style) slots you created */
-const ADS_SLOT_LEFT_RAIL = "7102575252";  // TV_DESKTOP_LEFT_RAIL
-const ADS_SLOT_RIGHT_RAIL = "4599700848"; // TV_DESKTOP_RIGHT_RAIL
-
-/**
- * ✅ IMPORTANT SWITCH:
- * If false => mobile will NOT render rails anywhere (not aside, not infeed).
- */
-const SHOW_RAILS_ON_MOBILE = false;
-
-function useAdsPush(deps = []) {
-  useEffect(() => {
-    try {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-}
-
-function AdSenseAuto({ slot, style }) {
-  useAdsPush([slot]);
-  return (
-    <ins
-      className="adsbygoogle"
-      style={{ display: "block", width: "100%", maxWidth: "100%", ...style }}
-      data-ad-client={ADS_CLIENT}
-      data-ad-slot={slot}
-      data-ad-format="auto"
-      data-full-width-responsive="true"
-    ></ins>
-  );
-}
-
-function AdSenseFluidKey({ style }) {
-  useAdsPush([]);
-  return (
-    <ins
-      className="adsbygoogle"
-      style={{ display: "block", ...style }}
-      data-ad-format="fluid"
-      data-ad-layout-key="-ge-1b-1q-el+13l"
-      data-ad-client={ADS_CLIENT}
-      data-ad-slot={ADS_SLOT_FLUID_KEY}
-    ></ins>
-  );
-}
-
-function AdSenseInArticle({ style }) {
-  useAdsPush([]);
-  return (
-    <ins
-      className="adsbygoogle"
-      style={{ display: "block", textAlign: "center", ...style }}
-      data-ad-layout="in-article"
-      data-ad-format="fluid"
-      data-ad-client={ADS_CLIENT}
-      data-ad-slot={ADS_SLOT_IN_ARTICLE}
-    ></ins>
-  );
-}
-
-function AdSenseAutoRelaxed({ style }) {
-  useAdsPush([]);
-  return (
-    <ins
-      className="adsbygoogle"
-      style={{ display: "block", ...style }}
-      data-ad-format="autorelaxed"
-      data-ad-client={ADS_CLIENT}
-      data-ad-slot={ADS_SLOT_AUTORELAXED}
-    ></ins>
-  );
-}
-
 /* ---------- helper: relative time ---------- */
 function timeAgo(input) {
   const d = input ? new Date(input) : null;
@@ -268,23 +186,12 @@ const pageWrap = {
   fontFamily: "'Newsreader', serif",
 };
 
-const gridWrap = {
-  width: "100%",
-  maxWidth: 1400,
-  padding: "0 12px",
-  display: "grid",
-  gridTemplateColumns: "220px minmax(0, 1fr) 220px", // ✅ rails smaller (was 260)
-  gap: 16,
-};
-
-
 const singleColWrap = {
   width: "100%",
-  maxWidth: 1200,          // ✅ keep single column at 1200 (nice readable)
+  maxWidth: 1200, // ✅ keep single column at 1200 (nice readable)
   padding: "0 12px",
 };
 
-const railCol = { minWidth: 0, position: "relative" };
 const mainCol = { minWidth: 0 };
 
 const listStyle = { display: "flex", flexDirection: "column", gap: 8 };
@@ -677,26 +584,25 @@ export default function CategoryPage() {
         }
 
         const aData = await cachedGet(
-  `/articles`,
-  {
-    params: { category: effectiveSlug, page, limit },
-    validateStatus: () => true,
-  },
-  25_000
-);
+          `/articles`,
+          {
+            params: { category: effectiveSlug, page, limit },
+            validateStatus: () => true,
+          },
+          25_000
+        );
 
-if (!alive) return;
+        if (!alive) return;
 
-if (Array.isArray(aData?.items)) {
-  const sorted = normalizeArticlesLatestFirst(aData.items);
-  setArticles(sorted);
-} else if (aData?.status === 404) {
-  setArticles([]);
-  setNotFound(true);
-} else {
-  setArticles([]);
-}
-
+        if (Array.isArray(aData?.items)) {
+          const sorted = normalizeArticlesLatestFirst(aData.items);
+          setArticles(sorted);
+        } else if (aData?.status === 404) {
+          setArticles([]);
+          setNotFound(true);
+        } else {
+          setArticles([]);
+        }
       } catch {
         if (!alive) return;
         setNotFound(true);
@@ -813,9 +719,6 @@ if (Array.isArray(aData?.items)) {
       .sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
   }, [planSections]);
 
-  const leftRails = rails.filter((s) => (s.side || "right") === "left");
-  const rightRails = rails.filter((s) => (s.side || "right") === "right");
-
   const mainBlocks = useMemo(() => {
     return (planSections || [])
       .filter(
@@ -880,18 +783,15 @@ if (Array.isArray(aData?.items)) {
   const lead = articles?.[0] || null;
   const rest = Array.isArray(articles) && articles.length > 1 ? articles.slice(1) : [];
 
-  // ✅ infeed: rails ONLY if you enable SHOW_RAILS_ON_MOBILE
+  // Keep logic as-is, but we will NOT render rails blocks anymore.
   const infeed = useMemo(() => {
     if (!isMobile) return null;
-    if (!SHOW_RAILS_ON_MOBILE) {
-      return rest.map((a) => ({ type: "article", data: a }));
-    }
-    return interleaveAfterEveryN(rest, rails, 8);
-  }, [isMobile, rest, rails]);
+    return rest.map((a) => ({ type: "article", data: a }));
+  }, [isMobile, rest]);
 
-  // Ads enabled everywhere (your current behavior)
+  // ✅ Ads removed: keep vars but disable rendering without changing other logic
   const isWorldCategory = String(slug || "").toLowerCase() === "world";
-  const isAdEnabledCategory = true;
+  const isAdEnabledCategory = false;
 
   const renderInsetAfter = (idx) => {
     const blocks = insetBlocks.filter((b) => b.__after === idx);
@@ -903,7 +803,7 @@ if (Array.isArray(aData?.items)) {
     ));
   };
 
-  /* Refs + bottom pin styles */
+  /* Refs + bottom pin styles (kept as-is even though rails are removed) */
   const gridRef = useRef(null);
   const leftAsideRef = useRef(null);
   const rightAsideRef = useRef(null);
@@ -938,173 +838,22 @@ if (Array.isArray(aData?.items)) {
     );
 
   return (
-  <>
-    <SiteNav />
+    <>
+      <SiteNav />
 
-    {/* ✅ NEW: full-width guard wrapper to prevent squeeze */}
-    <div className="category-container">
-      <div style={pageWrap}>
-        {headBlocks.map((sec) => (
-          <div
-            key={sec._id || sec.id || sec.slug}
-            style={{ width: "100%", maxWidth: 1200, padding: "0 12px", marginBottom: 12 }}
-          >
-            <SectionRenderer section={sec} />
-          </div>
-        ))}
+      {/* ✅ NEW: full-width guard wrapper to prevent squeeze */}
+      <div className="category-container">
+        <div style={pageWrap}>
+          {headBlocks.map((sec) => (
+            <div
+              key={sec._id || sec.id || sec.slug}
+              style={{ width: "100%", maxWidth: 1200, padding: "0 12px", marginBottom: 12 }}
+            >
+              <SectionRenderer section={sec} />
+            </div>
+          ))}
 
-        {/* ✅ Desktop ONLY 3-col layout (rails visible) */}
-        {!isMobile && !isNarrow ? (
-          <div style={gridWrap} ref={gridRef}>
-            {/* ================= LEFT RAIL ================= */}
-            <aside style={railCol} ref={leftAsideRef}>
-              {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-              {!railsLoading && railsError && (
-                <div style={{ padding: 8, color: "crimson" }}>{railsError}</div>
-              )}
-              {!railsLoading && !railsError && (
-                <div ref={leftRailRef} style={leftRailStyle}>
-                  <div style={{ marginBottom: 12 }}>
-                    <AdSenseAuto slot={ADS_SLOT_LEFT_RAIL} />
-                  </div>
-
-                  {leftRails.map((sec, i) => (
-                    <div
-                      key={sec._id || sec.id || sec.slug || i}
-                      style={{ marginTop: i === 0 ? 0 : 12 }}
-                    >
-                      <SectionRenderer section={sec} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </aside>
-
-            {/* ================= MAIN ================= */}
-            <main style={mainCol}>
-              {loading && <p>Loading…</p>}
-
-              {!loading && notFound && (
-                <>
-                  <h1>{categoryCopy.displayName}</h1>
-                  {renderCategoryIntro()}
-                  <p style={{ marginTop: 8 }}>
-                    We’re currently updating this section. Meanwhile, you can explore the latest{" "}
-                    <Link to="/top-news">top stories</Link> on {BRAND_NAME}.
-                  </p>
-                </>
-              )}
-
-              {!loading && !notFound && (
-                <>
-                  {topBlocks.map((sec) => (
-                    <div key={sec._id || sec.id || sec.slug} style={{ marginBottom: 12 }}>
-                      <SectionRenderer section={sec} />
-                    </div>
-                  ))}
-
-                  {renderCategoryIntro()}
-
-                  {!articles || articles.length === 0 ? (
-                    <>
-                      <h1>{categoryCopy.displayName}</h1>
-                      {renderCategoryIntro()}
-                      <p style={{ marginTop: 8, textAlign: "center" }}>
-                        New stories will appear here soon. For now, visit our{" "}
-                        <Link to="/top-news">Top News</Link> or <Link to="/world">World</Link> sections.
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <LeadCard a={lead} />
-
-                      <div style={listStyle}>
-                        {rest.map((a, idx) => {
-                          const pos = idx + 1;
-                          return (
-                            <div key={a._id || a.id || a.slug || idx}>
-                              <ArticleRow a={a} />
-                              {renderInsetAfter(pos)}
-
-                              {isAdEnabledCategory && [6, 9, 13, 17].includes(pos) && (
-                                <>
-                                  {pos === 6 && (
-                                    <div style={{ margin: "12px 0", textAlign: "center" }}>
-                                      <AdSenseAuto slot={ADS_SLOT_MAIN} />
-                                    </div>
-                                  )}
-                                  {pos === 9 && (
-                                    <div style={{ margin: "12px 0" }}>
-                                      <AdSenseInArticle />
-                                    </div>
-                                  )}
-                                  {pos === 13 && (
-                                    <div style={{ margin: "12px 0" }}>
-                                      <AdSenseFluidKey />
-                                    </div>
-                                  )}
-                                  {pos === 17 && (
-                                    <div style={{ margin: "12px 0", textAlign: "center" }}>
-                                      <AdSenseAuto slot={ADS_SLOT_SECOND} />
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16 }}>
-                        {page > 1 && (
-                          <button onClick={() => gotoPage(page - 1)} style={{ padding: "6px 10px" }}>
-                            ← Newer
-                          </button>
-                        )}
-                        {rest.length + (lead ? 1 : 0) >= limit && (
-                          <button onClick={() => gotoPage(page + 1)} style={{ padding: "6px 10px" }}>
-                            Older →
-                          </button>
-                        )}
-                      </div>
-
-                      {isAdEnabledCategory && (
-                        <div style={{ margin: "16px 0" }}>
-                          <AdSenseAutoRelaxed />
-                        </div>
-                      )}
-                    </>
-                  )}
-                </>
-              )}
-            </main>
-
-            {/* ================= RIGHT RAIL ================= */}
-            <aside style={railCol} ref={rightAsideRef}>
-              {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-              {!railsLoading && railsError && (
-                <div style={{ padding: 8, color: "crimson" }}>{railsError}</div>
-              )}
-              {!railsLoading && !railsError && (
-                <div ref={rightRailRef} style={rightRailStyle}>
-                  <div style={{ marginBottom: 12 }}>
-                    <AdSenseAuto slot={ADS_SLOT_RIGHT_RAIL} />
-                  </div>
-
-                  {rightRails.map((sec, i) => (
-                    <div
-                      key={sec._id || sec.id || sec.slug || i}
-                      style={{ marginTop: i === 0 ? 0 : 12 }}
-                    >
-                      <SectionRenderer section={sec} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </aside>
-          </div>
-        ) : (
-          /* ✅ Mobile + Narrow: single column, rails NOT rendered anywhere */
+          {/* ✅ Rails removed: always render single-column layout */}
           <div style={singleColWrap}>
             {loading && <p>Loading…</p>}
 
@@ -1143,38 +892,14 @@ if (Array.isArray(aData?.items)) {
                     <LeadCard a={lead} />
 
                     <div style={listStyle}>
-                      {(infeed || []).map((block, idx) =>
-                        block.type === "article" ? (
-                          <div key={(block.data._id || block.data.id || block.data.slug || idx) + "-a"}>
-                            <ArticleRow a={block.data} />
-                            {renderInsetAfter(idx + 1)}
-
-                            {isAdEnabledCategory && [7, 11, 15, 19].includes(idx + 1) && (
-                              <>
-                                {idx + 1 === 7 && (
-                                  <div style={{ margin: "12px 0", textAlign: "center" }}>
-                                    <AdSenseAuto slot={ADS_SLOT_MAIN} />
-                                  </div>
-                                )}
-                                {idx + 1 === 11 && (
-                                  <div style={{ margin: "12px 0" }}>
-                                    <AdSenseInArticle />
-                                  </div>
-                                )}
-                                {idx + 1 === 15 && (
-                                  <div style={{ margin: "12px 0" }}>
-                                    <AdSenseFluidKey />
-                                  </div>
-                                )}
-                                {idx + 1 === 19 && (
-                                  <div style={{ margin: "12px 0", textAlign: "center" }}>
-                                    <AdSenseAuto slot={ADS_SLOT_SECOND} />
-                                  </div>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        ) : null
+                      {(isMobile ? infeed || [] : rest.map((a) => ({ type: "article", data: a }))).map(
+                        (block, idx) =>
+                          block.type === "article" ? (
+                            <div key={(block.data._id || block.data.id || block.data.slug || idx) + "-a"}>
+                              <ArticleRow a={block.data} />
+                              {renderInsetAfter(idx + 1)}
+                            </div>
+                          ) : null
                       )}
                     </div>
 
@@ -1190,23 +915,15 @@ if (Array.isArray(aData?.items)) {
                         </button>
                       )}
                     </div>
-
-                    {isAdEnabledCategory && (
-                      <div style={{ margin: "16px 0" }}>
-                        <AdSenseAutoRelaxed />
-                      </div>
-                    )}
                   </>
                 )}
               </>
             )}
           </div>
-        )}
+        </div>
       </div>
-    </div>
 
-    <SiteFooter />
-  </>
-);
-
+      <SiteFooter />
+    </>
+  );
 }
