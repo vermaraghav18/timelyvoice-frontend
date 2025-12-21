@@ -15,10 +15,7 @@ import { ensureRenderableImage } from "../../lib/images.js";
 /* ---------- Brand constant ---------- */
 const BRAND_NAME = "The Timely Voice";
 
-/* ✅ Desktop content width (controls left/right empty space)
-   - smaller number => more empty space on sides
-   - start with 920; try 860 if you want even more rail space later
-*/
+/* ✅ Desktop content width (controls left/right empty space) */
 const DESKTOP_CONTENT_MAX = 920;
 
 /* ---------- helper: relative time ---------- */
@@ -198,13 +195,6 @@ const cardStyle = {
   boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
 };
 
-const rowLayout = (hasThumb) => ({
-  display: "grid",
-  gridTemplateColumns: hasThumb ? "1fr 110px" : "1fr",
-  gap: 8,
-  alignItems: "center",
-});
-
 const titleStyle = {
   margin: 0,
   fontSize: 18,
@@ -238,7 +228,7 @@ const thumbStyle = {
   display: "block",
 };
 
-/* ---------- Lead Card (first story) ---------- */
+/* ---------- Lead Card (mobile lead) ---------- */
 const leadCardWrap = {
   marginBottom: 14,
   background: "#001236ff",
@@ -327,6 +317,95 @@ function LeadCard({ a }) {
   );
 }
 
+/* ---------- NEW: Top 2 grid (desktop/laptop) ---------- */
+const topGridWrap = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 12,
+  marginBottom: 14,
+};
+
+const topCard = {
+  background: "#001236ff",
+  border: "0px solid #e5e7eb",
+  borderRadius: 1,
+  padding: 10,
+  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+  overflow: "hidden",
+};
+
+const topImg = {
+  width: "100%",
+  height: 190,
+  objectFit: "cover",
+  borderRadius: 2,
+  display: "block",
+  marginTop: 8,
+};
+
+const topTitle = {
+  margin: 0,
+  fontSize: 18,
+  lineHeight: 1.25,
+  fontWeight: 700,
+  color: "#ffffff",
+};
+
+const topMeta = {
+  marginTop: 8,
+  fontSize: 12,
+  color: "#ee6affff",
+  display: "flex",
+  gap: 6,
+  alignItems: "center",
+  flexWrap: "wrap",
+};
+
+function TopCard({ a }) {
+  if (!a) return null;
+  const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
+  const updated = a.updatedAt || a.publishedAt || a.publishAt || a.createdAt;
+
+  const imgRaw = ensureRenderableImage(a);
+  const img = toCloudinaryOptimized(imgRaw, 900);
+
+  return (
+    <div style={topCard}>
+      <Link to={articleUrl} style={{ textDecoration: "none", color: "inherit" }}>
+        <h2 style={topTitle}>{a.title}</h2>
+      </Link>
+      {img && (
+        <Link to={articleUrl} style={{ display: "block" }}>
+          <img
+            src={img}
+            alt={a.imageAlt || a.title || ""}
+            style={topImg}
+            loading="lazy"
+            decoding="async"
+          />
+        </Link>
+      )}
+      <div style={topMeta}>
+        <span>Updated {timeAgo(updated)}</span>
+      </div>
+    </div>
+  );
+}
+
+function TopTwoGrid({ a1, a2 }) {
+  if (!a1 && !a2) return null;
+  // if only one exists, just render one full width
+  if (a1 && !a2) return <TopCard a={a1} />;
+  if (!a1 && a2) return <TopCard a={a2} />;
+
+  return (
+    <div style={topGridWrap}>
+      <TopCard a={a1} />
+      <TopCard a={a2} />
+    </div>
+  );
+}
+
 /* ---------- Article Row (rest) ---------- */
 function getCategoryName(a) {
   const raw =
@@ -347,7 +426,6 @@ function getCategoryName(a) {
   return map[String(raw || "General").trim().toLowerCase()] || (raw || "General");
 }
 
-// ✅ NEW: compact prop to reduce desktop height only (kept from your current code)
 function ArticleRow({ a, compact = false }) {
   const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
   const categoryName = getCategoryName(a);
@@ -368,7 +446,12 @@ function ArticleRow({ a, compact = false }) {
         gap: 6,
         alignItems: "center",
       }
-    : rowLayout(!!thumb);
+    : {
+        display: "grid",
+        gridTemplateColumns: thumb ? "1fr 110px" : "1fr",
+        gap: 8,
+        alignItems: "center",
+      };
 
   const thumbS = compact
     ? { ...thumbStyle, width: 96, height: 64 }
@@ -413,7 +496,7 @@ export default function CategoryPage() {
   const { pathname, search } = location;
   const pagePath = normPath(pathname);
 
-  // ✅ Pagination removed: always use one request, big limit
+  // ✅ Pagination removed
   const page = 1;
   const limit = 500;
 
@@ -482,7 +565,7 @@ export default function CategoryPage() {
     return m ? m[1] : null;
   }
 
-  /* fetch category + articles (cached where safe) */
+  /* fetch category + articles */
   useEffect(() => {
     let alive = true;
     setLoading(true);
@@ -709,8 +792,10 @@ export default function CategoryPage() {
     };
   }, [slug]);
 
-  const lead = articles?.[0] || null;
-  const rest = Array.isArray(articles) && articles.length > 1 ? articles.slice(1) : [];
+  // ✅ NEW split: top two + rest
+  const top1 = articles?.[0] || null;
+  const top2 = articles?.[1] || null;
+  const rest = Array.isArray(articles) && articles.length > 2 ? articles.slice(2) : [];
 
   const renderInsetAfter = (idx) => {
     const blocks = insetBlocks.filter((b) => b.__after === idx);
@@ -722,16 +807,14 @@ export default function CategoryPage() {
     ));
   };
 
-  // ✅ THIS is the key: shrink content width on desktop, keep mobile same
   const contentWrapStyle = useMemo(() => {
     return {
       width: "100%",
       maxWidth: isMobile ? 1200 : DESKTOP_CONTENT_MAX,
-      padding: isMobile ? "0 12px" : "0 12px",
+      padding: "0 12px",
     };
   }, [isMobile]);
 
-  // ✅ Also shrink the head blocks wrapper to match the content width (desktop)
   const headWrapStyle = useMemo(() => {
     return {
       width: "100%",
@@ -784,12 +867,16 @@ export default function CategoryPage() {
                   </>
                 ) : (
                   <>
-                    <LeadCard a={lead} />
+                    {/* ✅ Desktop: first 2 side-by-side (smaller). Mobile: keep single big lead */}
+                    {!isMobile ? (
+                      <TopTwoGrid a1={top1} a2={top2} />
+                    ) : (
+                      <LeadCard a={top1} />
+                    )}
 
                     <div style={listStyle}>
                       {rest.map((a, idx) => (
                         <div key={a._id || a.id || a.slug || idx}>
-                          {/* ✅ compact ONLY on laptop/desktop */}
                           <ArticleRow a={a} compact={!isMobile} />
                           {renderInsetAfter(idx + 1)}
                         </div>
