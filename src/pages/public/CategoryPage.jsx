@@ -15,6 +15,12 @@ import { ensureRenderableImage } from "../../lib/images.js";
 /* ---------- Brand constant ---------- */
 const BRAND_NAME = "The Timely Voice";
 
+/* ✅ Desktop content width (controls left/right empty space)
+   - smaller number => more empty space on sides
+   - start with 920; try 860 if you want even more rail space later
+*/
+const DESKTOP_CONTENT_MAX = 920;
+
 /* ---------- helper: relative time ---------- */
 function timeAgo(input) {
   const d = input ? new Date(input) : null;
@@ -182,12 +188,6 @@ const pageWrap = {
   fontFamily: "'Newsreader', serif",
 };
 
-const singleColWrap = {
-  width: "100%",
-  maxWidth: 1200,
-  padding: "0 12px",
-};
-
 const listStyle = { display: "flex", flexDirection: "column", gap: 8 };
 
 const cardStyle = {
@@ -347,7 +347,7 @@ function getCategoryName(a) {
   return map[String(raw || "General").trim().toLowerCase()] || (raw || "General");
 }
 
-// ✅ NEW: compact prop to reduce desktop height only
+// ✅ NEW: compact prop to reduce desktop height only (kept from your current code)
 function ArticleRow({ a, compact = false }) {
   const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
   const categoryName = getCategoryName(a);
@@ -357,7 +357,6 @@ function ArticleRow({ a, compact = false }) {
   const thumbRaw = ensureRenderableImage(a);
   const thumb = toCloudinaryOptimized(thumbRaw, compact ? 300 : 360);
 
-  // Desktop compact styles
   const cardS = compact ? { ...cardStyle, padding: 8 } : cardStyle;
   const titleS = compact ? { ...titleStyle, fontSize: 16, lineHeight: 1.2 } : titleStyle;
   const metaS = compact ? { ...metaRow, marginTop: 6 } : metaRow;
@@ -723,6 +722,25 @@ export default function CategoryPage() {
     ));
   };
 
+  // ✅ THIS is the key: shrink content width on desktop, keep mobile same
+  const contentWrapStyle = useMemo(() => {
+    return {
+      width: "100%",
+      maxWidth: isMobile ? 1200 : DESKTOP_CONTENT_MAX,
+      padding: isMobile ? "0 12px" : "0 12px",
+    };
+  }, [isMobile]);
+
+  // ✅ Also shrink the head blocks wrapper to match the content width (desktop)
+  const headWrapStyle = useMemo(() => {
+    return {
+      width: "100%",
+      maxWidth: isMobile ? 1200 : DESKTOP_CONTENT_MAX,
+      padding: "0 12px",
+      marginBottom: 12,
+    };
+  }, [isMobile]);
+
   return (
     <>
       <SiteNav />
@@ -730,15 +748,12 @@ export default function CategoryPage() {
       <div className="category-container">
         <div style={pageWrap}>
           {headBlocks.map((sec) => (
-            <div
-              key={sec._id || sec.id || sec.slug}
-              style={{ width: "100%", maxWidth: 1200, padding: "0 12px", marginBottom: 12 }}
-            >
+            <div key={sec._id || sec.id || sec.slug} style={headWrapStyle}>
               <SectionRenderer section={sec} />
             </div>
           ))}
 
-          <div style={singleColWrap}>
+          <div style={contentWrapStyle}>
             {loading && <p>Loading…</p>}
 
             {!loading && notFound && (
