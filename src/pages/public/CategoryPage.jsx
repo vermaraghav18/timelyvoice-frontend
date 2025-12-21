@@ -1,5 +1,5 @@
 // frontend/src/pages/public/CategoryPage.jsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 
 import { api, cachedGet } from "../../lib/publicApi.js";
@@ -53,10 +53,7 @@ function parseTs(v) {
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
   const s = String(v).trim();
   if (/^\d+$/.test(s)) return Number(s);
-  const withT = s.replace(
-    /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/,
-    "$1T$2"
-  );
+  const withT = s.replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/, "$1T$2");
   const t = Date.parse(withT);
   return Number.isFinite(t) ? t : 0;
 }
@@ -227,35 +224,39 @@ const thumbStyle = {
   display: "block",
 };
 
-/* ---------- Lead Card (mobile lead) ---------- */
-const leadCardWrap = {
+/* ---------- NEW: First article (no card) ---------- */
+const firstWrap = {
   marginBottom: 14,
-  background: "#001236ff",
-  border: "0px solid #e5e7eb",
-  borderRadius: 1,
-  padding: 12,
-  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+  padding: 0,
 };
 
-const leadImg = {
+const firstTitle = {
+  margin: "0 0 10px",
+  fontSize: 26,
+  lineHeight: 1.15,
+  fontWeight: 800,
+  color: "#ffffff",
+  fontFamily: "'Merriweather Sans', sans-serif",
+};
+
+const firstImg = (isMobile) => ({
   width: "100%",
-  height: 320,
+  height: isMobile ? 260 : 380,
   objectFit: "cover",
   borderRadius: 2,
   display: "block",
   marginBottom: 10,
-};
+});
 
-const leadH = {
-  margin: "0 0 6px",
-  fontSize: 21,
-  lineHeight: 1.25,
-  fontWeight: 600,
-  color: "#ffffffff",
-};
-
-const leadMeta = {
+const firstSummary = {
+  fontSize: 18,
+  color: "#b9b9b9ff",
   marginTop: 6,
+  lineHeight: 1.6,
+};
+
+const firstMeta = {
+  marginTop: 8,
   fontSize: 12,
   color: "#ee6affff",
   display: "flex",
@@ -264,59 +265,54 @@ const leadMeta = {
   flexWrap: "wrap",
 };
 
-const leadSummary = {
-  fontSize: 18,
-  color: "#b9b9b9ff",
-  marginTop: 6,
-  lineHeight: 1.6,
-};
-
-function LeadCard({ a }) {
+function FirstArticle({ a, isMobile }) {
   if (!a) return null;
+
   const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
   const updated = a.updatedAt || a.publishedAt || a.publishAt || a.createdAt;
 
   const imgRaw = ensureRenderableImage(a);
-  const img = toCloudinaryOptimized(imgRaw, 1200);
+  const img = toCloudinaryOptimized(imgRaw, 1400);
 
   const summary =
     a.summary ||
     a.excerpt ||
     a.description ||
     a.seoDescription ||
-    (typeof a.body === "string"
-      ? a.body.replace(/<[^>]*>/g, "").slice(0, 220)
-      : "");
+    (typeof a.body === "string" ? a.body.replace(/<[^>]*>/g, "").slice(0, 260) : "");
 
   return (
-    <div style={leadCardWrap}>
+    <div style={firstWrap}>
       <Link to={articleUrl} style={{ textDecoration: "none", color: "inherit" }}>
-        <h2 style={leadH}>{a.title}</h2>
+        <h1 style={firstTitle}>{a.title}</h1>
       </Link>
+
       {img && (
         <Link to={articleUrl} style={{ display: "block" }}>
           <img
             src={img}
             alt={a.imageAlt || a.title || ""}
-            style={leadImg}
+            style={firstImg(isMobile)}
             loading="lazy"
             decoding="async"
           />
         </Link>
       )}
+
       {summary && (
         <Link to={articleUrl} style={{ textDecoration: "none", color: "inherit" }}>
-          <p style={leadSummary}>{summary}</p>
+          <p style={firstSummary}>{summary}</p>
         </Link>
       )}
-      <div style={leadMeta}>
+
+      <div style={firstMeta}>
         <span>Updated {timeAgo(updated)}</span>
       </div>
     </div>
   );
 }
 
-/* ---------- NEW: Top 2 grid (desktop/laptop) ---------- */
+/* ---------- Top 2 grid (2nd & 3rd articles) ---------- */
 const topGridWrap = {
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
@@ -360,7 +356,6 @@ const topMeta = {
   flexWrap: "wrap",
 };
 
-/* ✅ NEW: summary style for the first 2 cards */
 const topSummary = {
   marginTop: 8,
   fontSize: 14,
@@ -385,9 +380,7 @@ function TopCard({ a }) {
     a.excerpt ||
     a.description ||
     a.seoDescription ||
-    (typeof a.body === "string"
-      ? a.body.replace(/<[^>]*>/g, "").slice(0, 170)
-      : "");
+    (typeof a.body === "string" ? a.body.replace(/<[^>]*>/g, "").slice(0, 170) : "");
 
   return (
     <div style={topCard}>
@@ -407,7 +400,6 @@ function TopCard({ a }) {
         </Link>
       )}
 
-      {/* ✅ NEW: summary below image */}
       {summary && (
         <Link to={articleUrl} style={{ textDecoration: "none", color: "inherit" }}>
           <p style={topSummary}>{summary}</p>
@@ -421,8 +413,19 @@ function TopCard({ a }) {
   );
 }
 
-function TopTwoGrid({ a1, a2 }) {
+function TwoUpGrid({ a1, a2, isMobile }) {
   if (!a1 && !a2) return null;
+
+  // On mobile: keep them stacked so it doesn’t get cramped
+  if (isMobile) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 14 }}>
+        {a1 && <TopCard a={a1} />}
+        {a2 && <TopCard a={a2} />}
+      </div>
+    );
+  }
+
   if (a1 && !a2) return <TopCard a={a1} />;
   if (!a1 && a2) return <TopCard a={a2} />;
 
@@ -436,8 +439,7 @@ function TopTwoGrid({ a1, a2 }) {
 
 /* ---------- Article Row (rest) ---------- */
 function getCategoryName(a) {
-  const raw =
-    typeof a?.category === "string" ? a.category : a?.category?.name ?? "General";
+  const raw = typeof a?.category === "string" ? a.category : a?.category?.name ?? "General";
   const map = {
     world: "World",
     politics: "Politics",
@@ -826,9 +828,11 @@ export default function CategoryPage() {
     };
   }, [slug]);
 
-  const top1 = articles?.[0] || null;
-  const top2 = articles?.[1] || null;
-  const rest = Array.isArray(articles) && articles.length > 2 ? articles.slice(2) : [];
+  // ✅ NEW slicing: 1st = first article (no card), 2nd & 3rd = two-up big cards, rest = normal list
+  const first = articles?.[0] || null;
+  const second = articles?.[1] || null;
+  const third = articles?.[2] || null;
+  const rest = Array.isArray(articles) && articles.length > 3 ? articles.slice(3) : [];
 
   const renderInsetAfter = (idx) => {
     const blocks = insetBlocks.filter((b) => b.__after === idx);
@@ -895,14 +899,19 @@ export default function CategoryPage() {
                     <h1>{categoryCopy.displayName}</h1>
                     <p style={{ marginTop: 8, textAlign: "center" }}>
                       New articles for this category are coming soon. Check{" "}
-                      <Link to="/top-news">Top News</Link> or <Link to="/world">World</Link> while you
-                      wait.
+                      <Link to="/top-news">Top News</Link> or <Link to="/world">World</Link> while
+                      you wait.
                     </p>
                   </>
                 ) : (
                   <>
-                    {!isMobile ? <TopTwoGrid a1={top1} a2={top2} /> : <LeadCard a={top1} />}
+                    {/* ✅ 1) First article: title -> image -> summary (NO card) */}
+                    <FirstArticle a={first} isMobile={isMobile} />
 
+                    {/* ✅ 2) 2nd + 3rd: big cards side-by-side on desktop */}
+                    <TwoUpGrid a1={second} a2={third} isMobile={isMobile} />
+
+                    {/* ✅ 3) Rest: normal cards */}
                     <div style={listStyle}>
                       {rest.map((a, idx) => (
                         <div key={a._id || a.id || a.slug || idx}>

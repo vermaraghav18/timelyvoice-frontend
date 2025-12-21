@@ -27,9 +27,8 @@ const WRAP_STYLE = {
 };
 
 /**
- * ✅ KEY CHANGE:
- * - Do NOT use maxWidth here.
- * - Let SiteNav wrap PrimaryNav inside <div className="site-container">.
+ * ✅ Outer holds height + alignment.
+ * Container width (maxWidth/margin/padding) will be injected from SiteNav.
  */
 const OUTER_STYLE = {
   width: "100%",
@@ -38,7 +37,6 @@ const OUTER_STYLE = {
   alignItems: "center",
   justifyContent: "center",
   overflow: "hidden",
-  padding: "0 12px",
   boxSizing: "border-box",
 };
 
@@ -111,7 +109,7 @@ function isMobile() {
   return window.matchMedia("(max-width: 768px)").matches;
 }
 
-export default function PrimaryNav() {
+export default function PrimaryNav({ containerStyle }) {
   const { pathname } = useLocation();
   const scrollerRef = useRef(null);
   const activeRef = useRef(null);
@@ -150,6 +148,12 @@ export default function PrimaryNav() {
     }
   }, [pathname]);
 
+  // ✅ Inject container (maxWidth + centered) from SiteNav
+  const outerStyle = {
+    ...OUTER_STYLE,
+    ...(containerStyle || {}),
+  };
+
   return (
     <nav style={WRAP_STYLE} aria-label="Primary">
       <style>{`
@@ -176,7 +180,7 @@ export default function PrimaryNav() {
         }
       `}</style>
 
-      <div className="primary-outer" style={OUTER_STYLE}>
+      <div className="primary-outer" style={outerStyle}>
         <div
           ref={scrollerRef}
           className="nav-scroller primary-scroller"
