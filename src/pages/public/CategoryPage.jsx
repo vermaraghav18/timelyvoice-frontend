@@ -147,8 +147,7 @@ const CATEGORY_COPY_STATIC = {
 
 function getCategoryCopy(slug, category) {
   const key = String(slug || "").toLowerCase();
-  const baseName =
-    category?.name || humanizeSlug(key || "News").trim() || "News";
+  const baseName = category?.name || humanizeSlug(key || "News").trim() || "News";
 
   const fallbackMetaTitle = `${baseName} News & Analysis — ${BRAND_NAME}`;
   const fallbackMetaDescription = `Latest ${baseName.toLowerCase()} stories, context and exam-ready explainers from ${BRAND_NAME}.`;
@@ -361,6 +360,18 @@ const topMeta = {
   flexWrap: "wrap",
 };
 
+/* ✅ NEW: summary style for the first 2 cards */
+const topSummary = {
+  marginTop: 8,
+  fontSize: 14,
+  lineHeight: 1.5,
+  color: "#cbd5ff",
+  display: "-webkit-box",
+  WebkitLineClamp: 3,
+  WebkitBoxOrient: "vertical",
+  overflow: "hidden",
+};
+
 function TopCard({ a }) {
   if (!a) return null;
   const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
@@ -369,11 +380,21 @@ function TopCard({ a }) {
   const imgRaw = ensureRenderableImage(a);
   const img = toCloudinaryOptimized(imgRaw, 900);
 
+  const summary =
+    a.summary ||
+    a.excerpt ||
+    a.description ||
+    a.seoDescription ||
+    (typeof a.body === "string"
+      ? a.body.replace(/<[^>]*>/g, "").slice(0, 170)
+      : "");
+
   return (
     <div style={topCard}>
       <Link to={articleUrl} style={{ textDecoration: "none", color: "inherit" }}>
         <h2 style={topTitle}>{a.title}</h2>
       </Link>
+
       {img && (
         <Link to={articleUrl} style={{ display: "block" }}>
           <img
@@ -385,6 +406,14 @@ function TopCard({ a }) {
           />
         </Link>
       )}
+
+      {/* ✅ NEW: summary below image */}
+      {summary && (
+        <Link to={articleUrl} style={{ textDecoration: "none", color: "inherit" }}>
+          <p style={topSummary}>{summary}</p>
+        </Link>
+      )}
+
       <div style={topMeta}>
         <span>Updated {timeAgo(updated)}</span>
       </div>
@@ -394,7 +423,6 @@ function TopCard({ a }) {
 
 function TopTwoGrid({ a1, a2 }) {
   if (!a1 && !a2) return null;
-  // if only one exists, just render one full width
   if (a1 && !a2) return <TopCard a={a1} />;
   if (!a1 && a2) return <TopCard a={a2} />;
 
@@ -453,9 +481,7 @@ function ArticleRow({ a, compact = false }) {
         alignItems: "center",
       };
 
-  const thumbS = compact
-    ? { ...thumbStyle, width: 96, height: 64 }
-    : thumbStyle;
+  const thumbS = compact ? { ...thumbStyle, width: 96, height: 64 } : thumbStyle;
 
   return (
     <div style={cardS}>
@@ -496,7 +522,6 @@ export default function CategoryPage() {
   const { pathname, search } = location;
   const pagePath = normPath(pathname);
 
-  // ✅ Pagination removed
   const page = 1;
   const limit = 500;
 
@@ -511,11 +536,15 @@ export default function CategoryPage() {
   const [railsError, setRailsError] = useState("");
 
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 720px)").matches : false
+    typeof window !== "undefined"
+      ? window.matchMedia("(max-width: 720px)").matches
+      : false
   );
 
   const [isNarrow, setIsNarrow] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 1200px)").matches : false
+    typeof window !== "undefined"
+      ? window.matchMedia("(max-width: 1200px)").matches
+      : false
   );
 
   useEffect(() => {
@@ -545,11 +574,15 @@ export default function CategoryPage() {
   const normalizedSlug = useMemo(() => toSlug(slug), [slug]);
 
   const canonical = useMemo(() => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://timelyvoice.com";
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "https://timelyvoice.com";
     return `${origin}/category/${encodeURIComponent(normalizedSlug)}`;
   }, [normalizedSlug]);
 
-  const categoryCopy = useMemo(() => getCategoryCopy(normalizedSlug, category), [normalizedSlug, category]);
+  const categoryCopy = useMemo(
+    () => getCategoryCopy(normalizedSlug, category),
+    [normalizedSlug, category]
+  );
 
   useEffect(() => {
     const want = `/category/${normalizedSlug}`;
@@ -581,7 +614,8 @@ export default function CategoryPage() {
 
         if (cRes?.redirectTo) {
           const newSlug = extractCanonicalSlugFromRedirect({ data: cRes });
-          if (newSlug) navigate({ pathname: `/category/${newSlug}`, search }, { replace: true });
+          if (newSlug)
+            navigate({ pathname: `/category/${newSlug}`, search }, { replace: true });
           return;
         }
 
@@ -792,7 +826,6 @@ export default function CategoryPage() {
     };
   }, [slug]);
 
-  // ✅ NEW split: top two + rest
   const top1 = articles?.[0] || null;
   const top2 = articles?.[1] || null;
   const rest = Array.isArray(articles) && articles.length > 2 ? articles.slice(2) : [];
@@ -862,17 +895,13 @@ export default function CategoryPage() {
                     <h1>{categoryCopy.displayName}</h1>
                     <p style={{ marginTop: 8, textAlign: "center" }}>
                       New articles for this category are coming soon. Check{" "}
-                      <Link to="/top-news">Top News</Link> or <Link to="/world">World</Link> while you wait.
+                      <Link to="/top-news">Top News</Link> or <Link to="/world">World</Link> while you
+                      wait.
                     </p>
                   </>
                 ) : (
                   <>
-                    {/* ✅ Desktop: first 2 side-by-side (smaller). Mobile: keep single big lead */}
-                    {!isMobile ? (
-                      <TopTwoGrid a1={top1} a2={top2} />
-                    ) : (
-                      <LeadCard a={top1} />
-                    )}
+                    {!isMobile ? <TopTwoGrid a1={top1} a2={top2} /> : <LeadCard a={top1} />}
 
                     <div style={listStyle}>
                       {rest.map((a, idx) => (
