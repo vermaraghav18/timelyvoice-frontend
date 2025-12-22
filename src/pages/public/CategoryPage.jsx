@@ -551,10 +551,24 @@ function InlineAd() {
   }, []);
 
   return (
-    <div style={{ display: "flex", justifyContent: "center", margin: "24px 0" }}>
+    <div
+      style={{
+        width: "100%",
+        display: "flex",
+        justifyContent: "center",
+        margin: 0,
+        padding: 0,
+        lineHeight: 0,
+      }}
+    >
       <ins
         className="adsbygoogle"
-        style={{ display: "inline-block", width: 300, height: 300 }}
+        style={{
+          display: "block",
+          width: 300,
+          height: 300,
+          margin: 0,
+        }}
         data-ad-client={ADS_CLIENT}
         data-ad-slot={ADS_SLOT_INLINE}
       />
@@ -930,7 +944,7 @@ export default function CategoryPage() {
 
                     <div style={listStyle}>
                       {rest.map((a, idx) => (
-                        <div key={a._id || a.id || a.slug || idx}>
+                        <div key={a._id || a.id || a.slug || idx} style={{ width: "100%" }}>
                           <ArticleRow a={a} compact={!isMobile} />
 
                           {/* ✅ Show 300x300 Ad after every 4 cards */}
