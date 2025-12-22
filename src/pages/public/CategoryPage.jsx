@@ -188,7 +188,14 @@ const pageWrap = {
   fontFamily: "'Newsreader', serif",
 };
 
-const listStyle = { display: "flex", flexDirection: "column", gap: 8 };
+/* ✅ CHANGE: remove list gap; we control spacing ourselves */
+const listStyle = { display: "flex", flexDirection: "column", gap: 0 };
+
+/* ✅ NEW: consistent card spacing */
+const itemWrap = { width: "100%", marginBottom: 8 };
+
+/* ✅ NEW: ad spacing (gap above, almost none below) */
+const adWrap = { width: "100%", margin: "12px 0 2px", textAlign: "center", lineHeight: 0 };
 
 const cardStyle = {
   background: "linear-gradient(135deg, #001236 0%, #001e49ff 100%)",
@@ -550,33 +557,17 @@ function InlineAd() {
     }
   }, []);
 
- return (
-  <div
-    style={{
-      width: "100%",
-      textAlign: "center",
-      paddingTop: 16,   // ✅ space ABOVE ad
-      paddingBottom: 0, // ❌ no space below
-      margin: 0,
-      lineHeight: 0,
-    }}
-  >
-    <ins
-      className="adsbygoogle"
-      style={{
-        display: "inline-block",
-        width: 300,
-        height: 300,
-        margin: 0,
-      }}
-      data-ad-client={ADS_CLIENT}
-      data-ad-slot={ADS_SLOT_INLINE}
-    />
-  </div>
-);
-
+  return (
+    <div style={adWrap}>
+      <ins
+        className="adsbygoogle"
+        style={{ display: "inline-block", width: 300, height: 300, margin: 0 }}
+        data-ad-client={ADS_CLIENT}
+        data-ad-slot={ADS_SLOT_INLINE}
+      />
+    </div>
+  );
 }
-
 
 export default function CategoryPage() {
   const { slug } = useParams();
@@ -870,7 +861,6 @@ export default function CategoryPage() {
     if (!blocks.length) return null;
     return blocks.map((sec) => (
       <div key={sec._id || sec.id || sec.slug} style={{ marginTop: 12 }}>
-
         <SectionRenderer section={sec} />
       </div>
     ));
@@ -948,9 +938,12 @@ export default function CategoryPage() {
                     <div style={listStyle}>
                       {rest.map((a, idx) => (
                         <div key={a._id || a.id || a.slug || idx} style={{ width: "100%" }}>
-                          <ArticleRow a={a} compact={!isMobile} />
+                          {/* ✅ card row spacing controlled here */}
+                          <div style={itemWrap}>
+                            <ArticleRow a={a} compact={!isMobile} />
+                          </div>
 
-                          {/* ✅ Show 300x300 Ad after every 4 cards */}
+                          {/* ✅ ad is its own row -> no huge bottom gap */}
                           {(idx + 1) % 4 === 0 && <InlineAd />}
 
                           {renderInsetAfter(idx + 1)}
