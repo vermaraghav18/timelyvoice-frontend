@@ -598,7 +598,7 @@ export default function ReaderArticle() {
   const outerContainer = {
     display: 'flex',
     justifyContent: 'center',
-    marginTop: isMobile ? 16 : 32,
+    marginTop: isMobile ? 6 : 12,
     marginBottom: isMobile ? 24 : 40,
     fontFamily: "'Newsreader', serif",
     position: 'relative',
@@ -979,6 +979,7 @@ export default function ReaderArticle() {
               className="card"
               style={{
                 ...styles.card,
+                borderRadius: 0,     // ✅ add this
                 padding: isMobile ? 12 : 18,
                 marginTop: 0,
                 backgroundColor: '#001236ff',
