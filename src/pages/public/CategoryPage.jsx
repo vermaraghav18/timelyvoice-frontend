@@ -550,29 +550,31 @@ function InlineAd() {
     }
   }, []);
 
-  return (
-    <div
+ return (
+  <div
+    style={{
+      width: "100%",
+      textAlign: "center",
+      paddingTop: 16,   // ✅ space ABOVE ad
+      paddingBottom: 0, // ❌ no space below
+      margin: 0,
+      lineHeight: 0,
+    }}
+  >
+    <ins
+      className="adsbygoogle"
       style={{
-        width: "100%",
+        display: "inline-block",
+        width: 300,
+        height: 300,
         margin: 0,
-        padding: 0,
-        textAlign: "center", // ✅ THIS is the key: hard-centers inline blocks
-        lineHeight: 0,       // ✅ removes baseline gap
       }}
-    >
-      <ins
-        className="adsbygoogle"
-        style={{
-          display: "inline-block", // ✅ inline-block + textAlign center = always centered
-          width: 300,
-          height: 300,
-          margin: 0,
-        }}
-        data-ad-client={ADS_CLIENT}
-        data-ad-slot={ADS_SLOT_INLINE}
-      />
-    </div>
-  );
+      data-ad-client={ADS_CLIENT}
+      data-ad-slot={ADS_SLOT_INLINE}
+    />
+  </div>
+);
+
 }
 
 
@@ -867,7 +869,8 @@ export default function CategoryPage() {
     const blocks = insetBlocks.filter((b) => b.__after === idx);
     if (!blocks.length) return null;
     return blocks.map((sec) => (
-      <div key={sec._id || sec.id || sec.slug} style={{ margin: "12px 0" }}>
+      <div key={sec._id || sec.id || sec.slug} style={{ marginTop: 12 }}>
+
         <SectionRenderer section={sec} />
       </div>
     ));
