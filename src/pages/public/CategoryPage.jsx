@@ -20,7 +20,7 @@ const DESKTOP_CONTENT_MAX = 920;
 
 /* ---------- AdSense: Category Page Skin (Left/Right Vertical) ---------- */
 const ADS_CLIENT = "ca-pub-8472487092329023";
-const ADS_SLOT_LEFT = "1029272878";  // TV_Category_Left_Skyscraper
+const ADS_SLOT_LEFT = "1029272878"; // TV_Category_Left_Skyscraper
 const ADS_SLOT_RIGHT = "5507573932"; // TV_Category_Right_Skyscraper
 
 /* ---------- helper: relative time ---------- */
@@ -484,7 +484,9 @@ function ArticleRow({ a, compact = false }) {
             <h3 style={titleS}>{a.title}</h3>
           </Link>
           <div style={metaS}>
-            <Link to={categoryUrl} style={catLink}>{categoryName}</Link>
+            <Link to={categoryUrl} style={catLink}>
+              {categoryName}
+            </Link>
             <span aria-hidden>•</span>
             <span>Updated {timeAgo(updated)}</span>
           </div>
@@ -500,22 +502,36 @@ function ArticleRow({ a, compact = false }) {
   );
 }
 
-/* ---------- Page-skin ads (correct fixed-size 300x1000, no overlap) ---------- */
+/* =========================
+   AdSense: robust loader + push
+   ========================= */
 function ensureAdsenseScript() {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined") return Promise.resolve();
 
-  const existing = document.querySelector(
-    'script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]'
-  );
-  if (existing) return;
+  if (window.__tvAdsenseReadyPromise) return window.__tvAdsenseReadyPromise;
 
-  const s = document.createElement("script");
-  s.async = true;
-  s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(
-    ADS_CLIENT
-  )}`;
-  s.crossOrigin = "anonymous";
-  document.head.appendChild(s);
+  window.__tvAdsenseReadyPromise = new Promise((resolve) => {
+    const existing = document.querySelector(
+      'script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]'
+    );
+
+    if (existing) {
+      setTimeout(resolve, 0);
+      return;
+    }
+
+    const s = document.createElement("script");
+    s.async = true;
+    s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(
+      ADS_CLIENT
+    )}`;
+    s.crossOrigin = "anonymous";
+    s.onload = () => resolve();
+    s.onerror = () => resolve();
+    document.head.appendChild(s);
+  });
+
+  return window.__tvAdsenseReadyPromise;
 }
 
 function pushAdsense() {
@@ -530,9 +546,24 @@ function pushAdsense() {
 
 function AdRail({ side = "left", slot }) {
   useEffect(() => {
-    ensureAdsenseScript();
-    const t = setTimeout(() => pushAdsense(), 150);
-    return () => clearTimeout(t);
+    let alive = true;
+
+    (async () => {
+      await ensureAdsenseScript();
+      if (!alive) return;
+
+      // Ensure the <ins> exists + has layout before pushing
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (!alive) return;
+          pushAdsense();
+        });
+      });
+    })();
+
+    return () => {
+      alive = false;
+    };
   }, [slot]);
 
   return (
@@ -542,7 +573,7 @@ function AdRail({ side = "left", slot }) {
         style={{ display: "inline-block", width: 300, height: 1000 }}
         data-ad-client={ADS_CLIENT}
         data-ad-slot={slot}
-      />
+      ></ins>
     </div>
   );
 }
@@ -571,32 +602,40 @@ export default function CategoryPage() {
     typeof window !== "undefined" ? window.matchMedia("(max-width: 720px)").matches : false
   );
 
-  // IMPORTANT: pageskin needs VERY wide screens (>=1600). This flag controls rendering.
-  const [isWideEnoughForSkin, setIsWideEnoughForSkin] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(min-width: 1601px)").matches : false
-  );
+  /* ✅ Compute if page-skin rails can fit (instead of hardcoded 1601px) */
+  const [canFitRails, setCanFitRails] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const railW = 300;
+    const railGap = 16;
+    const buffer = 40; // scrollbar + padding safety
+    const needed = DESKTOP_CONTENT_MAX + 2 * (railW + railGap) + buffer;
+    return window.innerWidth >= needed;
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const mqMobile = window.matchMedia("(max-width: 720px)");
-    const mqWide = window.matchMedia("(min-width: 1601px)");
 
     const onMobile = (e) => setIsMobile(e.matches);
-    const onWide = (e) => setIsWideEnoughForSkin(e.matches);
-
     mqMobile.addEventListener?.("change", onMobile);
     mqMobile.addListener?.(onMobile);
 
-    mqWide.addEventListener?.("change", onWide);
-    mqWide.addListener?.(onWide);
+    const onResize = () => {
+      const railW = 300;
+      const railGap = 16;
+      const buffer = 40;
+      const needed = DESKTOP_CONTENT_MAX + 2 * (railW + railGap) + buffer;
+      setCanFitRails(window.innerWidth >= needed);
+    };
+
+    onResize();
+    window.addEventListener("resize", onResize);
 
     return () => {
       mqMobile.removeEventListener?.("change", onMobile);
       mqMobile.removeListener?.(onMobile);
-
-      mqWide.removeEventListener?.("change", onWide);
-      mqWide.removeListener?.(onWide);
+      window.removeEventListener("resize", onResize);
     };
   }, []);
 
@@ -679,7 +718,9 @@ export default function CategoryPage() {
       }
     })();
 
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [slug, navigate, normalizedSlug, search]);
 
   /* SEO */
@@ -705,7 +746,13 @@ export default function CategoryPage() {
     try {
       const { displayName } = categoryCopy;
 
-      const coll = { "@context": "https://schema.org", "@type": "CollectionPage", name: metaTitle, description: metaDescription, url: canonical };
+      const coll = {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        name: metaTitle,
+        description: metaDescription,
+        url: canonical,
+      };
       const breadcrumb = {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
@@ -724,18 +771,11 @@ export default function CategoryPage() {
     let cancel = false;
     (async () => {
       try {
-        const data = await cachedGet(
-          "/sections",
-          { params: { path: pagePath, validateStatus: () => true } },
-          60_000
-        );
+        const data = await cachedGet("/sections", { params: { path: pagePath, validateStatus: () => true } }, 60_000);
 
         const items = Array.isArray(data) ? data : [];
         const filtered = items.filter(
-          (s) =>
-            s?.enabled !== false &&
-            s?.target?.type === "path" &&
-            normPath(s?.target?.value) === pagePath
+          (s) => s?.enabled !== false && s?.target?.type === "path" && normPath(s?.target?.value) === pagePath
         );
 
         const seen = new Set();
@@ -754,7 +794,9 @@ export default function CategoryPage() {
       }
     })();
 
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [pagePath]);
 
   const headBlocks = pageSections.filter((s) => s.template?.startsWith("head_"));
@@ -808,7 +850,9 @@ export default function CategoryPage() {
         if (!cancel) setRailsLoading(false);
       }
     })();
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [slug]);
 
   const first = articles?.[0] || null;
@@ -834,8 +878,8 @@ export default function CategoryPage() {
     return { width: "100%", maxWidth: isMobile ? 1200 : DESKTOP_CONTENT_MAX, padding: "0 12px", marginBottom: 12 };
   }, [isMobile]);
 
-  // ✅ Show rails only on very wide desktop
-  const showPageSkinRails = !isMobile && isWideEnoughForSkin;
+  // ✅ Show rails only if they can fit (no overlap)
+  const showPageSkinRails = !isMobile && canFitRails;
 
   // ✅ When rails are on, reserve gutters + set real header height for rail top
   useEffect(() => {
@@ -886,8 +930,8 @@ export default function CategoryPage() {
               <>
                 <h1>{categoryCopy.displayName}</h1>
                 <p style={{ marginTop: 8 }}>
-                  We’re updating this section. You can read our latest{" "}
-                  <Link to="/top-news">top stories</Link> in the meantime.
+                  We’re updating this section. You can read our latest <Link to="/top-news">top stories</Link> in the
+                  meantime.
                 </p>
               </>
             )}
@@ -904,8 +948,8 @@ export default function CategoryPage() {
                   <>
                     <h1>{categoryCopy.displayName}</h1>
                     <p style={{ marginTop: 8, textAlign: "center" }}>
-                      New articles for this category are coming soon. Check{" "}
-                      <Link to="/top-news">Top News</Link> or <Link to="/world">World</Link> while you wait.
+                      New articles for this category are coming soon. Check <Link to="/top-news">Top News</Link> or{" "}
+                      <Link to="/world">World</Link> while you wait.
                     </p>
                   </>
                 ) : (
