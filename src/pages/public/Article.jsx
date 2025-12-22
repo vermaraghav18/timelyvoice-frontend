@@ -20,22 +20,19 @@ import CommentForm from '../../components/comments/CommentForm.jsx';
 import { track } from '../../lib/analytics';
 import useReadComplete from '../../hooks/useReadComplete.js';
 
-// reuse homepage rails
-import SectionRenderer from '../../components/sections/SectionRenderer.jsx';
 import RelatedStories from '../../components/RelatedStories.jsx';
-import '../../styles/rails.css';
 
 import { ensureRenderableImage } from '../../lib/images';
 
 /* =========================================================
-  ✅ AdSense (ONLY In-article Fluid ads for Article page)
-  + ✅ Top ad: Desktop responsive + Mobile fixed 320×100 (so it’s not huge)
+  ✅ AdSense (Article)
+  + ✅ Top responsive ad under title/source
+  + ✅ In-article (fluid) ads (3 minimum, 4 if long)
   ========================================================= */
 const ADS_CLIENT = 'ca-pub-8472487092329023';
 
-// ✅ TOP AD SLOTS
-const ADS_ARTICLE_TOP_DESKTOP = '5588476743'; // responsive auto (desktop)
-const ADS_ARTICLE_TOP_MOBILE = '7732899132'; // 320×100 (mobile)
+// ✅ Article top responsive ad
+const ADS_ARTICLE_TOP = '5588476743';
 
 // ✅ In-article (fluid) slots
 const ADS_INARTICLE_1 = '6745877256';
@@ -70,19 +67,12 @@ function useIsMobile(breakpoint = 768) {
   return isMobile;
 }
 
-/** ✅ TOP AD (below title/source, above time/date)
- * - Desktop: responsive auto (slot 5588476743)
- * - Mobile: fixed 320×100 (slot 7732899132) so it does NOT become huge
- * - SPA-safe push + avoids double push
+/** ✅ Top responsive display ad (below title/source, above time/date)
+ * - responsive for mobile + desktop
+ * - prevents double-push TagError (status + iframe + requested flag)
  */
-function ArticleTopAd({
-  client = ADS_CLIENT,
-  isMobile = false,
-  desktopSlot = ADS_ARTICLE_TOP_DESKTOP,
-  mobileSlot = ADS_ARTICLE_TOP_MOBILE,
-}) {
+function ArticleTopAd({ slot = ADS_ARTICLE_TOP, client = ADS_CLIENT }) {
   const insRef = useRef(null);
-  const slot = isMobile ? mobileSlot : desktopSlot;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -92,20 +82,12 @@ function ArticleTopAd({
     const ins = insRef.current;
     if (!ins) return;
 
-    // If slot changes, reset "requested" so AdSense can re-render for the new slot
-    ins.dataset.requested = '';
-
-    // ✅ Already processed by AdSense
     if (ins.getAttribute('data-adsbygoogle-status') === 'done') return;
-
-    // ✅ If AdSense already injected an iframe, never push again
     if (ins.querySelector('iframe')) return;
 
-    // ✅ Mark as requested to avoid React re-render double push
     if (ins.dataset.requested === '1') return;
     ins.dataset.requested = '1';
 
-    // Push now + delayed push (SPA timing)
     try {
       (window.adsbygoogle = window.adsbygoogle || []).push({});
     } catch {}
@@ -120,27 +102,15 @@ function ArticleTopAd({
 
   return (
     <div className="tv-article-topad" aria-label="Advertisement">
-      {/* MOBILE: fixed 320×100 to keep it small */}
-      {isMobile ? (
-        <ins
-          ref={insRef}
-          className="adsbygoogle"
-          style={{ display: 'inline-block', width: 320, height: 100 }}
-          data-ad-client={client}
-          data-ad-slot={slot}
-        />
-      ) : (
-        /* DESKTOP: responsive */
-        <ins
-          ref={insRef}
-          className="adsbygoogle"
-          style={{ display: 'block' }}
-          data-ad-client={client}
-          data-ad-slot={slot}
-          data-ad-format="auto"
-          data-full-width-responsive="true"
-        />
-      )}
+      <ins
+        ref={insRef}
+        className="adsbygoogle"
+        style={{ display: 'block' }}
+        data-ad-client={client}
+        data-ad-slot={slot}
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
     </div>
   );
 }
@@ -167,21 +137,15 @@ function InArticleAd({
     const ins = insRef.current;
     if (!ins) return;
 
-    // ✅ Already processed by AdSense
     if (ins.getAttribute('data-adsbygoogle-status') === 'done') return;
-
-    // ✅ If AdSense already injected an iframe, never push again
     if (ins.querySelector('iframe')) return;
 
-    // ✅ Mark as requested to avoid React re-render double push
     if (ins.dataset.requested === '1') return;
     ins.dataset.requested = '1';
 
     try {
       (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch {
-      // keep quiet in prod
-    }
+    } catch {}
   }, [slot, client]);
 
   const wrapClass = [
@@ -211,23 +175,11 @@ function InArticleAd({
   Article helpers
   ========================================================= */
 
-// --- Video helpers (Drive share -> direct playable url) ---
-function getDriveFileId(url = '') {
-  const s = String(url || '').trim();
-  if (!s) return '';
-  const byPath = s.match(/\/file\/d\/([^/]+)/);
-  const byParam = s.match(/[?&]id=([^&]+)/);
-  return (byPath && byPath[1]) || (byParam && byParam[1]) || '';
-}
-
 function toPlayableVideoSrc(url = '') {
   const raw = String(url || '').trim();
   if (!raw) return '';
-
-  // ✅ allow mp4 OR Cloudinary video URLs
   if (/\.mp4(\?|#|$)/i.test(raw)) return raw;
   if (raw.includes('/video/upload/')) return raw;
-
   return '';
 }
 
@@ -236,7 +188,6 @@ const SITE_NAME = 'The Timely Voice';
 
 const SITE_URL =
   typeof window !== 'undefined' ? window.location.origin : 'https://example.com';
-// Use a square logo that actually exists and is at least 112x112. 512x512 PNG/SVG recommended.
 const SITE_LOGO = `${SITE_URL}/logo-512.png`;
 
 // Local hero fallback (from /public)
@@ -250,32 +201,18 @@ function estimateReadingTime(text = '', wpm = 200) {
   return { minutes, words };
 }
 
-/** Normalize article body:
- * - If it already contains HTML (<p>, <h2>, <ul>…), keep it as-is.
- * - Otherwise interpret simple markdown-like syntax:
- *   # Heading     → <h2>
- *   ## Subhead    → <h3>
- *   - item / * / • → <ul><li>item</li>…>
- *   1. item       → <ol><li>item</li>…>
- *   Blank lines   → paragraphs (<p>…</p>)
- */
 function normalizeBody(htmlOrText = '') {
   let s = String(htmlOrText || '').trim();
   if (!s) return '';
 
-  // 1) Strip markdown-style heading hashes at the start of lines.
   s = s.replace(/^#{1,6}\s*/gm, '');
-
-  // 2) Strip markdown bold/italic markers but keep the inner text.
   s = s.replace(/\*\*(.+?)\*\*/g, '$1');
   s = s.replace(/\*(.+?)\*/g, '$1');
 
-  // 3) If it already looks like HTML, return cleaned string directly.
   if (/(<(p|h1|h2|h3|h4|h5|ul|ol|li|blockquote|br|span|div|mark)[\s>])/i.test(s)) {
     return s;
   }
 
-  // 4) Otherwise, treat it as simple markdown-ish text and build HTML
   const lines = s.replace(/\r\n?/g, '\n').split('\n');
 
   const blocks = [];
@@ -308,21 +245,18 @@ function normalizeBody(htmlOrText = '') {
       continue;
     }
 
-    // Headings: #, ##, ### -> h2, h3, h4
     const headingMatch = line.match(/^(#{1,3})\s+(.*)$/);
     if (headingMatch) {
       flushParagraph();
       flushList();
       const hashes = headingMatch[1].length;
       const text = headingMatch[2].trim();
-      const hLevel = Math.min(4, hashes + 1); // # → h2, ## → h3, ### → h4
+      const hLevel = Math.min(4, hashes + 1);
       blocks.push(`<h${hLevel}>${text}</h${hLevel}>`);
       continue;
     }
 
-    // Bullets: -, *, •
     const bulletMatch = line.match(/^([-*•])\s+(.*)$/);
-    // Ordered: 1. item / 1) item
     const orderedMatch = line.match(/^(\d+)[.)]\s+(.*)$/);
 
     if (bulletMatch || orderedMatch) {
@@ -341,12 +275,10 @@ function normalizeBody(htmlOrText = '') {
       continue;
     }
 
-    // Normal text line
     if (listType) flushList();
     paraLines.push(line);
   }
 
-  // Flush any trailing structures
   flushParagraph();
   flushList();
 
@@ -356,7 +288,6 @@ function normalizeBody(htmlOrText = '') {
   return html;
 }
 
-/** Split normalized HTML into array of paragraph HTML strings */
 function splitParagraphs(normalizedHtml = '') {
   if (!normalizedHtml) return [];
   return normalizedHtml
@@ -366,11 +297,7 @@ function splitParagraphs(normalizedHtml = '') {
     .map((chunk) => (chunk.endsWith('</p>') ? chunk : `${chunk}</p>`));
 }
 
-/** 🔧 Helper to choose the visible byline:
- * - Prefer author if present
- * - Otherwise use source (but ignore "Automation")
- * - Otherwise fall back to "News Desk"
- */
+/** Byline helper */
 const BRAND_NEWS_DESK = 'Timely Voice News Desk';
 
 function pickByline(doc = {}) {
@@ -440,7 +367,7 @@ export default function ReaderArticle() {
   const { slug } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const isMobile = useIsMobile(768); // rails hidden below 768px
+  const isMobile = useIsMobile(768);
 
   const [article, setArticle] = useState(null);
   const [status, setStatus] = useState('loading'); // 'loading' | 'ok' | 'notfound'
@@ -448,12 +375,6 @@ export default function ReaderArticle() {
   const [reading, setReading] = useState({ minutes: 0, words: 0 });
   const [comments, setComments] = useState([]);
 
-  // homepage rails plan
-  const [homeSections, setHomeSections] = useState([]);
-  const [railsLoading, setRailsLoading] = useState(true);
-  const [railsError, setRailsError] = useState('');
-
-  // Comments loader
   async function loadComments(articleSlug) {
     const { data } = await api.get(`/public/articles/${encodeURIComponent(articleSlug)}/comments`, {
       validateStatus: () => true,
@@ -473,42 +394,11 @@ export default function ReaderArticle() {
     [slug]
   );
 
-  // Ensure the initial HTML never says "Article not found" (prevents Soft 404)
   useEffect(() => {
     removeManagedHeadTags();
     upsertTag('title', {}, { textContent: `Loading… — ${SITE_NAME}` });
     upsertTag('meta', { name: 'robots', content: 'index,follow' });
   }, [slug]);
-
-  /* ---------- fetch homepage rails plan for sidebars ---------- */
-  useEffect(() => {
-    let cancel = false;
-    (async () => {
-      try {
-        setRailsLoading(true);
-        const res = await api.get('/sections/plan', {
-          params: { sectionType: 'homepage' },
-          validateStatus: () => true,
-        });
-
-        if (!cancel) {
-          const rows = Array.isArray(res.data) ? res.data : [];
-          setHomeSections(rows);
-          setRailsError('');
-        }
-      } catch {
-        if (!cancel) {
-          setHomeSections([]);
-          setRailsError('Failed to load rails');
-        }
-      } finally {
-        if (!cancel) setRailsLoading(false);
-      }
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, []);
 
   /* ---------- fetch article ---------- */
   useEffect(() => {
@@ -537,7 +427,6 @@ export default function ReaderArticle() {
         const rt = estimateReadingTime(bodyHtml || doc.summary || '');
         setReading(rt);
 
-        // ---- SEO
         removeManagedHeadTags();
 
         const title = (doc.metaTitle && doc.metaTitle.trim()) || doc.title || 'Article';
@@ -549,7 +438,6 @@ export default function ReaderArticle() {
         upsertTag('meta', { name: 'description', content: String(desc).slice(0, 155) });
         upsertTag('link', { rel: 'canonical', href: canonical });
 
-        // Article date metas for FB/OG/SEO
         const publishedIso = new Date(
           doc.publishedAt || doc.publishAt || doc.createdAt || Date.now()
         ).toISOString();
@@ -559,12 +447,9 @@ export default function ReaderArticle() {
         upsertTag('meta', { property: 'article:published_time', content: publishedIso });
         upsertTag('meta', { property: 'article:modified_time', content: modifiedIso });
 
-        // Open Graph / Twitter
         const ogImage = ensureRenderableImage(doc);
 
-        // Brand on social
         upsertTag('meta', { property: 'og:site_name', content: SITE_NAME });
-
         upsertTag('meta', { property: 'og:type', content: 'article' });
         upsertTag('meta', { property: 'og:title', content: title });
         upsertTag('meta', { property: 'og:description', content: String(desc).slice(0, 200) });
@@ -579,11 +464,9 @@ export default function ReaderArticle() {
         upsertTag('meta', { name: 'twitter:description', content: String(desc).slice(0, 200) });
         if (ogImage) upsertTag('meta', { name: 'twitter:image', content: ogImage });
 
-        // Optional author meta
         const authorNameMeta = (doc.author && String(doc.author).trim()) || 'Timely Voice News';
         upsertTag('meta', { name: 'author', content: authorNameMeta });
 
-        // ---------- JSON-LD: Strong NewsArticle + Breadcrumb ----------
         const categoryObj = doc.category ?? null;
         const categoryName =
           categoryObj && typeof categoryObj === 'object'
@@ -595,7 +478,6 @@ export default function ReaderArticle() {
             : categoryName;
 
         const authorName = (doc.author && String(doc.author).trim()) || 'Timely Voice News';
-
         const authorNode = authorName.toLowerCase().includes('timely voice')
           ? { '@type': 'Organization', name: authorName }
           : { '@type': 'Person', name: authorName };
@@ -651,7 +533,6 @@ export default function ReaderArticle() {
 
         addJsonLd({ '@context': 'https://schema.org', '@graph': [articleNode, breadcrumbNode] });
 
-        // analytics
         try {
           track('page_view', {
             view: 'article_detail',
@@ -666,7 +547,6 @@ export default function ReaderArticle() {
           });
         } catch {}
 
-        // related
         try {
           const r1 = await api.get('/articles', {
             params: { page: 1, limit: 8, category: categoryName },
@@ -703,21 +583,18 @@ export default function ReaderArticle() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, location.key, navigate]);
 
-  // load comments
   useEffect(() => {
     if (article?.slug) loadComments(article.slug);
   }, [article?.slug]);
 
-  /* ---------- derived ---------- */
   const displayDate =
     article?.updatedAt || article?.publishedAt || article?.publishAt || article?.createdAt;
 
   const rawImageUrl = ensureRenderableImage(article);
   const imageAlt = article?.imageAlt || article?.title || '';
-
   const heroSrc = rawImageUrl || FALLBACK_HERO_IMAGE;
 
-  /* ---------- layout ---------- */
+  /* ---------- layout (✅ rails removed + wider content) ---------- */
   const outerContainer = {
     display: 'flex',
     justifyContent: 'center',
@@ -729,30 +606,31 @@ export default function ReaderArticle() {
 
   const mainWrapper = {
     display: 'flex',
-    flexDirection: isMobile ? 'column' : 'row',
+    flexDirection: 'column',
     justifyContent: 'center',
-    alignItems: isMobile ? 'stretch' : 'flex-start',
-    gap: isMobile ? 12 : 8,
+    alignItems: 'stretch',
+    gap: 0,
     width: '100%',
-    maxWidth: isMobile ? 640 : 1040,
+    maxWidth: isMobile ? 720 : 1180, // ✅ wider now that rails are gone
     padding: '0 12px',
   };
 
   const centerColumn = {
-    flex: isMobile ? '1 1 auto' : '0 0 740px',
-    width: isMobile ? '100%' : 'auto',
+    width: '100%',
+    maxWidth: isMobile ? '100%' : 980, // ✅ wider article column
+    margin: '0 auto',
   };
 
   /* ---------- article styles ---------- */
   const titleH1 = {
     margin: '0 0 8px',
-    fontSize: isMobile ? 'clamp(18px, 5.5vw, 26px)' : 'clamp(18px, 2vw, 28px)',
+    fontSize: isMobile ? 'clamp(18px, 5.5vw, 26px)' : 'clamp(18px, 2vw, 30px)',
     lineHeight: 1.3,
     fontWeight: 600,
   };
 
   const sourceRow = {
-    margin: isMobile ? '6px 0 10px' : '10px 0 12px',
+    margin: isMobile ? '6px 0 12px' : '10px 0 14px',
     fontSize: isMobile ? 14 : 15,
     color: '#00ffbfff',
     fontWeight: 500,
@@ -788,7 +666,8 @@ export default function ReaderArticle() {
     boxShadow: '0 8px 20px 0 #000, 0 0 0 1px rgba(255,255,255,0.06)',
   };
 
-  const articleBodyWrapper = { maxWidth: '70ch', margin: '0 auto' };
+  // ✅ wider readable line length now that we have more space
+  const articleBodyWrapper = { maxWidth: '86ch', margin: '0 auto' };
 
   const prose = {
     fontSize: isMobile ? 19 : 'clamp(19px, 2.2vw, 22px)',
@@ -796,7 +675,6 @@ export default function ReaderArticle() {
     color: '#ffffffff',
   };
 
-  // ---- BODY PREP ----
   const normalizedBody = useMemo(
     () => normalizeBody(article?.bodyHtml || article?.body || ''),
     [article?.bodyHtml, article?.body]
@@ -806,7 +684,7 @@ export default function ReaderArticle() {
   /* =========================================================
     ✅ Ad placement rule:
     - 3 ads minimum, 4 if long articles
-    - spaced by reading chunks (roughly 10–15 lines)
+    - spaced by reading chunks
     ========================================================= */
   function stripHtml(html = '') {
     return String(html || '')
@@ -832,14 +710,13 @@ export default function ReaderArticle() {
     const wc = paragraphs.map((p) => wordCountFromHtml(p));
     const totalWords = wc.reduce((a, b) => a + b, 0);
 
-    // 4 ads only for longer stories
     const desiredAds = totalWords >= 900 ? 4 : 3;
 
-    const FIRST_AD_AFTER_WORDS = 150; // don't show immediately at top
-    const MIN_GAP_WORDS = 200; // target spacing between ads
-    const MAX_GAP_WORDS = 280; // force a placement if we overshoot
+    const FIRST_AD_AFTER_WORDS = 150;
+    const MIN_GAP_WORDS = 200;
+    const MAX_GAP_WORDS = 280;
 
-    const placements = []; // paragraph indices where we place an ad AFTER that paragraph
+    const placements = [];
     let sinceLast = 0;
     let cumulative = 0;
 
@@ -847,7 +724,6 @@ export default function ReaderArticle() {
       cumulative += wc[i];
       sinceLast += wc[i];
 
-      // First ad gate
       if (placements.length === 0) {
         if (cumulative >= FIRST_AD_AFTER_WORDS) {
           placements.push(i);
@@ -856,7 +732,6 @@ export default function ReaderArticle() {
         continue;
       }
 
-      // Next ads by gap
       if (placements.length < desiredAds) {
         if (sinceLast >= MIN_GAP_WORDS) {
           placements.push(i);
@@ -868,7 +743,6 @@ export default function ReaderArticle() {
       }
     }
 
-    // Fallback: guarantee desiredAds placements using % positions
     const pickIndex = (ratio) =>
       Math.min(totalParas - 1, Math.max(0, Math.floor((totalParas - 1) * ratio)));
 
@@ -884,7 +758,6 @@ export default function ReaderArticle() {
       uniqPush(pickIndex(r));
     }
 
-    // still short? push towards end
     while (placements.length < desiredAds) {
       uniqPush(totalParas - 1);
       if (placements.length >= desiredAds) break;
@@ -907,7 +780,6 @@ export default function ReaderArticle() {
     return map;
   }, [paragraphs]);
 
-  // --- 404 SEO handling (must always define hooks in same order) ---
   useEffect(() => {
     if (status === 'notfound') {
       removeManagedHeadTags();
@@ -945,43 +817,37 @@ export default function ReaderArticle() {
 
   return (
     <>
-      {/* Styles scoped to this page */}
       <style>{`
-        /* =========================
-          Article typography
-          ========================= */
         .article-body{
           overflow-x: hidden;
         }
 
         .article-body p {
-          /* lighter body weight */
-          font-weight: 300;
+          font-weight: 100;
           margin: 1.25em 0;
           line-height: 1.85;
           font-size: 19px;
           color: #e8ecf1;
         }
 
-        /* ✅ Top ad (under title/source) – centered, mobile not huge */
+        /* ✅ Top ad – responsive & safe */
         .tv-article-topad{
           width: 100%;
           max-width: 100%;
-          margin: 8px 0 8px;
+          margin: 10px 0 10px;
           overflow: hidden;
-          display: flex;
-          justify-content: center;
-          align-items: center;
         }
         .tv-article-topad ins.adsbygoogle{
+          display: block !important;
+          width: 100% !important;
           max-width: 100% !important;
           overflow: hidden !important;
         }
         .tv-article-topad iframe{
+          width: 100% !important;
           max-width: 100% !important;
         }
 
-        /* MAIN HEADLINES (h2) – orange highlight bar */
         .article-body h2 {
           font-size: 22px;
           margin-top: 1.8em;
@@ -994,7 +860,6 @@ export default function ReaderArticle() {
           border-left: none;
         }
 
-        /* Optional: smaller subheads (h3) */
         .article-body h3 {
           font-size: 19px;
           margin-top: 1.6em;
@@ -1023,28 +888,31 @@ export default function ReaderArticle() {
           border-radius: 2px;
         }
 
-        /* INLINE HERO IMAGE – FLOAT LEFT ON DESKTOP */
         .article-hero-inline {
           float: left;
           width: 40%;
-          max-width: 320px;
+          max-width: 360px;
           margin: 0 18px 10px 0;
         }
 
         .article-hero-inline.article-hero-video {
           width: 62%;
-          max-width: 520px;
+          max-width: 560px;
         }
 
-        .article-hero-inline img,
+        .article-hero-inline img {
+          display: block;
+          width: 100%;
+          height: auto;
+          border-radius: 1px;
+          background: #f1f5f9;
+        }
+
         .article-hero-inline video {
           display: block;
           width: 100%;
           height: auto;
           border-radius: 1px;
-        }
-
-        .article-hero-inline video {
           background: #000;
           object-fit: cover;
         }
@@ -1069,9 +937,7 @@ export default function ReaderArticle() {
           }
         }
 
-        /* =========================
-          ✅ In-article Ads (fluid)
-          ========================= */
+        /* ✅ In-article Ads (fluid) */
         .article-body .tv-inarticle-wrap{
           clear: both;
           width: 100%;
@@ -1108,13 +974,12 @@ export default function ReaderArticle() {
 
       <div style={outerContainer}>
         <div style={mainWrapper}>
-          {/* CENTER ARTICLE */}
           <main style={centerColumn}>
             <article
               className="card"
               style={{
                 ...styles.card,
-                padding: isMobile ? 12 : 16,
+                padding: isMobile ? 12 : 18,
                 marginTop: 0,
                 backgroundColor: '#001236ff',
                 color: '#FFFFFF',
@@ -1126,13 +991,8 @@ export default function ReaderArticle() {
 
               <div style={sourceRow}>By {pickByline(article)}</div>
 
-              {/* ✅ TOP AD: Desktop responsive, Mobile 320×100 (not huge) */}
-              <ArticleTopAd
-                client={ADS_CLIENT}
-                isMobile={isMobile}
-                desktopSlot={ADS_ARTICLE_TOP_DESKTOP}
-                mobileSlot={ADS_ARTICLE_TOP_MOBILE}
-              />
+              {/* ✅ Top responsive ad */}
+              <ArticleTopAd slot={ADS_ARTICLE_TOP} client={ADS_CLIENT} />
 
               <div style={timeShareBar}>
                 <small style={timeText}>
@@ -1140,13 +1000,7 @@ export default function ReaderArticle() {
                   {reading.minutes ? (
                     <>
                       {' • '}
-                      <span
-                        style={{
-                          color: '#ee6affff',
-                          fontWeight: 500,
-                          fontSize: isMobile ? 16 : 18,
-                        }}
-                      >
+                      <span style={{ color: '#ee6affff', fontWeight: 500, fontSize: isMobile ? 16 : 18 }}>
                         {reading.minutes} min read
                       </span>
                     </>
@@ -1158,13 +1012,11 @@ export default function ReaderArticle() {
 
               {article.summary && <div style={summaryBox}>{article.summary}</div>}
 
-              {/* Inline hero floated left inside article body */}
               <div
                 ref={bodyRef}
                 className="article-body google-anno-skip"
                 style={{ ...prose, ...articleBodyWrapper }}
               >
-                {/* If video exists, it REPLACES the hero image */}
                 {(() => {
                   const playable = toPlayableVideoSrc(article?.videoUrl);
 
@@ -1200,7 +1052,6 @@ export default function ReaderArticle() {
                   );
                 })()}
 
-                {/* ✅ In-article (fluid) ads: 3 minimum, 4 for long articles, spaced by reading chunks */}
                 {paragraphs.length === 0
                   ? null
                   : paragraphs.map((html, i) => {
@@ -1238,34 +1089,11 @@ export default function ReaderArticle() {
               />
             </article>
 
-            {/* Leave a comment MUST be the last visible section */}
             <section style={{ marginTop: 24 }}>
               <CommentForm slug={article.slug} onSubmitted={() => loadComments(article.slug)} />
               <CommentThread comments={comments} />
             </section>
           </main>
-
-          {/* RIGHT RAILS (even indices) — hidden on mobile */}
-          {!isMobile && (
-            <aside style={{ flex: '0 0 260px' }}>
-              <div className="rail-wrap" style={{ display: 'flow-root', marginTop: 0, paddingTop: 0 }}>
-                {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-                {!railsLoading && railsError && (
-                  <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>
-                )}
-                {!railsLoading &&
-                  !railsError &&
-                  homeSections
-                    .filter((s) => s.template?.startsWith('rail_'))
-                    .filter((_, i) => i % 2 === 0)
-                    .map((sec, i) => (
-                      <div key={sec.id || sec._id || sec.slug} style={{ marginTop: i === 0 ? 0 : 12 }}>
-                        <SectionRenderer section={sec} />
-                      </div>
-                    ))}
-              </div>
-            </aside>
-          )}
         </div>
       </div>
 
