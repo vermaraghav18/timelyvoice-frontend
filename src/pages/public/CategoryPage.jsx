@@ -21,6 +21,10 @@ const DESKTOP_CONTENT_MAX = 920;
 /* ✅ Content padding inside the center column */
 const CONTENT_PAD_X = 12;
 
+/* ---------- AdSense: Category inline card ---------- */
+const ADS_CLIENT = "ca-pub-8472487092329023";
+const ADS_SLOT_INLINE = "5931257525"; // category_fitin_ad (300x300)
+
 /* ---------- helper: relative time ---------- */
 function timeAgo(input) {
   const d = input ? new Date(input) : null;
@@ -519,6 +523,45 @@ function ArticleRow({ a, compact = false }) {
   );
 }
 
+/* ---------- Inline Ad (300×300) shown after every 4 cards ---------- */
+function InlineAd() {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const existing = document.querySelector(
+      'script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]'
+    );
+
+    if (!existing) {
+      const s = document.createElement("script");
+      s.async = true;
+      s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(
+        ADS_CLIENT
+      )}`;
+      s.crossOrigin = "anonymous";
+      document.head.appendChild(s);
+    }
+
+    try {
+      window.adsbygoogle = window.adsbygoogle || [];
+      window.adsbygoogle.push({});
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  return (
+    <div style={{ display: "flex", justifyContent: "center", margin: "24px 0" }}>
+      <ins
+        className="adsbygoogle"
+        style={{ display: "inline-block", width: 300, height: 300 }}
+        data-ad-client={ADS_CLIENT}
+        data-ad-slot={ADS_SLOT_INLINE}
+      />
+    </div>
+  );
+}
+
 export default function CategoryPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -889,6 +932,10 @@ export default function CategoryPage() {
                       {rest.map((a, idx) => (
                         <div key={a._id || a.id || a.slug || idx}>
                           <ArticleRow a={a} compact={!isMobile} />
+
+                          {/* ✅ Show 300x300 Ad after every 4 cards */}
+                          {(idx + 1) % 4 === 0 && <InlineAd />}
+
                           {renderInsetAfter(idx + 1)}
                         </div>
                       ))}
