@@ -1,7 +1,61 @@
+/* frontend/src/styles/category.css */
+
 /* Full-width container for category pages to avoid squeeze with PageShell side skins */
 .category-container{
   max-width: 100%;
   width: 100%;
   margin: 0 auto;
   min-width: 0;
+}
+
+/* =========================
+   CATEGORY: PAGE-SKIN RAILS
+   ========================= */
+
+/* Tune these 2 values to match your header perfectly */
+:root{
+  --tv-header-h: 150px;  /* logo + navbar area height */
+  --tv-rail-w: 180px;    /* must match your intended rail width */
+}
+
+/* Full-height fixed rails (visually fill side area) */
+.tv-ads-rail{
+  position: fixed;
+  left: 0;
+  top: var(--tv-header-h);
+  bottom: 0;
+
+  width: var(--tv-rail-w);
+  z-index: 5;
+
+  background: #000; /* fills the empty space around ad */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+
+  padding-top: 8px;
+  overflow: hidden;
+}
+
+.tv-ads-rail.right{
+  left: auto;
+  right: 0;
+}
+
+.tv-ads-rail.left{
+  left: 0;
+}
+
+/* Make the ad fit the rail width cleanly */
+.tv-ads-rail ins.adsbygoogle{
+  display: block !important;
+  width: 100% !important;
+  max-width: var(--tv-rail-w) !important;
+}
+
+/* Hide rails on smaller screens */
+@media (max-width: 1200px){
+  .tv-ads-rail{
+    display: none !important;
+  }
 }
