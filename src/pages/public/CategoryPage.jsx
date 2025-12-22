@@ -1,6 +1,7 @@
 // frontend/src/pages/public/CategoryPage.jsx
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
+import { createPortal } from "react-dom";
 
 import { api, cachedGet } from "../../lib/publicApi.js";
 import { removeManagedHeadTags, upsertTag, setJsonLd } from "../../lib/seoHead.js";
@@ -20,10 +21,10 @@ const DESKTOP_CONTENT_MAX = 920;
 
 /* ---------- AdSense: Category Page Skin (Left/Right Vertical) ---------- */
 const ADS_CLIENT = "ca-pub-8472487092329023";
-const ADS_SLOT_LEFT = "1029272878";  // TV_Category_Left_Skyscraper
+const ADS_SLOT_LEFT = "1029272878"; // TV_Category_Left_Skyscraper
 const ADS_SLOT_RIGHT = "5507573932"; // TV_Category_Right_Skyscraper
 
-/* Rail width: you can tweak (160–200) depending on your design */
+/* Rail width */
 const RAIL_W = 180;
 
 /* ---------- helper: relative time ---------- */
@@ -233,10 +234,7 @@ const thumbStyle = {
 };
 
 /* ---------- NEW: First article (no card) ---------- */
-const firstWrap = {
-  marginBottom: 14,
-  padding: 0,
-};
+const firstWrap = { marginBottom: 14, padding: 0 };
 
 const firstTitle = {
   margin: "0 0 10px",
@@ -424,7 +422,6 @@ function TopCard({ a }) {
 function TwoUpGrid({ a1, a2, isMobile }) {
   if (!a1 && !a2) return null;
 
-  // On mobile: keep them stacked so it doesn’t get cramped
   if (isMobile) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 14 }}>
@@ -525,12 +522,13 @@ function ArticleRow({ a, compact = false }) {
   );
 }
 
-/* ---------- AdRails (fixed full-height, touch edges) ---------- */
+/* ---------- AdRails (fixed full-height, PORTAL to body) ---------- */
 function ensureAdsenseScript() {
   if (typeof window === "undefined") return;
 
-  // If already loaded, do nothing
-  const existing = document.querySelector('script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]');
+  const existing = document.querySelector(
+    'script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]'
+  );
   if (existing) return;
 
   const s = document.createElement("script");
@@ -547,54 +545,54 @@ function pushAdsense() {
   window.adsbygoogle = window.adsbygoogle || [];
   try {
     window.adsbygoogle.push({});
-  } catch {
-    // ignore
-  }
+  } catch {}
 }
 
 function AdRail({ side = "left", slot }) {
-  // Full-height edge rail (touch top/bottom and edge)
   const railStyle = {
     position: "fixed",
     top: 0,
     bottom: 0,
     width: RAIL_W,
-    zIndex: 5,
+    zIndex: 20, // keep below sticky nav if nav uses higher z-index
     display: "flex",
     alignItems: "stretch",
     justifyContent: "center",
     pointerEvents: "auto",
+    margin: 0,
+    padding: 0,
     ...(side === "left" ? { left: 0 } : { right: 0 }),
   };
 
-  // Inner container: fill height; we keep a little padding so it looks clean,
-  // but the rail still touches the edges because the rail itself is full-height.
+  // ✅ IMPORTANT: align ad toward the EDGE, not center
   const innerStyle = {
     width: "100%",
     height: "100%",
     display: "flex",
     alignItems: "flex-start",
-    justifyContent: "center",
-    paddingTop: 0,   // touch top
-    paddingBottom: 0 // touch bottom
+    justifyContent: side === "left" ? "flex-start" : "flex-end",
+    margin: 0,
+    padding: 0,
   };
 
-  // AdSense INS: keep it responsive; width should be set to rail width so it fits
+  // The <ins> should not add its own margins/padding
   const insStyle = {
     display: "block",
     width: "100%",
     height: "100%",
+    margin: 0,
+    padding: 0,
   };
 
-  // Push ad after mount
   useEffect(() => {
     ensureAdsenseScript();
-    // Small delay so script can register + ins is in DOM
     const t = setTimeout(() => pushAdsense(), 150);
     return () => clearTimeout(t);
   }, [slot]);
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div style={railStyle} aria-label={`${side} ad rail`}>
       <div style={innerStyle}>
         <ins
@@ -606,7 +604,8 @@ function AdRail({ side = "left", slot }) {
           data-full-width-responsive="true"
         />
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -634,15 +633,16 @@ export default function CategoryPage() {
     typeof window !== "undefined" ? window.matchMedia("(max-width: 720px)").matches : false
   );
 
+  // ✅ IMPORTANT: widen this breakpoint so page-skins never overlap content
   const [isNarrow, setIsNarrow] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 1200px)").matches : false
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 1400px)").matches : false
   );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const mqMobile = window.matchMedia("(max-width: 720px)");
-    const mqNarrow = window.matchMedia("(max-width: 1200px)");
+    const mqNarrow = window.matchMedia("(max-width: 1400px)");
 
     const onMobile = (e) => setIsMobile(e.matches);
     const onNarrow = (e) => setIsNarrow(e.matches);
@@ -665,15 +665,14 @@ export default function CategoryPage() {
   const normalizedSlug = useMemo(() => toSlug(slug), [slug]);
 
   const canonical = useMemo(() => {
-    const origin =
-      typeof window !== "undefined" ? window.location.origin : "https://timelyvoice.com";
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://timelyvoice.com";
     return `${origin}/category/${encodeURIComponent(normalizedSlug)}`;
   }, [normalizedSlug]);
 
-  const categoryCopy = useMemo(
-    () => getCategoryCopy(normalizedSlug, category),
-    [normalizedSlug, category]
-  );
+  const categoryCopy = useMemo(() => getCategoryCopy(normalizedSlug, category), [
+    normalizedSlug,
+    category,
+  ]);
 
   useEffect(() => {
     const want = `/category/${normalizedSlug}`;
@@ -705,8 +704,7 @@ export default function CategoryPage() {
 
         if (cRes?.redirectTo) {
           const newSlug = extractCanonicalSlugFromRedirect({ data: cRes });
-          if (newSlug)
-            navigate({ pathname: `/category/${newSlug}`, search }, { replace: true });
+          if (newSlug) navigate({ pathname: `/category/${newSlug}`, search }, { replace: true });
           return;
         }
 
@@ -728,10 +726,7 @@ export default function CategoryPage() {
 
         const aData = await cachedGet(
           `/articles`,
-          {
-            params: { category: effectiveSlug, page, limit },
-            validateStatus: () => true,
-          },
+          { params: { category: effectiveSlug, page, limit }, validateStatus: () => true },
           25_000
         );
 
@@ -919,7 +914,6 @@ export default function CategoryPage() {
     };
   }, [slug]);
 
-  // ✅ NEW slicing: 1st = first article (no card), 2nd & 3rd = two-up big cards, rest = normal list
   const first = articles?.[0] || null;
   const second = articles?.[1] || null;
   const third = articles?.[2] || null;
@@ -952,15 +946,12 @@ export default function CategoryPage() {
     };
   }, [isMobile]);
 
-  // ✅ Only show left/right page-skin rails on wide desktop
-  // (Prevents overlap / “chips” on smaller screens)
   const showPageSkinRails = !isMobile && !isNarrow;
 
   return (
     <>
       <SiteNav />
 
-      {/* ✅ Fixed full-height page-skin rails (touch top/bottom + edge) */}
       {showPageSkinRails && (
         <>
           <AdRail side="left" slot={ADS_SLOT_LEFT} />
@@ -1002,19 +993,15 @@ export default function CategoryPage() {
                     <h1>{categoryCopy.displayName}</h1>
                     <p style={{ marginTop: 8, textAlign: "center" }}>
                       New articles for this category are coming soon. Check{" "}
-                      <Link to="/top-news">Top News</Link> or <Link to="/world">World</Link> while
-                      you wait.
+                      <Link to="/top-news">Top News</Link> or <Link to="/world">World</Link> while you
+                      wait.
                     </p>
                   </>
                 ) : (
                   <>
-                    {/* ✅ 1) First article: title -> image -> summary (NO card) */}
                     <FirstArticle a={first} isMobile={isMobile} />
-
-                    {/* ✅ 2) 2nd + 3rd: big cards side-by-side on desktop */}
                     <TwoUpGrid a1={second} a2={third} isMobile={isMobile} />
 
-                    {/* ✅ 3) Rest: normal cards */}
                     <div style={listStyle}>
                       {rest.map((a, idx) => (
                         <div key={a._id || a.id || a.slug || idx}>

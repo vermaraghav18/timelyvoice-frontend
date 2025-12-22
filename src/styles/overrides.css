@@ -1,3 +1,26 @@
+/* ================== GLOBAL HARD RESET (rails/page-skins need true viewport edges) ================== */
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100%;
+}
+
+#root {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100%;
+  min-width: 0;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
 /* ================== HOME GRID: remove gaps + gutters ================== */
 
 /* 1) Absolutely remove any column gap (even if a later 'gap:' shorthand is set) */
@@ -29,17 +52,19 @@
 
 
 /* ================== ADSENSE CONTAINMENT (prevents layout blowups) ================== */
-
 .ads-wrap{
   width: 100%;
   max-width: 100%;
   overflow: hidden;
 }
 
-.adsbygoogle{
+.adsbygoogle,
+ins.adsbygoogle{
   width: 100% !important;
   max-width: 100% !important;
   overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .adsbygoogle iframe{
@@ -52,8 +77,8 @@
 /* Center content stays above skins */
 .site-container{
   max-width: 1200px;
-  width: 100%;                 /* ✅ NEW */
-  box-sizing: border-box;      /* ✅ NEW */
+  width: 100%;
+  box-sizing: border-box;
   margin: 0 auto;
   position: relative;
   z-index: 2;
@@ -74,34 +99,33 @@
   margin: 0 !important;
   padding: 0 !important;
 
-  /* default hidden; enabled by media query */
-  display: none;
+  display: none; /* enabled via media query */
 }
 
 .left-skin{ left: 0; }
 .right-skin{ right: 0; }
 
-/* Show skins on desktop and protect content from overlap */
-@media (min-width: 1100px){
+/* Show skins on large desktop and protect content from overlap */
+@media (min-width: 1400px){
   .page-skin{
     display: block;
   }
 
-  /* ✅ FIX: give container enough width so 170px+170px padding doesn't crush content */
+  /* give container enough width so padding doesn't crush content */
   .site-container{
-    max-width: 1540px;          /* ✅ NEW: 1200 + 170 + 170 */
-    padding-left: 170px;
-    padding-right: 170px;
+    max-width: 1600px;  /* room for content + skins */
+    padding-left: 200px;
+    padding-right: 200px;
   }
 }
 
 /* Small screens: hide skins and remove padding */
-@media (max-width: 900px){
+@media (max-width: 1100px){
   .page-skin{
     display: none;
   }
   .site-container{
-    max-width: 1200px;          /* ✅ keep normal cap */
+    max-width: 1200px;
     padding-left: 0;
     padding-right: 0;
   }

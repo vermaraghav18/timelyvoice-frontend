@@ -1,4 +1,11 @@
-/* Full-width container for category pages to avoid squeeze with PageShell side skins */
+/* frontend/src/styles/category.css */
+
+/* Keep x-overflow hidden so rails/iframes never create sideways scroll */
+body {
+  overflow-x: hidden;
+}
+
+/* Full-width container for category pages */
 .category-container{
   max-width: 100%;
   width: 100%;
