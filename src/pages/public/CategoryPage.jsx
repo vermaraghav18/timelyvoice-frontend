@@ -1,7 +1,6 @@
 // frontend/src/pages/public/CategoryPage.jsx
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
-import { createPortal } from "react-dom";
 
 import { cachedGet } from "../../lib/publicApi.js";
 import { removeManagedHeadTags, upsertTag, setJsonLd } from "../../lib/seoHead.js";
@@ -19,27 +18,8 @@ const BRAND_NAME = "The Timely Voice";
 /* ✅ Desktop content width (normal target) */
 const DESKTOP_CONTENT_MAX = 920;
 
-/* ---------- AdSense: Category Page Skin (Left/Right Vertical) ---------- */
-const ADS_CLIENT = "ca-pub-8472487092329023";
-const ADS_SLOT_LEFT = "1029272878"; // TV_Category_Left_Skyscraper
-const ADS_SLOT_RIGHT = "5507573932"; // TV_Category_Right_Skyscraper
-
-/* ===================== OPTION 2: FIXED 300×600 RAILS ===================== */
-/* Rail container width must be >= 300 (plus a little breathing room) */
-const RAIL_W = 320; // ✅ was 180 — must be wider for 300px ad
-
-/* Fixed creative size */
-const RAIL_AD_W = 300;
-const RAIL_AD_H = 600;
-
-/* Keep a small gutter from viewport edge if you want (set 0 to touch edge) */
-const RAIL_EDGE_PAD = 0;
-
 /* ✅ Content padding inside the center column */
 const CONTENT_PAD_X = 12;
-
-/* ✅ Minimum readable content width when rails are ON */
-const MIN_CONTENT_WHEN_RAILS = 640;
 
 /* ---------- helper: relative time ---------- */
 function timeAgo(input) {
@@ -539,93 +519,6 @@ function ArticleRow({ a, compact = false }) {
   );
 }
 
-/* ---------- AdRails (FIXED 300×600) ---------- */
-function ensureAdsenseScript() {
-  if (typeof window === "undefined") return;
-
-  const existing = document.querySelector(
-    'script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]'
-  );
-  if (existing) return;
-
-  const s = document.createElement("script");
-  s.async = true;
-  s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(
-    ADS_CLIENT
-  )}`;
-  s.crossOrigin = "anonymous";
-  document.head.appendChild(s);
-}
-
-function pushAdsense() {
-  if (typeof window === "undefined") return;
-  window.adsbygoogle = window.adsbygoogle || [];
-  try {
-    window.adsbygoogle.push({});
-  } catch {
-    // ignore
-  }
-}
-
-function AdRail({ side = "left", slot }) {
-  const railStyle = {
-    position: "fixed",
-    top: 0,
-    bottom: 0,
-    width: RAIL_W,
-    zIndex: 9999,
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "center",
-    pointerEvents: "auto",
-    ...(side === "left" ? { left: RAIL_EDGE_PAD } : { right: RAIL_EDGE_PAD }),
-  };
-
-  // Keep a consistent top offset so it doesn’t fight with your header height.
-  // If you want it to start below the nav, change 0 -> 120 (like your other CSS).
-  const innerStyle = {
-    width: "100%",
-    height: "100%",
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "center",
-    paddingTop: 140, // ✅ keeps ad below header/nav visually
-    boxSizing: "border-box",
-  };
-
-  // ✅ FIXED ad size: 300×600
-  const insStyle = {
-    display: "inline-block",
-    width: `${RAIL_AD_W}px`,
-    height: `${RAIL_AD_H}px`,
-  };
-
-  useEffect(() => {
-    ensureAdsenseScript();
-    const t = setTimeout(() => pushAdsense(), 200);
-    return () => clearTimeout(t);
-  }, [slot]);
-
-  if (typeof document === "undefined") return null;
-
-  return createPortal(
-    <div style={railStyle} aria-label={`${side} ad rail`}>
-      <div style={innerStyle}>
-        <ins
-          className="adsbygoogle"
-          style={insStyle}
-          data-ad-client={ADS_CLIENT}
-          data-ad-slot={slot}
-          // ✅ IMPORTANT: do NOT set auto/resp for fixed rails
-          // data-ad-format="auto"
-          // data-full-width-responsive="true"
-        />
-      </div>
-    </div>,
-    document.body
-  );
-}
-
 export default function CategoryPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -643,31 +536,6 @@ export default function CategoryPage() {
 
   const [pageSections, setPageSections] = useState([]);
   const [planSections, setPlanSections] = useState([]);
-
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 720px)").matches : false
-  );
-
-  // ✅ zoom + scaling safe
-  const [vw, setVw] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 0));
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const mqMobile = window.matchMedia("(max-width: 720px)");
-    const onMobile = (e) => setIsMobile(e.matches);
-    mqMobile.addEventListener?.("change", onMobile);
-    mqMobile.addListener?.(onMobile);
-
-    const onResize = () => setVw(window.innerWidth);
-    window.addEventListener("resize", onResize);
-
-    return () => {
-      mqMobile.removeEventListener?.("change", onMobile);
-      mqMobile.removeListener?.(onMobile);
-      window.removeEventListener("resize", onResize);
-    };
-  }, []);
 
   const normalizedSlug = useMemo(() => toSlug(slug), [slug]);
 
@@ -915,6 +783,24 @@ export default function CategoryPage() {
     return { topBlocks: tops, insetBlocks: insets };
   }, [mainBlocks]);
 
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 720px)").matches : false
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mqMobile = window.matchMedia("(max-width: 720px)");
+    const onMobile = (e) => setIsMobile(e.matches);
+    mqMobile.addEventListener?.("change", onMobile);
+    mqMobile.addListener?.(onMobile);
+
+    return () => {
+      mqMobile.removeEventListener?.("change", onMobile);
+      mqMobile.removeListener?.(onMobile);
+    };
+  }, []);
+
   const first = articles?.[0] || null;
   const second = articles?.[1] || null;
   const third = articles?.[2] || null;
@@ -930,23 +816,10 @@ export default function CategoryPage() {
     ));
   };
 
-  // ✅ rails show only if we can afford 2×rail width + readable content
-  const canShowRails = useMemo(() => {
-    if (isMobile) return false;
-    if (!vw) return false;
-
-    const available = vw - 2 * RAIL_W;
-    return available >= MIN_CONTENT_WHEN_RAILS + 2 * CONTENT_PAD_X;
-  }, [isMobile, vw]);
-
   const computedContentMax = useMemo(() => {
     if (isMobile) return 1200;
-    if (!canShowRails) return DESKTOP_CONTENT_MAX;
-
-    const available = vw - 2 * RAIL_W - 2 * CONTENT_PAD_X;
-    const safe = Math.max(MIN_CONTENT_WHEN_RAILS, available);
-    return Math.min(DESKTOP_CONTENT_MAX, safe);
-  }, [isMobile, canShowRails, vw]);
+    return DESKTOP_CONTENT_MAX;
+  }, [isMobile]);
 
   const contentWrapStyle = useMemo(() => {
     return {
@@ -968,14 +841,6 @@ export default function CategoryPage() {
   return (
     <>
       <SiteNav />
-
-      {/* ✅ FIXED 300×600 rails rendered to BODY */}
-      {canShowRails && (
-        <>
-          <AdRail side="left" slot={ADS_SLOT_LEFT} />
-          <AdRail side="right" slot={ADS_SLOT_RIGHT} />
-        </>
-      )}
 
       <div className="category-container">
         <div style={pageWrap}>
