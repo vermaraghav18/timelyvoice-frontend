@@ -1,6 +1,6 @@
 /* frontend/src/styles/category.css */
 
-/* Full-width container for category pages to avoid squeeze with PageShell side skins */
+/* Full-width container for category pages */
 .category-container{
   max-width: 100%;
   width: 100%;
@@ -12,55 +12,39 @@
    CATEGORY: PAGE-SKIN RAILS
    ========================= */
 
-/* Tune these values to match your header perfectly */
+/* MUST match your real header height + ad size */
 :root{
-  /* ✅ Increased because your header/nav area is taller than 150 */
-  --tv-header-h: 170px;  /* logo + navbar area height */
-
-  --tv-rail-w: 180px;    /* rail width */
+  --tv-header-h: 150px;  /* adjust if needed */
+  --tv-rail-w: 300px;    /* MUST match 300x1000 unit */
+  --tv-rail-h: 1000px;
 }
 
-/* Full-height fixed rails (visually fill side area) */
+/* Full-height fixed rails: from under header to bottom, touching edges */
 .tv-ads-rail{
   position: fixed;
   top: var(--tv-header-h);
   bottom: 0;
-
   width: var(--tv-rail-w);
-  z-index: 5;
+  z-index: 9999;
 
-  /* ✅ fill side area so it doesn't look "empty/broken" */
-  background: #000;
-
+  background: #000;           /* fills empty space */
   display: flex;
   justify-content: center;
-
-  /* ✅ vertically center the ad inside the full-height rail */
-  align-items: center;
-
-  /* ✅ no extra padding since we're centering */
-  padding-top: 0;
+  align-items: flex-start;    /* ad starts at top of rail */
   overflow: hidden;
 }
 
-.tv-ads-rail.left{
-  left: 0;
-}
+.tv-ads-rail.left{ left: 0; }
+.tv-ads-rail.right{ right: 0; }
 
-.tv-ads-rail.right{
-  right: 0;
-}
-
-/* Make the ad fit the rail width cleanly */
+/* Keep the requested ad size exactly 300x1000 (don’t auto-resize it) */
 .tv-ads-rail ins.adsbygoogle{
-  display: block !important;
-  width: 100% !important;
-  max-width: var(--tv-rail-w) !important;
+  display: inline-block !important;
+  width: var(--tv-rail-w) !important;
+  height: var(--tv-rail-h) !important;
 }
 
 /* Hide rails on smaller screens */
 @media (max-width: 1200px){
-  .tv-ads-rail{
-    display: none !important;
-  }
+  .tv-ads-rail{ display: none !important; }
 }
