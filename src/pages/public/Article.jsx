@@ -29,14 +29,15 @@ import { ensureRenderableImage } from '../../lib/images';
 
 /* =========================================================
   ✅ AdSense (ONLY In-article Fluid ads for Article page)
-  + ✅ NEW: Top responsive ad under title/source
+  + ✅ Top ad: Desktop responsive + Mobile fixed 320×100 (so it’s not huge)
   ========================================================= */
 const ADS_CLIENT = 'ca-pub-8472487092329023';
 
-// ✅ NEW: Article top responsive ad (from your AdSense screenshot)
-const ADS_ARTICLE_TOP = '5588476743';
+// ✅ TOP AD SLOTS
+const ADS_ARTICLE_TOP_DESKTOP = '5588476743'; // responsive auto (desktop)
+const ADS_ARTICLE_TOP_MOBILE = '7732899132'; // 320×100 (mobile)
 
-// ✅ Your In-article (fluid) slots
+// ✅ In-article (fluid) slots
 const ADS_INARTICLE_1 = '6745877256';
 const ADS_INARTICLE_2 = '2220308886';
 const ADS_INARTICLE_3 = '7281063871';
@@ -69,12 +70,19 @@ function useIsMobile(breakpoint = 768) {
   return isMobile;
 }
 
-/** ✅ NEW: Top responsive display ad (below title/source, above time/date)
- * - responsive for mobile + desktop
- * - prevents double-push TagError (status + iframe + requested flag)
+/** ✅ TOP AD (below title/source, above time/date)
+ * - Desktop: responsive auto (slot 5588476743)
+ * - Mobile: fixed 320×100 (slot 7732899132) so it does NOT become huge
+ * - SPA-safe push + avoids double push
  */
-function ArticleTopAd({ slot = ADS_ARTICLE_TOP, client = ADS_CLIENT }) {
+function ArticleTopAd({
+  client = ADS_CLIENT,
+  isMobile = false,
+  desktopSlot = ADS_ARTICLE_TOP_DESKTOP,
+  mobileSlot = ADS_ARTICLE_TOP_MOBILE,
+}) {
   const insRef = useRef(null);
+  const slot = isMobile ? mobileSlot : desktopSlot;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -83,6 +91,9 @@ function ArticleTopAd({ slot = ADS_ARTICLE_TOP, client = ADS_CLIENT }) {
 
     const ins = insRef.current;
     if (!ins) return;
+
+    // If slot changes, reset "requested" so AdSense can re-render for the new slot
+    ins.dataset.requested = '';
 
     // ✅ Already processed by AdSense
     if (ins.getAttribute('data-adsbygoogle-status') === 'done') return;
@@ -109,15 +120,27 @@ function ArticleTopAd({ slot = ADS_ARTICLE_TOP, client = ADS_CLIENT }) {
 
   return (
     <div className="tv-article-topad" aria-label="Advertisement">
-      <ins
-        ref={insRef}
-        className="adsbygoogle"
-        style={{ display: 'block' }}
-        data-ad-client={client}
-        data-ad-slot={slot}
-        data-ad-format="auto"
-        data-full-width-responsive="true"
-      />
+      {/* MOBILE: fixed 320×100 to keep it small */}
+      {isMobile ? (
+        <ins
+          ref={insRef}
+          className="adsbygoogle"
+          style={{ display: 'inline-block', width: 320, height: 100 }}
+          data-ad-client={client}
+          data-ad-slot={slot}
+        />
+      ) : (
+        /* DESKTOP: responsive */
+        <ins
+          ref={insRef}
+          className="adsbygoogle"
+          style={{ display: 'block' }}
+          data-ad-client={client}
+          data-ad-slot={slot}
+          data-ad-format="auto"
+          data-full-width-responsive="true"
+        />
+      )}
     </div>
   );
 }
@@ -729,7 +752,7 @@ export default function ReaderArticle() {
   };
 
   const sourceRow = {
-    margin: isMobile ? '6px 0 12px' : '10px 0 20px',
+    margin: isMobile ? '6px 0 10px' : '10px 0 12px',
     fontSize: isMobile ? 14 : 15,
     color: '#00ffbfff',
     fontWeight: 500,
@@ -928,34 +951,33 @@ export default function ReaderArticle() {
           Article typography
           ========================= */
         .article-body{
-          overflow-x: hidden; /* prevents any accidental horizontal overflow */
+          overflow-x: hidden;
         }
 
         .article-body p {
-          font-weight: 100;
+          /* lighter body weight */
+          font-weight: 300;
           margin: 1.25em 0;
           line-height: 1.85;
           font-size: 19px;
           color: #e8ecf1;
         }
 
-        /* ✅ REMOVED: Drop-cap first-letter rule */
-
-        /* ✅ NEW: Top ad (under title/source) – responsive & safe */
+        /* ✅ Top ad (under title/source) – centered, mobile not huge */
         .tv-article-topad{
           width: 100%;
           max-width: 100%;
-          margin: 10px 0 10px;
+          margin: 8px 0 8px;
           overflow: hidden;
+          display: flex;
+          justify-content: center;
+          align-items: center;
         }
         .tv-article-topad ins.adsbygoogle{
-          display: block !important;
-          width: 100% !important;
           max-width: 100% !important;
           overflow: hidden !important;
         }
         .tv-article-topad iframe{
-          width: 100% !important;
           max-width: 100% !important;
         }
 
@@ -972,7 +994,7 @@ export default function ReaderArticle() {
           border-left: none;
         }
 
-        /* Optional: smaller subheads (h3) – lighter style */
+        /* Optional: smaller subheads (h3) */
         .article-body h3 {
           font-size: 19px;
           margin-top: 1.6em;
@@ -993,7 +1015,6 @@ export default function ReaderArticle() {
           color: #d4d4d4;
         }
 
-        /* INLINE HIGHLIGHT: yellow for important words */
         .article-body .hl-key,
         .article-body mark {
           background-color: #ffe766;
@@ -1010,25 +1031,20 @@ export default function ReaderArticle() {
           margin: 0 18px 10px 0;
         }
 
-        /* Bigger HERO when it's a video */
         .article-hero-inline.article-hero-video {
           width: 62%;
           max-width: 520px;
         }
 
-        .article-hero-inline img {
-          display: block;
-          width: 100%;
-          height: auto;
-          border-radius: 1px;
-          background: #f1f5f9;
-        }
-
+        .article-hero-inline img,
         .article-hero-inline video {
           display: block;
           width: 100%;
           height: auto;
           border-radius: 1px;
+        }
+
+        .article-hero-inline video {
           background: #000;
           object-fit: cover;
         }
@@ -1055,15 +1071,14 @@ export default function ReaderArticle() {
 
         /* =========================
           ✅ In-article Ads (fluid)
-          Fix: never overflow layout
           ========================= */
         .article-body .tv-inarticle-wrap{
-          clear: both;             /* critical: prevents float squeeze from hero */
+          clear: both;
           width: 100%;
           max-width: 100%;
           display: block;
           margin: 18px 0;
-          overflow: hidden;        /* critical: clips any weird iframe overflow */
+          overflow: hidden;
         }
 
         .article-body .tv-inarticle-wrap ins.adsbygoogle{
@@ -1078,7 +1093,6 @@ export default function ReaderArticle() {
           max-width: 100% !important;
         }
 
-        /* ✅ Safe "full bleed" mode without 100vw (prevents iOS overflow) */
         .article-body .tv-inarticle-wrap--fullbleed{
           width: 100%;
           max-width: 100%;
@@ -1112,8 +1126,13 @@ export default function ReaderArticle() {
 
               <div style={sourceRow}>By {pickByline(article)}</div>
 
-              {/* ✅ NEW: Responsive ad under title/source, above time/date */}
-              <ArticleTopAd slot={ADS_ARTICLE_TOP} client={ADS_CLIENT} />
+              {/* ✅ TOP AD: Desktop responsive, Mobile 320×100 (not huge) */}
+              <ArticleTopAd
+                client={ADS_CLIENT}
+                isMobile={isMobile}
+                desktopSlot={ADS_ARTICLE_TOP_DESKTOP}
+                mobileSlot={ADS_ARTICLE_TOP_MOBILE}
+              />
 
               <div style={timeShareBar}>
                 <small style={timeText}>
@@ -1229,10 +1248,7 @@ export default function ReaderArticle() {
           {/* RIGHT RAILS (even indices) — hidden on mobile */}
           {!isMobile && (
             <aside style={{ flex: '0 0 260px' }}>
-              <div
-                className="rail-wrap"
-                style={{ display: 'flow-root', marginTop: 0, paddingTop: 0 }}
-              >
+              <div className="rail-wrap" style={{ display: 'flow-root', marginTop: 0, paddingTop: 0 }}>
                 {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
                 {!railsLoading && railsError && (
                   <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>
@@ -1243,10 +1259,7 @@ export default function ReaderArticle() {
                     .filter((s) => s.template?.startsWith('rail_'))
                     .filter((_, i) => i % 2 === 0)
                     .map((sec, i) => (
-                      <div
-                        key={sec.id || sec._id || sec.slug}
-                        style={{ marginTop: i === 0 ? 0 : 12 }}
-                      >
+                      <div key={sec.id || sec._id || sec.slug} style={{ marginTop: i === 0 ? 0 : 12 }}>
                         <SectionRenderer section={sec} />
                       </div>
                     ))}
