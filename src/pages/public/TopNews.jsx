@@ -15,12 +15,8 @@ import "./TopNews.css";
 
 const FALLBACK_HERO_IMAGE = "/tv-default-hero.jpg";
 
-/* ---------- AdSense (TopNews page-skin + in-feed) ---------- */
+/* ---------- AdSense (TopNews in-feed) ---------- */
 const ADS_CLIENT = "ca-pub-8472487092329023";
-
-// page-skin (already working)
-const ADS_SLOT_SKIN_LEFT = "1900265755";
-const ADS_SLOT_SKIN_RIGHT = "6961020746";
 
 // ✅ In-feed units between cards (from your screenshots)
 const ADS_SLOT_INFEED_DESKTOP = "8428632191"; // TopNews InFeed Desktop
@@ -39,31 +35,6 @@ function ensureAdsenseScript(client) {
   s.src = src;
   s.crossOrigin = "anonymous";
   document.head.appendChild(s);
-}
-
-function PageSkinAd({ side, slot }) {
-  useEffect(() => {
-    ensureAdsenseScript(ADS_CLIENT);
-
-    // SPA timing: push now + delayed push
-    pushAd();
-    const t = setTimeout(() => pushAd(), 400);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slot]);
-
-  return (
-    <aside className={`tn-skin tn-skin--${side}`} aria-label={`Ad ${side}`}>
-      <ins
-        className="adsbygoogle"
-        style={{ display: "block" }}
-        data-ad-client={ADS_CLIENT}
-        data-ad-slot={slot}
-        data-ad-format="auto"
-        data-full-width-responsive="true"
-      />
-    </aside>
-  );
 }
 
 /* ✅ In-feed AdSense block (between cards) */
@@ -150,7 +121,6 @@ function getCategoryName(a) {
   }
   return "World";
 }
-
 
 /* ---------- Cloudinary optimizer ---------- */
 function optimizeCloudinary(url, width = 520) {
@@ -260,11 +230,8 @@ export default function TopNews() {
     <>
       <SiteNav />
 
-      {/* ✅ Left/Right skins (no chips) */}
+      {/* ✅ Page shell (left/right vertical ads removed) */}
       <div className="tn-shell">
-        <PageSkinAd side="left" slot={ADS_SLOT_SKIN_LEFT} />
-        <PageSkinAd side="right" slot={ADS_SLOT_SKIN_RIGHT} />
-
         <main className="tn-container">
           {loading && <div className="tn-status">Loading…</div>}
           {err && <div className="tn-error">{err}</div>}
