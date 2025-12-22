@@ -12,38 +12,43 @@
    CATEGORY: PAGE-SKIN RAILS
    ========================= */
 
-/* Tune these 2 values to match your header perfectly */
+/* Tune these values to match your header perfectly */
 :root{
-  --tv-header-h: 150px;  /* logo + navbar area height */
-  --tv-rail-w: 180px;    /* must match your intended rail width */
+  /* ✅ Increased because your header/nav area is taller than 150 */
+  --tv-header-h: 170px;  /* logo + navbar area height */
+
+  --tv-rail-w: 180px;    /* rail width */
 }
 
 /* Full-height fixed rails (visually fill side area) */
 .tv-ads-rail{
   position: fixed;
-  left: 0;
   top: var(--tv-header-h);
   bottom: 0;
 
   width: var(--tv-rail-w);
   z-index: 5;
 
-  background: #000; /* fills the empty space around ad */
+  /* ✅ fill side area so it doesn't look "empty/broken" */
+  background: #000;
+
   display: flex;
   justify-content: center;
-  align-items: flex-start;
 
-  padding-top: 8px;
+  /* ✅ vertically center the ad inside the full-height rail */
+  align-items: center;
+
+  /* ✅ no extra padding since we're centering */
+  padding-top: 0;
   overflow: hidden;
-}
-
-.tv-ads-rail.right{
-  left: auto;
-  right: 0;
 }
 
 .tv-ads-rail.left{
   left: 0;
+}
+
+.tv-ads-rail.right{
+  right: 0;
 }
 
 /* Make the ad fit the rail width cleanly */
