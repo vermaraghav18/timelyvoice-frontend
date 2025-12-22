@@ -21,11 +21,19 @@ const DESKTOP_CONTENT_MAX = 920;
 
 /* ---------- AdSense: Category Page Skin (Left/Right Vertical) ---------- */
 const ADS_CLIENT = "ca-pub-8472487092329023";
-const ADS_SLOT_LEFT = "1029272878";  // TV_Category_Left_Skyscraper
+const ADS_SLOT_LEFT = "1029272878"; // TV_Category_Left_Skyscraper
 const ADS_SLOT_RIGHT = "5507573932"; // TV_Category_Right_Skyscraper
 
-/* Rail width */
-const RAIL_W = 180;
+/* ===================== OPTION 2: FIXED 300×600 RAILS ===================== */
+/* Rail container width must be >= 300 (plus a little breathing room) */
+const RAIL_W = 320; // ✅ was 180 — must be wider for 300px ad
+
+/* Fixed creative size */
+const RAIL_AD_W = 300;
+const RAIL_AD_H = 600;
+
+/* Keep a small gutter from viewport edge if you want (set 0 to touch edge) */
+const RAIL_EDGE_PAD = 0;
 
 /* ✅ Content padding inside the center column */
 const CONTENT_PAD_X = 12;
@@ -239,7 +247,7 @@ const thumbStyle = {
   display: "block",
 };
 
-/* ---------- NEW: First article (no card) ---------- */
+/* ---------- First article (no card) ---------- */
 const firstWrap = {
   marginBottom: 14,
   padding: 0,
@@ -531,7 +539,7 @@ function ArticleRow({ a, compact = false }) {
   );
 }
 
-/* ---------- AdRails ---------- */
+/* ---------- AdRails (FIXED 300×600) ---------- */
 function ensureAdsenseScript() {
   if (typeof window === "undefined") return;
 
@@ -567,31 +575,34 @@ function AdRail({ side = "left", slot }) {
     width: RAIL_W,
     zIndex: 9999,
     display: "flex",
-    alignItems: "stretch",
+    alignItems: "flex-start",
     justifyContent: "center",
     pointerEvents: "auto",
-    ...(side === "left" ? { left: 0 } : { right: 0 }),
+    ...(side === "left" ? { left: RAIL_EDGE_PAD } : { right: RAIL_EDGE_PAD }),
   };
 
+  // Keep a consistent top offset so it doesn’t fight with your header height.
+  // If you want it to start below the nav, change 0 -> 120 (like your other CSS).
   const innerStyle = {
     width: "100%",
     height: "100%",
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "center",
-    paddingTop: 0,
-    paddingBottom: 0,
+    paddingTop: 140, // ✅ keeps ad below header/nav visually
+    boxSizing: "border-box",
   };
 
+  // ✅ FIXED ad size: 300×600
   const insStyle = {
-    display: "block",
-    width: "100%",
-    height: "100%",
+    display: "inline-block",
+    width: `${RAIL_AD_W}px`,
+    height: `${RAIL_AD_H}px`,
   };
 
   useEffect(() => {
     ensureAdsenseScript();
-    const t = setTimeout(() => pushAdsense(), 150);
+    const t = setTimeout(() => pushAdsense(), 200);
     return () => clearTimeout(t);
   }, [slot]);
 
@@ -605,8 +616,9 @@ function AdRail({ side = "left", slot }) {
           style={insStyle}
           data-ad-client={ADS_CLIENT}
           data-ad-slot={slot}
-          data-ad-format="auto"
-          data-full-width-responsive="true"
+          // ✅ IMPORTANT: do NOT set auto/resp for fixed rails
+          // data-ad-format="auto"
+          // data-full-width-responsive="true"
         />
       </div>
     </div>,
@@ -636,14 +648,13 @@ export default function CategoryPage() {
     typeof window !== "undefined" ? window.matchMedia("(max-width: 720px)").matches : false
   );
 
-  // ✅ NEW: track real viewport width (zoom + Windows scaling safe)
+  // ✅ zoom + scaling safe
   const [vw, setVw] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 0));
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const mqMobile = window.matchMedia("(max-width: 720px)");
-
     const onMobile = (e) => setIsMobile(e.matches);
     mqMobile.addEventListener?.("change", onMobile);
     mqMobile.addListener?.(onMobile);
@@ -919,22 +930,17 @@ export default function CategoryPage() {
     ));
   };
 
-  // ✅ NEW: decide if rails can show (zoom + scaling safe)
+  // ✅ rails show only if we can afford 2×rail width + readable content
   const canShowRails = useMemo(() => {
     if (isMobile) return false;
     if (!vw) return false;
 
-    // Available width left after two rails
     const available = vw - 2 * RAIL_W;
-
-    // Need at least some readable width in the middle
     return available >= MIN_CONTENT_WHEN_RAILS + 2 * CONTENT_PAD_X;
   }, [isMobile, vw]);
 
-  // ✅ NEW: if rails show, shrink content maxWidth so nothing overlaps
   const computedContentMax = useMemo(() => {
     if (isMobile) return 1200;
-
     if (!canShowRails) return DESKTOP_CONTENT_MAX;
 
     const available = vw - 2 * RAIL_W - 2 * CONTENT_PAD_X;
@@ -963,7 +969,7 @@ export default function CategoryPage() {
     <>
       <SiteNav />
 
-      {/* ✅ Rails render to BODY + show based on real available space */}
+      {/* ✅ FIXED 300×600 rails rendered to BODY */}
       {canShowRails && (
         <>
           <AdRail side="left" slot={ADS_SLOT_LEFT} />
