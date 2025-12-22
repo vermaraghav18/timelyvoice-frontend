@@ -12,39 +12,55 @@
    CATEGORY: PAGE-SKIN RAILS
    ========================= */
 
-/* MUST match your real header height + ad size */
+/* Defaults (JS will overwrite --tv-header-h with real measured header height) */
 :root{
-  --tv-header-h: 150px;  /* adjust if needed */
-  --tv-rail-w: 300px;    /* MUST match 300x1000 unit */
-  --tv-rail-h: 1000px;
+  --tv-header-h: 150px;
+  --tv-rail-w: 300px;     /* IMPORTANT: ad is 300px wide */
+  --tv-rail-gap: 16px;    /* space between rail and content */
 }
 
-/* Full-height fixed rails: from under header to bottom, touching edges */
+/* When rails are enabled, reserve gutters so ads NEVER overlap content */
+html.tv-has-pageskin .category-container{
+  padding-left: calc(var(--tv-rail-w) + var(--tv-rail-gap));
+  padding-right: calc(var(--tv-rail-w) + var(--tv-rail-gap));
+}
+
+/* Fixed rails in the gutter */
 .tv-ads-rail{
   position: fixed;
   top: var(--tv-header-h);
   bottom: 0;
-  width: var(--tv-rail-w);
-  z-index: 9999;
 
-  background: #000;           /* fills empty space */
+  width: var(--tv-rail-w);
+  z-index: 50;
+
   display: flex;
   justify-content: center;
-  align-items: flex-start;    /* ad starts at top of rail */
+  align-items: flex-start;
+
+  padding-top: 8px;
   overflow: hidden;
+
+  /* optional: fill gutter behind ad so it looks “solid” */
+  background: transparent;
+  pointer-events: auto;
 }
 
 .tv-ads-rail.left{ left: 0; }
 .tv-ads-rail.right{ right: 0; }
 
-/* Keep the requested ad size exactly 300x1000 (don’t auto-resize it) */
+/* Ad itself is FIXED SIZE (300x1000) like your AdSense code generator */
 .tv-ads-rail ins.adsbygoogle{
   display: inline-block !important;
-  width: var(--tv-rail-w) !important;
-  height: var(--tv-rail-h) !important;
+  width: 300px !important;
+  height: 1000px !important;
 }
 
-/* Hide rails on smaller screens */
-@media (max-width: 1200px){
+/* Safety: never show skins on smaller screens */
+@media (max-width: 1600px){
   .tv-ads-rail{ display: none !important; }
+  html.tv-has-pageskin .category-container{
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
 }

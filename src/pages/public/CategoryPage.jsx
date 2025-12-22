@@ -15,12 +15,12 @@ import { ensureRenderableImage } from "../../lib/images.js";
 /* ---------- Brand constant ---------- */
 const BRAND_NAME = "The Timely Voice";
 
-/* ✅ Desktop content width (controls left/right empty space) */
+/* ✅ Desktop content width */
 const DESKTOP_CONTENT_MAX = 920;
 
 /* ---------- AdSense: Category Page Skin (Left/Right Vertical) ---------- */
 const ADS_CLIENT = "ca-pub-8472487092329023";
-const ADS_SLOT_LEFT = "1029272878"; // TV_Category_Left_Skyscraper
+const ADS_SLOT_LEFT = "1029272878";  // TV_Category_Left_Skyscraper
 const ADS_SLOT_RIGHT = "5507573932"; // TV_Category_Right_Skyscraper
 
 /* ---------- helper: relative time ---------- */
@@ -229,11 +229,8 @@ const thumbStyle = {
   display: "block",
 };
 
-/* ---------- NEW: First article (no card) ---------- */
-const firstWrap = {
-  marginBottom: 14,
-  padding: 0,
-};
+/* ---------- First article (no card) ---------- */
+const firstWrap = { marginBottom: 14, padding: 0 };
 
 const firstTitle = {
   margin: "0 0 10px",
@@ -474,18 +471,8 @@ function ArticleRow({ a, compact = false }) {
   const metaS = compact ? { ...metaRow, marginTop: 6 } : metaRow;
 
   const rowS = compact
-    ? {
-        display: "grid",
-        gridTemplateColumns: thumb ? "1fr 96px" : "1fr",
-        gap: 6,
-        alignItems: "center",
-      }
-    : {
-        display: "grid",
-        gridTemplateColumns: thumb ? "1fr 110px" : "1fr",
-        gap: 8,
-        alignItems: "center",
-      };
+    ? { display: "grid", gridTemplateColumns: thumb ? "1fr 96px" : "1fr", gap: 6, alignItems: "center" }
+    : { display: "grid", gridTemplateColumns: thumb ? "1fr 110px" : "1fr", gap: 8, alignItems: "center" };
 
   const thumbS = compact ? { ...thumbStyle, width: 96, height: 64 } : thumbStyle;
 
@@ -497,9 +484,7 @@ function ArticleRow({ a, compact = false }) {
             <h3 style={titleS}>{a.title}</h3>
           </Link>
           <div style={metaS}>
-            <Link to={categoryUrl} style={catLink}>
-              {categoryName}
-            </Link>
+            <Link to={categoryUrl} style={catLink}>{categoryName}</Link>
             <span aria-hidden>•</span>
             <span>Updated {timeAgo(updated)}</span>
           </div>
@@ -507,13 +492,7 @@ function ArticleRow({ a, compact = false }) {
 
         {thumb && (
           <Link to={articleUrl}>
-            <img
-              src={thumb}
-              alt={a.imageAlt || a.title || ""}
-              style={thumbS}
-              loading="lazy"
-              decoding="async"
-            />
+            <img src={thumb} alt={a.imageAlt || a.title || ""} style={thumbS} loading="lazy" decoding="async" />
           </Link>
         )}
       </div>
@@ -521,7 +500,7 @@ function ArticleRow({ a, compact = false }) {
   );
 }
 
-/* ---------- AdRails (fixed, full-height area, aligned under header via CSS) ---------- */
+/* ---------- Page-skin ads (correct fixed-size 300x1000, no overlap) ---------- */
 function ensureAdsenseScript() {
   if (typeof window === "undefined") return;
 
@@ -560,11 +539,9 @@ function AdRail({ side = "left", slot }) {
     <div className={`tv-ads-rail ${side === "left" ? "left" : "right"}`} aria-label={`${side} ad rail`}>
       <ins
         className="adsbygoogle"
-        style={{ display: "block" }}
+        style={{ display: "inline-block", width: 300, height: 1000 }}
         data-ad-client={ADS_CLIENT}
         data-ad-slot={slot}
-        data-ad-format="auto"
-        data-full-width-responsive="true"
       />
     </div>
   );
@@ -591,61 +568,50 @@ export default function CategoryPage() {
   const [railsError, setRailsError] = useState("");
 
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined"
-      ? window.matchMedia("(max-width: 720px)").matches
-      : false
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 720px)").matches : false
   );
 
-  const [isNarrow, setIsNarrow] = useState(() =>
-    typeof window !== "undefined"
-      ? window.matchMedia("(max-width: 1200px)").matches
-      : false
+  // IMPORTANT: pageskin needs VERY wide screens (>=1600). This flag controls rendering.
+  const [isWideEnoughForSkin, setIsWideEnoughForSkin] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(min-width: 1601px)").matches : false
   );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const mqMobile = window.matchMedia("(max-width: 720px)");
-    const mqNarrow = window.matchMedia("(max-width: 1200px)");
+    const mqWide = window.matchMedia("(min-width: 1601px)");
 
     const onMobile = (e) => setIsMobile(e.matches);
-    const onNarrow = (e) => setIsNarrow(e.matches);
+    const onWide = (e) => setIsWideEnoughForSkin(e.matches);
 
     mqMobile.addEventListener?.("change", onMobile);
     mqMobile.addListener?.(onMobile);
 
-    mqNarrow.addEventListener?.("change", onNarrow);
-    mqNarrow.addListener?.(onNarrow);
+    mqWide.addEventListener?.("change", onWide);
+    mqWide.addListener?.(onWide);
 
     return () => {
       mqMobile.removeEventListener?.("change", onMobile);
       mqMobile.removeListener?.(onMobile);
 
-      mqNarrow.removeEventListener?.("change", onNarrow);
-      mqNarrow.removeListener?.(onNarrow);
+      mqWide.removeEventListener?.("change", onWide);
+      mqWide.removeListener?.(onWide);
     };
   }, []);
 
   const normalizedSlug = useMemo(() => toSlug(slug), [slug]);
 
   const canonical = useMemo(() => {
-    const origin =
-      typeof window !== "undefined"
-        ? window.location.origin
-        : "https://timelyvoice.com";
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://timelyvoice.com";
     return `${origin}/category/${encodeURIComponent(normalizedSlug)}`;
   }, [normalizedSlug]);
 
-  const categoryCopy = useMemo(
-    () => getCategoryCopy(normalizedSlug, category),
-    [normalizedSlug, category]
-  );
+  const categoryCopy = useMemo(() => getCategoryCopy(normalizedSlug, category), [normalizedSlug, category]);
 
   useEffect(() => {
     const want = `/category/${normalizedSlug}`;
-    if (pathname !== want) {
-      navigate({ pathname: want, search }, { replace: true });
-    }
+    if (pathname !== want) navigate({ pathname: want, search }, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [normalizedSlug]);
 
@@ -671,11 +637,7 @@ export default function CategoryPage() {
 
         if (cRes?.redirectTo) {
           const newSlug = extractCanonicalSlugFromRedirect({ data: cRes });
-          if (newSlug)
-            navigate(
-              { pathname: `/category/${newSlug}`, search },
-              { replace: true }
-            );
+          if (newSlug) navigate({ pathname: `/category/${newSlug}`, search }, { replace: true });
           return;
         }
 
@@ -697,24 +659,17 @@ export default function CategoryPage() {
 
         const aData = await cachedGet(
           `/articles`,
-          {
-            params: { category: effectiveSlug, page, limit },
-            validateStatus: () => true,
-          },
+          { params: { category: effectiveSlug, page, limit }, validateStatus: () => true },
           25_000
         );
 
         if (!alive) return;
 
-        if (Array.isArray(aData?.items)) {
-          const sorted = normalizeArticlesLatestFirst(aData.items);
-          setArticles(sorted);
-        } else if (aData?.status === 404) {
+        if (Array.isArray(aData?.items)) setArticles(normalizeArticlesLatestFirst(aData.items));
+        else if (aData?.status === 404) {
           setArticles([]);
           setNotFound(true);
-        } else {
-          setArticles([]);
-        }
+        } else setArticles([]);
       } catch {
         if (!alive) return;
         setNotFound(true);
@@ -724,9 +679,7 @@ export default function CategoryPage() {
       }
     })();
 
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [slug, navigate, normalizedSlug, search]);
 
   /* SEO */
@@ -736,65 +689,33 @@ export default function CategoryPage() {
     const { metaTitle, metaDescription } = categoryCopy;
 
     upsertTag("title", {}, { textContent: metaTitle });
-
-    upsertTag("meta", {
-      name: "description",
-      content: metaDescription || "Browse latest stories on The Timely Voice.",
-    });
-
+    upsertTag("meta", { name: "description", content: metaDescription || "Browse latest stories on The Timely Voice." });
     upsertTag("link", { rel: "canonical", href: canonical });
+    upsertTag("meta", { name: "robots", content: "index,follow", "data-managed": "robots" });
 
-    upsertTag("meta", {
-      name: "robots",
-      content: "index,follow",
-      "data-managed": "robots",
-    });
-
-    if (slug) {
+    if (slug && typeof window !== "undefined") {
       upsertTag("link", {
         rel: "alternate",
         type: "application/rss+xml",
         title: `Timely Voice — ${category?.name || slug}`,
-        href: `${window.location.origin}/rss/${encodeURIComponent(
-          normalizedSlug
-        )}.xml`,
+        href: `${window.location.origin}/rss/${encodeURIComponent(normalizedSlug)}.xml`,
       });
     }
 
     try {
       const { displayName } = categoryCopy;
 
-      const coll = {
-        "@context": "https://schema.org",
-        "@type": "CollectionPage",
-        name: metaTitle,
-        description: metaDescription,
-        url: canonical,
-      };
-
+      const coll = { "@context": "https://schema.org", "@type": "CollectionPage", name: metaTitle, description: metaDescription, url: canonical };
       const breadcrumb = {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
         itemListElement: [
-          {
-            "@type": "ListItem",
-            position: 1,
-            name: "Home",
-            item: `${window.location.origin}/`,
-          },
-          {
-            "@type": "ListItem",
-            position: 2,
-            name: displayName || slug,
-            item: canonical,
-          },
+          { "@type": "ListItem", position: 1, name: "Home", item: `${window.location.origin}/` },
+          { "@type": "ListItem", position: 2, name: displayName || slug, item: canonical },
         ],
       };
 
-      setJsonLd({
-        "@context": "https://schema.org",
-        "@graph": [coll, breadcrumb],
-      });
+      setJsonLd({ "@context": "https://schema.org", "@graph": [coll, breadcrumb] });
     } catch {}
   }, [categoryCopy, canonical, slug, normalizedSlug, category?.name]);
 
@@ -810,7 +731,6 @@ export default function CategoryPage() {
         );
 
         const items = Array.isArray(data) ? data : [];
-
         const filtered = items.filter(
           (s) =>
             s?.enabled !== false &&
@@ -833,9 +753,8 @@ export default function CategoryPage() {
         if (!cancel) setPageSections([]);
       }
     })();
-    return () => {
-      cancel = true;
-    };
+
+    return () => { cancel = true; };
   }, [pagePath]);
 
   const headBlocks = pageSections.filter((s) => s.template?.startsWith("head_"));
@@ -860,11 +779,7 @@ export default function CategoryPage() {
       if (!Number.isFinite(n) || n <= 0) tops.push(s);
       else insets.push({ ...s, __after: n });
     }
-    insets.sort(
-      (a, b) =>
-        a.__after - b.__after ||
-        (a.placementIndex ?? 0) - (b.placementIndex ?? 0)
-    );
+    insets.sort((a, b) => a.__after - b.__after || (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
     return { topBlocks: tops, insetBlocks: insets };
   }, [mainBlocks]);
 
@@ -878,18 +793,11 @@ export default function CategoryPage() {
 
         const data = await cachedGet(
           "/sections/plan",
-          {
-            params: {
-              sectionType: "category",
-              sectionValue: String(slug || "").toLowerCase(),
-            },
-            validateStatus: () => true,
-          },
+          { params: { sectionType: "category", sectionValue: String(slug || "").toLowerCase() }, validateStatus: () => true },
           60_000
         );
 
-        const rows = Array.isArray(data) ? data : [];
-        if (!cancel) setPlanSections(rows);
+        if (!cancel) setPlanSections(Array.isArray(data) ? data : []);
       } catch (e) {
         if (!cancel) {
           setRailsError("Failed to load rails");
@@ -900,16 +808,13 @@ export default function CategoryPage() {
         if (!cancel) setRailsLoading(false);
       }
     })();
-    return () => {
-      cancel = true;
-    };
+    return () => { cancel = true; };
   }, [slug]);
 
   const first = articles?.[0] || null;
   const second = articles?.[1] || null;
   const third = articles?.[2] || null;
-  const rest =
-    Array.isArray(articles) && articles.length > 3 ? articles.slice(3) : [];
+  const rest = Array.isArray(articles) && articles.length > 3 ? articles.slice(3) : [];
 
   const renderInsetAfter = (idx) => {
     const blocks = insetBlocks.filter((b) => b.__after === idx);
@@ -922,29 +827,43 @@ export default function CategoryPage() {
   };
 
   const contentWrapStyle = useMemo(() => {
-    return {
-      width: "100%",
-      maxWidth: isMobile ? 1200 : DESKTOP_CONTENT_MAX,
-      padding: "0 12px",
-    };
+    return { width: "100%", maxWidth: isMobile ? 1200 : DESKTOP_CONTENT_MAX, padding: "0 12px" };
   }, [isMobile]);
 
   const headWrapStyle = useMemo(() => {
-    return {
-      width: "100%",
-      maxWidth: isMobile ? 1200 : DESKTOP_CONTENT_MAX,
-      padding: "0 12px",
-      marginBottom: 12,
-    };
+    return { width: "100%", maxWidth: isMobile ? 1200 : DESKTOP_CONTENT_MAX, padding: "0 12px", marginBottom: 12 };
   }, [isMobile]);
 
-  const showPageSkinRails = !isMobile && !isNarrow;
+  // ✅ Show rails only on very wide desktop
+  const showPageSkinRails = !isMobile && isWideEnoughForSkin;
+
+  // ✅ When rails are on, reserve gutters + set real header height for rail top
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const root = document.documentElement;
+    root.classList.toggle("tv-has-pageskin", !!showPageSkinRails);
+
+    const setHeaderHeightVar = () => {
+      const el =
+        document.querySelector("header") ||
+        document.querySelector("nav") ||
+        document.querySelector(".site-nav") ||
+        document.querySelector(".navbar");
+      if (!el) return;
+      const h = Math.max(0, Math.round(el.getBoundingClientRect().height));
+      if (h) root.style.setProperty("--tv-header-h", `${h}px`);
+    };
+
+    setHeaderHeightVar();
+    window.addEventListener("resize", setHeaderHeightVar);
+    return () => window.removeEventListener("resize", setHeaderHeightVar);
+  }, [showPageSkinRails]);
 
   return (
     <>
       <SiteNav />
 
-      {/* ✅ Fixed page-skin rails: sizing & alignment handled by CSS */}
       {showPageSkinRails && (
         <>
           <AdRail side="left" slot={ADS_SLOT_LEFT} />
@@ -986,8 +905,7 @@ export default function CategoryPage() {
                     <h1>{categoryCopy.displayName}</h1>
                     <p style={{ marginTop: 8, textAlign: "center" }}>
                       New articles for this category are coming soon. Check{" "}
-                      <Link to="/top-news">Top News</Link> or <Link to="/world">World</Link> while
-                      you wait.
+                      <Link to="/top-news">Top News</Link> or <Link to="/world">World</Link> while you wait.
                     </p>
                   </>
                 ) : (
