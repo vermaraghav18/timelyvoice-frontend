@@ -18,6 +18,14 @@ const BRAND_NAME = "The Timely Voice";
 /* ✅ Desktop content width (controls left/right empty space) */
 const DESKTOP_CONTENT_MAX = 920;
 
+/* ---------- AdSense: Category Page Skin (Left/Right Vertical) ---------- */
+const ADS_CLIENT = "ca-pub-8472487092329023";
+const ADS_SLOT_LEFT = "1029272878";  // TV_Category_Left_Skyscraper
+const ADS_SLOT_RIGHT = "5507573932"; // TV_Category_Right_Skyscraper
+
+/* Rail width: you can tweak (160–200) depending on your design */
+const RAIL_W = 180;
+
 /* ---------- helper: relative time ---------- */
 function timeAgo(input) {
   const d = input ? new Date(input) : null;
@@ -517,6 +525,91 @@ function ArticleRow({ a, compact = false }) {
   );
 }
 
+/* ---------- AdRails (fixed full-height, touch edges) ---------- */
+function ensureAdsenseScript() {
+  if (typeof window === "undefined") return;
+
+  // If already loaded, do nothing
+  const existing = document.querySelector('script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]');
+  if (existing) return;
+
+  const s = document.createElement("script");
+  s.async = true;
+  s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(
+    ADS_CLIENT
+  )}`;
+  s.crossOrigin = "anonymous";
+  document.head.appendChild(s);
+}
+
+function pushAdsense() {
+  if (typeof window === "undefined") return;
+  window.adsbygoogle = window.adsbygoogle || [];
+  try {
+    window.adsbygoogle.push({});
+  } catch {
+    // ignore
+  }
+}
+
+function AdRail({ side = "left", slot }) {
+  // Full-height edge rail (touch top/bottom and edge)
+  const railStyle = {
+    position: "fixed",
+    top: 0,
+    bottom: 0,
+    width: RAIL_W,
+    zIndex: 5,
+    display: "flex",
+    alignItems: "stretch",
+    justifyContent: "center",
+    pointerEvents: "auto",
+    ...(side === "left" ? { left: 0 } : { right: 0 }),
+  };
+
+  // Inner container: fill height; we keep a little padding so it looks clean,
+  // but the rail still touches the edges because the rail itself is full-height.
+  const innerStyle = {
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    paddingTop: 0,   // touch top
+    paddingBottom: 0 // touch bottom
+  };
+
+  // AdSense INS: keep it responsive; width should be set to rail width so it fits
+  const insStyle = {
+    display: "block",
+    width: "100%",
+    height: "100%",
+  };
+
+  // Push ad after mount
+  useEffect(() => {
+    ensureAdsenseScript();
+    // Small delay so script can register + ins is in DOM
+    const t = setTimeout(() => pushAdsense(), 150);
+    return () => clearTimeout(t);
+  }, [slot]);
+
+  return (
+    <div style={railStyle} aria-label={`${side} ad rail`}>
+      <div style={innerStyle}>
+        <ins
+          className="adsbygoogle"
+          style={insStyle}
+          data-ad-client={ADS_CLIENT}
+          data-ad-slot={slot}
+          data-ad-format="auto"
+          data-full-width-responsive="true"
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function CategoryPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -538,15 +631,11 @@ export default function CategoryPage() {
   const [railsError, setRailsError] = useState("");
 
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined"
-      ? window.matchMedia("(max-width: 720px)").matches
-      : false
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 720px)").matches : false
   );
 
   const [isNarrow, setIsNarrow] = useState(() =>
-    typeof window !== "undefined"
-      ? window.matchMedia("(max-width: 1200px)").matches
-      : false
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 1200px)").matches : false
   );
 
   useEffect(() => {
@@ -787,7 +876,9 @@ export default function CategoryPage() {
       if (!Number.isFinite(n) || n <= 0) tops.push(s);
       else insets.push({ ...s, __after: n });
     }
-    insets.sort((a, b) => a.__after - b.__after || (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
+    insets.sort(
+      (a, b) => a.__after - b.__after || (a.placementIndex ?? 0) - (b.placementIndex ?? 0)
+    );
     return { topBlocks: tops, insetBlocks: insets };
   }, [mainBlocks]);
 
@@ -861,9 +952,21 @@ export default function CategoryPage() {
     };
   }, [isMobile]);
 
+  // ✅ Only show left/right page-skin rails on wide desktop
+  // (Prevents overlap / “chips” on smaller screens)
+  const showPageSkinRails = !isMobile && !isNarrow;
+
   return (
     <>
       <SiteNav />
+
+      {/* ✅ Fixed full-height page-skin rails (touch top/bottom + edge) */}
+      {showPageSkinRails && (
+        <>
+          <AdRail side="left" slot={ADS_SLOT_LEFT} />
+          <AdRail side="right" slot={ADS_SLOT_RIGHT} />
+        </>
+      )}
 
       <div className="category-container">
         <div style={pageWrap}>
