@@ -1,65 +1,7 @@
-/* frontend/src/styles/category.css */
-
-/* Full-width container for category pages */
+/* Full-width container for category pages to avoid squeeze with PageShell side skins */
 .category-container{
   max-width: 100%;
   width: 100%;
   margin: 0 auto;
   min-width: 0;
-}
-
-/* =========================
-   CATEGORY: PAGE-SKIN RAILS
-   ========================= */
-
-/* Defaults (JS will overwrite --tv-header-h with real measured header height) */
-:root{
-  --tv-header-h: 150px;
-  --tv-rail-w: 300px;     /* IMPORTANT: ad is 300px wide */
-  --tv-rail-gap: 16px;    /* space between rail and content */
-}
-
-/* When rails are enabled, reserve gutters so ads NEVER overlap content */
-html.tv-has-pageskin .category-container{
-  padding-left: calc(var(--tv-rail-w) + var(--tv-rail-gap));
-  padding-right: calc(var(--tv-rail-w) + var(--tv-rail-gap));
-}
-
-/* Fixed rails in the gutter */
-.tv-ads-rail{
-  position: fixed;
-  top: var(--tv-header-h);
-  bottom: 0;
-
-  width: var(--tv-rail-w);
-  z-index: 50;
-
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-
-  padding-top: 8px;
-  overflow: hidden;
-
-  background: transparent;
-  pointer-events: auto;
-}
-
-.tv-ads-rail.left{ left: 0; }
-.tv-ads-rail.right{ right: 0; }
-
-/* Ad itself is FIXED SIZE (300x1000) */
-.tv-ads-rail ins.adsbygoogle{
-  display: inline-block !important;
-  width: 300px !important;
-  height: 1000px !important;
-}
-
-/* Safety: never show skins on smaller screens (extra fallback) */
-@media (max-width: 1100px){
-  .tv-ads-rail{ display: none !important; }
-  html.tv-has-pageskin .category-container{
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-  }
 }

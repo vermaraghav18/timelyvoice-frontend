@@ -15,13 +15,16 @@ import { ensureRenderableImage } from "../../lib/images.js";
 /* ---------- Brand constant ---------- */
 const BRAND_NAME = "The Timely Voice";
 
-/* ✅ Desktop content width */
+/* ✅ Desktop content width (controls left/right empty space) */
 const DESKTOP_CONTENT_MAX = 920;
 
 /* ---------- AdSense: Category Page Skin (Left/Right Vertical) ---------- */
 const ADS_CLIENT = "ca-pub-8472487092329023";
-const ADS_SLOT_LEFT = "1029272878"; // TV_Category_Left_Skyscraper
+const ADS_SLOT_LEFT = "1029272878";  // TV_Category_Left_Skyscraper
 const ADS_SLOT_RIGHT = "5507573932"; // TV_Category_Right_Skyscraper
+
+/* Rail width: you can tweak (160–200) depending on your design */
+const RAIL_W = 180;
 
 /* ---------- helper: relative time ---------- */
 function timeAgo(input) {
@@ -229,8 +232,11 @@ const thumbStyle = {
   display: "block",
 };
 
-/* ---------- First article (no card) ---------- */
-const firstWrap = { marginBottom: 14, padding: 0 };
+/* ---------- NEW: First article (no card) ---------- */
+const firstWrap = {
+  marginBottom: 14,
+  padding: 0,
+};
 
 const firstTitle = {
   margin: "0 0 10px",
@@ -418,6 +424,7 @@ function TopCard({ a }) {
 function TwoUpGrid({ a1, a2, isMobile }) {
   if (!a1 && !a2) return null;
 
+  // On mobile: keep them stacked so it doesn’t get cramped
   if (isMobile) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 14 }}>
@@ -471,8 +478,18 @@ function ArticleRow({ a, compact = false }) {
   const metaS = compact ? { ...metaRow, marginTop: 6 } : metaRow;
 
   const rowS = compact
-    ? { display: "grid", gridTemplateColumns: thumb ? "1fr 96px" : "1fr", gap: 6, alignItems: "center" }
-    : { display: "grid", gridTemplateColumns: thumb ? "1fr 110px" : "1fr", gap: 8, alignItems: "center" };
+    ? {
+        display: "grid",
+        gridTemplateColumns: thumb ? "1fr 96px" : "1fr",
+        gap: 6,
+        alignItems: "center",
+      }
+    : {
+        display: "grid",
+        gridTemplateColumns: thumb ? "1fr 110px" : "1fr",
+        gap: 8,
+        alignItems: "center",
+      };
 
   const thumbS = compact ? { ...thumbStyle, width: 96, height: 64 } : thumbStyle;
 
@@ -494,7 +511,13 @@ function ArticleRow({ a, compact = false }) {
 
         {thumb && (
           <Link to={articleUrl}>
-            <img src={thumb} alt={a.imageAlt || a.title || ""} style={thumbS} loading="lazy" decoding="async" />
+            <img
+              src={thumb}
+              alt={a.imageAlt || a.title || ""}
+              style={thumbS}
+              loading="lazy"
+              decoding="async"
+            />
           </Link>
         )}
       </div>
@@ -502,36 +525,21 @@ function ArticleRow({ a, compact = false }) {
   );
 }
 
-/* =========================
-   AdSense: robust loader + push
-   ========================= */
+/* ---------- AdRails (fixed full-height, touch edges) ---------- */
 function ensureAdsenseScript() {
-  if (typeof window === "undefined") return Promise.resolve();
+  if (typeof window === "undefined") return;
 
-  if (window.__tvAdsenseReadyPromise) return window.__tvAdsenseReadyPromise;
+  // If already loaded, do nothing
+  const existing = document.querySelector('script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]');
+  if (existing) return;
 
-  window.__tvAdsenseReadyPromise = new Promise((resolve) => {
-    const existing = document.querySelector(
-      'script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]'
-    );
-
-    if (existing) {
-      setTimeout(resolve, 0);
-      return;
-    }
-
-    const s = document.createElement("script");
-    s.async = true;
-    s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(
-      ADS_CLIENT
-    )}`;
-    s.crossOrigin = "anonymous";
-    s.onload = () => resolve();
-    s.onerror = () => resolve();
-    document.head.appendChild(s);
-  });
-
-  return window.__tvAdsenseReadyPromise;
+  const s = document.createElement("script");
+  s.async = true;
+  s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(
+    ADS_CLIENT
+  )}`;
+  s.crossOrigin = "anonymous";
+  document.head.appendChild(s);
 }
 
 function pushAdsense() {
@@ -545,35 +553,59 @@ function pushAdsense() {
 }
 
 function AdRail({ side = "left", slot }) {
+  // Full-height edge rail (touch top/bottom and edge)
+  const railStyle = {
+    position: "fixed",
+    top: 0,
+    bottom: 0,
+    width: RAIL_W,
+    zIndex: 5,
+    display: "flex",
+    alignItems: "stretch",
+    justifyContent: "center",
+    pointerEvents: "auto",
+    ...(side === "left" ? { left: 0 } : { right: 0 }),
+  };
+
+  // Inner container: fill height; we keep a little padding so it looks clean,
+  // but the rail still touches the edges because the rail itself is full-height.
+  const innerStyle = {
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    paddingTop: 0,   // touch top
+    paddingBottom: 0 // touch bottom
+  };
+
+  // AdSense INS: keep it responsive; width should be set to rail width so it fits
+  const insStyle = {
+    display: "block",
+    width: "100%",
+    height: "100%",
+  };
+
+  // Push ad after mount
   useEffect(() => {
-    let alive = true;
-
-    (async () => {
-      await ensureAdsenseScript();
-      if (!alive) return;
-
-      // Ensure the <ins> exists + has layout before pushing
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (!alive) return;
-          pushAdsense();
-        });
-      });
-    })();
-
-    return () => {
-      alive = false;
-    };
+    ensureAdsenseScript();
+    // Small delay so script can register + ins is in DOM
+    const t = setTimeout(() => pushAdsense(), 150);
+    return () => clearTimeout(t);
   }, [slot]);
 
   return (
-    <div className={`tv-ads-rail ${side === "left" ? "left" : "right"}`} aria-label={`${side} ad rail`}>
-      <ins
-        className="adsbygoogle"
-        style={{ display: "inline-block", width: 300, height: 1000 }}
-        data-ad-client={ADS_CLIENT}
-        data-ad-slot={slot}
-      ></ins>
+    <div style={railStyle} aria-label={`${side} ad rail`}>
+      <div style={innerStyle}>
+        <ins
+          className="adsbygoogle"
+          style={insStyle}
+          data-ad-client={ADS_CLIENT}
+          data-ad-slot={slot}
+          data-ad-format="auto"
+          data-full-width-responsive="true"
+        />
+      </div>
     </div>
   );
 }
@@ -602,55 +634,52 @@ export default function CategoryPage() {
     typeof window !== "undefined" ? window.matchMedia("(max-width: 720px)").matches : false
   );
 
-  /* ✅ Compute if page-skin rails can fit (instead of hardcoded 1601px) */
-  const [canFitRails, setCanFitRails] = useState(() => {
-    if (typeof window === "undefined") return false;
-    const railW = 300;
-    const railGap = 16;
-    const buffer = 40; // scrollbar + padding safety
-    const needed = DESKTOP_CONTENT_MAX + 2 * (railW + railGap) + buffer;
-    return window.innerWidth >= needed;
-  });
+  const [isNarrow, setIsNarrow] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 1200px)").matches : false
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const mqMobile = window.matchMedia("(max-width: 720px)");
+    const mqNarrow = window.matchMedia("(max-width: 1200px)");
 
     const onMobile = (e) => setIsMobile(e.matches);
+    const onNarrow = (e) => setIsNarrow(e.matches);
+
     mqMobile.addEventListener?.("change", onMobile);
     mqMobile.addListener?.(onMobile);
 
-    const onResize = () => {
-      const railW = 300;
-      const railGap = 16;
-      const buffer = 40;
-      const needed = DESKTOP_CONTENT_MAX + 2 * (railW + railGap) + buffer;
-      setCanFitRails(window.innerWidth >= needed);
-    };
-
-    onResize();
-    window.addEventListener("resize", onResize);
+    mqNarrow.addEventListener?.("change", onNarrow);
+    mqNarrow.addListener?.(onNarrow);
 
     return () => {
       mqMobile.removeEventListener?.("change", onMobile);
       mqMobile.removeListener?.(onMobile);
-      window.removeEventListener("resize", onResize);
+
+      mqNarrow.removeEventListener?.("change", onNarrow);
+      mqNarrow.removeListener?.(onNarrow);
     };
   }, []);
 
   const normalizedSlug = useMemo(() => toSlug(slug), [slug]);
 
   const canonical = useMemo(() => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://timelyvoice.com";
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "https://timelyvoice.com";
     return `${origin}/category/${encodeURIComponent(normalizedSlug)}`;
   }, [normalizedSlug]);
 
-  const categoryCopy = useMemo(() => getCategoryCopy(normalizedSlug, category), [normalizedSlug, category]);
+  const categoryCopy = useMemo(
+    () => getCategoryCopy(normalizedSlug, category),
+    [normalizedSlug, category]
+  );
 
   useEffect(() => {
     const want = `/category/${normalizedSlug}`;
-    if (pathname !== want) navigate({ pathname: want, search }, { replace: true });
+    if (pathname !== want) {
+      navigate({ pathname: want, search }, { replace: true });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [normalizedSlug]);
 
@@ -676,7 +705,8 @@ export default function CategoryPage() {
 
         if (cRes?.redirectTo) {
           const newSlug = extractCanonicalSlugFromRedirect({ data: cRes });
-          if (newSlug) navigate({ pathname: `/category/${newSlug}`, search }, { replace: true });
+          if (newSlug)
+            navigate({ pathname: `/category/${newSlug}`, search }, { replace: true });
           return;
         }
 
@@ -698,17 +728,24 @@ export default function CategoryPage() {
 
         const aData = await cachedGet(
           `/articles`,
-          { params: { category: effectiveSlug, page, limit }, validateStatus: () => true },
+          {
+            params: { category: effectiveSlug, page, limit },
+            validateStatus: () => true,
+          },
           25_000
         );
 
         if (!alive) return;
 
-        if (Array.isArray(aData?.items)) setArticles(normalizeArticlesLatestFirst(aData.items));
-        else if (aData?.status === 404) {
+        if (Array.isArray(aData?.items)) {
+          const sorted = normalizeArticlesLatestFirst(aData.items);
+          setArticles(sorted);
+        } else if (aData?.status === 404) {
           setArticles([]);
           setNotFound(true);
-        } else setArticles([]);
+        } else {
+          setArticles([]);
+        }
       } catch {
         if (!alive) return;
         setNotFound(true);
@@ -730,11 +767,21 @@ export default function CategoryPage() {
     const { metaTitle, metaDescription } = categoryCopy;
 
     upsertTag("title", {}, { textContent: metaTitle });
-    upsertTag("meta", { name: "description", content: metaDescription || "Browse latest stories on The Timely Voice." });
-    upsertTag("link", { rel: "canonical", href: canonical });
-    upsertTag("meta", { name: "robots", content: "index,follow", "data-managed": "robots" });
 
-    if (slug && typeof window !== "undefined") {
+    upsertTag("meta", {
+      name: "description",
+      content: metaDescription || "Browse latest stories on The Timely Voice.",
+    });
+
+    upsertTag("link", { rel: "canonical", href: canonical });
+
+    upsertTag("meta", {
+      name: "robots",
+      content: "index,follow",
+      "data-managed": "robots",
+    });
+
+    if (slug) {
       upsertTag("link", {
         rel: "alternate",
         type: "application/rss+xml",
@@ -753,6 +800,7 @@ export default function CategoryPage() {
         description: metaDescription,
         url: canonical,
       };
+
       const breadcrumb = {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
@@ -771,11 +819,19 @@ export default function CategoryPage() {
     let cancel = false;
     (async () => {
       try {
-        const data = await cachedGet("/sections", { params: { path: pagePath, validateStatus: () => true } }, 60_000);
+        const data = await cachedGet(
+          "/sections",
+          { params: { path: pagePath }, validateStatus: () => true },
+          60_000
+        );
 
         const items = Array.isArray(data) ? data : [];
+
         const filtered = items.filter(
-          (s) => s?.enabled !== false && s?.target?.type === "path" && normPath(s?.target?.value) === pagePath
+          (s) =>
+            s?.enabled !== false &&
+            s?.target?.type === "path" &&
+            normPath(s?.target?.value) === pagePath
         );
 
         const seen = new Set();
@@ -793,7 +849,6 @@ export default function CategoryPage() {
         if (!cancel) setPageSections([]);
       }
     })();
-
     return () => {
       cancel = true;
     };
@@ -821,7 +876,9 @@ export default function CategoryPage() {
       if (!Number.isFinite(n) || n <= 0) tops.push(s);
       else insets.push({ ...s, __after: n });
     }
-    insets.sort((a, b) => a.__after - b.__after || (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
+    insets.sort(
+      (a, b) => a.__after - b.__after || (a.placementIndex ?? 0) - (b.placementIndex ?? 0)
+    );
     return { topBlocks: tops, insetBlocks: insets };
   }, [mainBlocks]);
 
@@ -835,11 +892,18 @@ export default function CategoryPage() {
 
         const data = await cachedGet(
           "/sections/plan",
-          { params: { sectionType: "category", sectionValue: String(slug || "").toLowerCase() }, validateStatus: () => true },
+          {
+            params: {
+              sectionType: "category",
+              sectionValue: String(slug || "").toLowerCase(),
+            },
+            validateStatus: () => true,
+          },
           60_000
         );
 
-        if (!cancel) setPlanSections(Array.isArray(data) ? data : []);
+        const rows = Array.isArray(data) ? data : [];
+        if (!cancel) setPlanSections(rows);
       } catch (e) {
         if (!cancel) {
           setRailsError("Failed to load rails");
@@ -855,6 +919,7 @@ export default function CategoryPage() {
     };
   }, [slug]);
 
+  // ✅ NEW slicing: 1st = first article (no card), 2nd & 3rd = two-up big cards, rest = normal list
   const first = articles?.[0] || null;
   const second = articles?.[1] || null;
   const third = articles?.[2] || null;
@@ -871,43 +936,31 @@ export default function CategoryPage() {
   };
 
   const contentWrapStyle = useMemo(() => {
-    return { width: "100%", maxWidth: isMobile ? 1200 : DESKTOP_CONTENT_MAX, padding: "0 12px" };
+    return {
+      width: "100%",
+      maxWidth: isMobile ? 1200 : DESKTOP_CONTENT_MAX,
+      padding: "0 12px",
+    };
   }, [isMobile]);
 
   const headWrapStyle = useMemo(() => {
-    return { width: "100%", maxWidth: isMobile ? 1200 : DESKTOP_CONTENT_MAX, padding: "0 12px", marginBottom: 12 };
+    return {
+      width: "100%",
+      maxWidth: isMobile ? 1200 : DESKTOP_CONTENT_MAX,
+      padding: "0 12px",
+      marginBottom: 12,
+    };
   }, [isMobile]);
 
-  // ✅ Show rails only if they can fit (no overlap)
-  const showPageSkinRails = !isMobile && canFitRails;
-
-  // ✅ When rails are on, reserve gutters + set real header height for rail top
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const root = document.documentElement;
-    root.classList.toggle("tv-has-pageskin", !!showPageSkinRails);
-
-    const setHeaderHeightVar = () => {
-      const el =
-        document.querySelector("header") ||
-        document.querySelector("nav") ||
-        document.querySelector(".site-nav") ||
-        document.querySelector(".navbar");
-      if (!el) return;
-      const h = Math.max(0, Math.round(el.getBoundingClientRect().height));
-      if (h) root.style.setProperty("--tv-header-h", `${h}px`);
-    };
-
-    setHeaderHeightVar();
-    window.addEventListener("resize", setHeaderHeightVar);
-    return () => window.removeEventListener("resize", setHeaderHeightVar);
-  }, [showPageSkinRails]);
+  // ✅ Only show left/right page-skin rails on wide desktop
+  // (Prevents overlap / “chips” on smaller screens)
+  const showPageSkinRails = !isMobile && !isNarrow;
 
   return (
     <>
       <SiteNav />
 
+      {/* ✅ Fixed full-height page-skin rails (touch top/bottom + edge) */}
       {showPageSkinRails && (
         <>
           <AdRail side="left" slot={ADS_SLOT_LEFT} />
@@ -930,8 +983,8 @@ export default function CategoryPage() {
               <>
                 <h1>{categoryCopy.displayName}</h1>
                 <p style={{ marginTop: 8 }}>
-                  We’re updating this section. You can read our latest <Link to="/top-news">top stories</Link> in the
-                  meantime.
+                  We’re updating this section. You can read our latest{" "}
+                  <Link to="/top-news">top stories</Link> in the meantime.
                 </p>
               </>
             )}
@@ -948,15 +1001,20 @@ export default function CategoryPage() {
                   <>
                     <h1>{categoryCopy.displayName}</h1>
                     <p style={{ marginTop: 8, textAlign: "center" }}>
-                      New articles for this category are coming soon. Check <Link to="/top-news">Top News</Link> or{" "}
-                      <Link to="/world">World</Link> while you wait.
+                      New articles for this category are coming soon. Check{" "}
+                      <Link to="/top-news">Top News</Link> or <Link to="/world">World</Link> while
+                      you wait.
                     </p>
                   </>
                 ) : (
                   <>
+                    {/* ✅ 1) First article: title -> image -> summary (NO card) */}
                     <FirstArticle a={first} isMobile={isMobile} />
+
+                    {/* ✅ 2) 2nd + 3rd: big cards side-by-side on desktop */}
                     <TwoUpGrid a1={second} a2={third} isMobile={isMobile} />
 
+                    {/* ✅ 3) Rest: normal cards */}
                     <div style={listStyle}>
                       {rest.map((a, idx) => (
                         <div key={a._id || a.id || a.slug || idx}>
