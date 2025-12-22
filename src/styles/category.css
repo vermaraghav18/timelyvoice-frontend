@@ -1,6 +1,16 @@
 /* frontend/src/styles/category.css */
 
-/* Keep x-overflow hidden so rails/iframes never create sideways scroll */
+/* ✅ critical: remove default browser margin/padding so fixed rails can touch edges */
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  margin: 0;
+  padding: 0;
+}
+
 body {
   overflow-x: hidden;
 }
