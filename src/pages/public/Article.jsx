@@ -29,14 +29,32 @@ import { ensureRenderableImage } from '../../lib/images';
 
 /* =========================================================
   ✅ AdSense (ONLY In-article Fluid ads for Article page)
+  + ✅ NEW: Top responsive ad under title/source
   ========================================================= */
 const ADS_CLIENT = 'ca-pub-8472487092329023';
+
+// ✅ NEW: Article top responsive ad (from your AdSense screenshot)
+const ADS_ARTICLE_TOP = '5588476743';
 
 // ✅ Your In-article (fluid) slots
 const ADS_INARTICLE_1 = '6745877256';
 const ADS_INARTICLE_2 = '2220308886';
 const ADS_INARTICLE_3 = '7281063871';
 const ADS_INARTICLE_4 = '5967982203';
+
+/* Load AdSense script once (safe in SPA) */
+function ensureAdsenseScript(client) {
+  if (typeof document === 'undefined') return;
+  const src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`;
+  const exists = Array.from(document.scripts).some((s) => s.src === src);
+  if (exists) return;
+
+  const s = document.createElement('script');
+  s.async = true;
+  s.src = src;
+  s.crossOrigin = 'anonymous';
+  document.head.appendChild(s);
+}
 
 /** Simple viewport hook: returns true when width < breakpoint */
 function useIsMobile(breakpoint = 768) {
@@ -49,6 +67,59 @@ function useIsMobile(breakpoint = 768) {
     return () => window.removeEventListener('resize', onResize);
   }, [breakpoint]);
   return isMobile;
+}
+
+/** ✅ NEW: Top responsive display ad (below title/source, above time/date)
+ * - responsive for mobile + desktop
+ * - prevents double-push TagError (status + iframe + requested flag)
+ */
+function ArticleTopAd({ slot = ADS_ARTICLE_TOP, client = ADS_CLIENT }) {
+  const insRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    ensureAdsenseScript(client);
+
+    const ins = insRef.current;
+    if (!ins) return;
+
+    // ✅ Already processed by AdSense
+    if (ins.getAttribute('data-adsbygoogle-status') === 'done') return;
+
+    // ✅ If AdSense already injected an iframe, never push again
+    if (ins.querySelector('iframe')) return;
+
+    // ✅ Mark as requested to avoid React re-render double push
+    if (ins.dataset.requested === '1') return;
+    ins.dataset.requested = '1';
+
+    // Push now + delayed push (SPA timing)
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch {}
+    const t = setTimeout(() => {
+      try {
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+      } catch {}
+    }, 350);
+
+    return () => clearTimeout(t);
+  }, [slot, client]);
+
+  return (
+    <div className="tv-article-topad" aria-label="Advertisement">
+      <ins
+        ref={insRef}
+        className="adsbygoogle"
+        style={{ display: 'block' }}
+        data-ad-client={client}
+        data-ad-slot={slot}
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
+    </div>
+  );
 }
 
 /** ✅ In-article (fluid) Ad unit
@@ -68,6 +139,8 @@ function InArticleAd({
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    ensureAdsenseScript(client);
+
     const ins = insRef.current;
     if (!ins) return;
 
@@ -86,7 +159,7 @@ function InArticleAd({
     } catch {
       // keep quiet in prod
     }
-  }, [slot]);
+  }, [slot, client]);
 
   const wrapClass = [
     'tv-inarticle-wrap',
@@ -475,7 +548,10 @@ export default function ReaderArticle() {
         upsertTag('meta', { property: 'og:url', content: canonical });
         if (ogImage) upsertTag('meta', { property: 'og:image', content: ogImage });
 
-        upsertTag('meta', { name: 'twitter:card', content: ogImage ? 'summary_large_image' : 'summary' });
+        upsertTag('meta', {
+          name: 'twitter:card',
+          content: ogImage ? 'summary_large_image' : 'summary',
+        });
         upsertTag('meta', { name: 'twitter:title', content: title });
         upsertTag('meta', { name: 'twitter:description', content: String(desc).slice(0, 200) });
         if (ogImage) upsertTag('meta', { name: 'twitter:image', content: ogImage });
@@ -704,36 +780,109 @@ export default function ReaderArticle() {
   );
   const paragraphs = useMemo(() => splitParagraphs(normalizedBody), [normalizedBody]);
 
-  // ✅ Slot selection: insert 4 ads depending on paragraph count
-  const inArticleSlotsAfterIndex = (i, total) => {
-    if (total === 1) {
-      if (i === 0) return [ADS_INARTICLE_1, ADS_INARTICLE_2];
-      return [];
+  /* =========================================================
+    ✅ Ad placement rule:
+    - 3 ads minimum, 4 if long articles
+    - spaced by reading chunks (roughly 10–15 lines)
+    ========================================================= */
+  function stripHtml(html = '') {
+    return String(html || '')
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function wordCountFromHtml(html = '') {
+    const t = stripHtml(html);
+    if (!t) return 0;
+    return t.split(' ').filter(Boolean).length;
+  }
+
+  const adPlanByAfterIndex = useMemo(() => {
+    const slots = [ADS_INARTICLE_1, ADS_INARTICLE_2, ADS_INARTICLE_3, ADS_INARTICLE_4];
+
+    const totalParas = paragraphs.length;
+    if (totalParas <= 0) return {};
+
+    const wc = paragraphs.map((p) => wordCountFromHtml(p));
+    const totalWords = wc.reduce((a, b) => a + b, 0);
+
+    // 4 ads only for longer stories
+    const desiredAds = totalWords >= 900 ? 4 : 3;
+
+    const FIRST_AD_AFTER_WORDS = 150; // don't show immediately at top
+    const MIN_GAP_WORDS = 200; // target spacing between ads
+    const MAX_GAP_WORDS = 280; // force a placement if we overshoot
+
+    const placements = []; // paragraph indices where we place an ad AFTER that paragraph
+    let sinceLast = 0;
+    let cumulative = 0;
+
+    for (let i = 0; i < totalParas; i++) {
+      cumulative += wc[i];
+      sinceLast += wc[i];
+
+      // First ad gate
+      if (placements.length === 0) {
+        if (cumulative >= FIRST_AD_AFTER_WORDS) {
+          placements.push(i);
+          sinceLast = 0;
+        }
+        continue;
+      }
+
+      // Next ads by gap
+      if (placements.length < desiredAds) {
+        if (sinceLast >= MIN_GAP_WORDS) {
+          placements.push(i);
+          sinceLast = 0;
+        } else if (sinceLast >= MAX_GAP_WORDS) {
+          placements.push(i);
+          sinceLast = 0;
+        }
+      }
     }
 
-    if (total === 2) {
-      if (i === 0) return [ADS_INARTICLE_1];
-      if (i === 1) return [ADS_INARTICLE_2, ADS_INARTICLE_3];
-      return [];
+    // Fallback: guarantee desiredAds placements using % positions
+    const pickIndex = (ratio) =>
+      Math.min(totalParas - 1, Math.max(0, Math.floor((totalParas - 1) * ratio)));
+
+    const fallbackTargets = desiredAds === 4 ? [0.30, 0.55, 0.78, 0.92] : [0.33, 0.66, 0.88];
+
+    const uniqPush = (idx) => {
+      if (idx < 0 || idx >= totalParas) return;
+      if (!placements.includes(idx)) placements.push(idx);
+    };
+
+    for (const r of fallbackTargets) {
+      if (placements.length >= desiredAds) break;
+      uniqPush(pickIndex(r));
     }
 
-    if (total === 3) {
-      if (i === 0) return [ADS_INARTICLE_1];
-      if (i === 1) return [ADS_INARTICLE_2];
-      if (i === 2) return [ADS_INARTICLE_3];
-      return [];
+    // still short? push towards end
+    while (placements.length < desiredAds) {
+      uniqPush(totalParas - 1);
+      if (placements.length >= desiredAds) break;
+      uniqPush(Math.max(0, totalParas - 2));
+      if (placements.length >= desiredAds) break;
+      uniqPush(Math.max(0, totalParas - 3));
+      break;
     }
 
-    if (total >= 4) {
-      if (i === 0) return [ADS_INARTICLE_1];
-      if (i === 1) return [ADS_INARTICLE_2];
-      if (i === 2) return [ADS_INARTICLE_3];
-      if (i === 3) return [ADS_INARTICLE_4];
-      return [];
+    placements.sort((a, b) => a - b);
+
+    const map = {};
+    for (let k = 0; k < Math.min(desiredAds, placements.length); k++) {
+      const afterIndex = placements[k];
+      const slot = slots[k];
+      if (!map[afterIndex]) map[afterIndex] = [];
+      map[afterIndex].push(slot);
     }
 
-    return [];
-  };
+    return map;
+  }, [paragraphs]);
 
   // --- 404 SEO handling (must always define hooks in same order) ---
   useEffect(() => {
@@ -783,19 +932,31 @@ export default function ReaderArticle() {
         }
 
         .article-body p {
+          font-weight: 100;
           margin: 1.25em 0;
           line-height: 1.85;
           font-size: 19px;
           color: #e8ecf1;
         }
 
-        .article-body p:first-of-type::first-letter {
-          font-size: 2.6em;
-          font-weight: 700;
-          float: left;
-          line-height: 1;
-          margin-right: 8px;
-          color: #00bfff;
+        /* ✅ REMOVED: Drop-cap first-letter rule */
+
+        /* ✅ NEW: Top ad (under title/source) – responsive & safe */
+        .tv-article-topad{
+          width: 100%;
+          max-width: 100%;
+          margin: 10px 0 10px;
+          overflow: hidden;
+        }
+        .tv-article-topad ins.adsbygoogle{
+          display: block !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          overflow: hidden !important;
+        }
+        .tv-article-topad iframe{
+          width: 100% !important;
+          max-width: 100% !important;
         }
 
         /* MAIN HEADLINES (h2) – orange highlight bar */
@@ -951,13 +1112,22 @@ export default function ReaderArticle() {
 
               <div style={sourceRow}>By {pickByline(article)}</div>
 
+              {/* ✅ NEW: Responsive ad under title/source, above time/date */}
+              <ArticleTopAd slot={ADS_ARTICLE_TOP} client={ADS_CLIENT} />
+
               <div style={timeShareBar}>
                 <small style={timeText}>
                   {displayDate ? `Updated on: ${new Date(displayDate).toLocaleString()}` : ''}
                   {reading.minutes ? (
                     <>
                       {' • '}
-                      <span style={{ color: '#ee6affff', fontWeight: 500, fontSize: isMobile ? 16 : 18 }}>
+                      <span
+                        style={{
+                          color: '#ee6affff',
+                          fontWeight: 500,
+                          fontSize: isMobile ? 16 : 18,
+                        }}
+                      >
                         {reading.minutes} min read
                       </span>
                     </>
@@ -1011,11 +1181,11 @@ export default function ReaderArticle() {
                   );
                 })()}
 
-                {/* ✅ ONLY In-article (fluid) ads inserted at fixed positions */}
+                {/* ✅ In-article (fluid) ads: 3 minimum, 4 for long articles, spaced by reading chunks */}
                 {paragraphs.length === 0
                   ? null
                   : paragraphs.map((html, i) => {
-                      const slots = inArticleSlotsAfterIndex(i, paragraphs.length) || [];
+                      const slots = adPlanByAfterIndex[i] || [];
                       const uniqSlots = Array.from(new Set(slots.filter(Boolean)));
 
                       return (
@@ -1059,16 +1229,24 @@ export default function ReaderArticle() {
           {/* RIGHT RAILS (even indices) — hidden on mobile */}
           {!isMobile && (
             <aside style={{ flex: '0 0 260px' }}>
-              <div className="rail-wrap" style={{ display: 'flow-root', marginTop: 0, paddingTop: 0 }}>
+              <div
+                className="rail-wrap"
+                style={{ display: 'flow-root', marginTop: 0, paddingTop: 0 }}
+              >
                 {railsLoading && <div style={{ padding: 8 }}>Loading rails…</div>}
-                {!railsLoading && railsError && <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>}
+                {!railsLoading && railsError && (
+                  <div style={{ padding: 8, color: 'crimson' }}>{railsError}</div>
+                )}
                 {!railsLoading &&
                   !railsError &&
                   homeSections
                     .filter((s) => s.template?.startsWith('rail_'))
                     .filter((_, i) => i % 2 === 0)
                     .map((sec, i) => (
-                      <div key={sec.id || sec._id || sec.slug} style={{ marginTop: i === 0 ? 0 : 12 }}>
+                      <div
+                        key={sec.id || sec._id || sec.slug}
+                        style={{ marginTop: i === 0 ? 0 : 12 }}
+                      >
                         <SectionRenderer section={sec} />
                       </div>
                     ))}
