@@ -554,17 +554,16 @@ function InlineAd() {
     <div
       style={{
         width: "100%",
-        display: "flex",
-        justifyContent: "center",
         margin: 0,
         padding: 0,
-        lineHeight: 0,
+        textAlign: "center", // ✅ THIS is the key: hard-centers inline blocks
+        lineHeight: 0,       // ✅ removes baseline gap
       }}
     >
       <ins
         className="adsbygoogle"
         style={{
-          display: "block",
+          display: "inline-block", // ✅ inline-block + textAlign center = always centered
           width: 300,
           height: 300,
           margin: 0,
@@ -575,6 +574,7 @@ function InlineAd() {
     </div>
   );
 }
+
 
 export default function CategoryPage() {
   const { slug } = useParams();
