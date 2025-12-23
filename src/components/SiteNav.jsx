@@ -123,9 +123,11 @@ export default function SiteNav() {
     };
   }, [isMobile, mobileMenuOpen]);
 
-  // ✅ Desktop max width for the whole header shell (reduce = bigger gutters)
-  const NAV_MAX = 980;
-  const container = { maxWidth: NAV_MAX, margin: "0 auto" };
+  /**
+   * ✅ FULL BLEED container now.
+   * Previously: maxWidth 980 + margin auto → that created gutters.
+   */
+  const container = { width: "100%" };
 
   // Languages removed from UI, but we keep this noop list/href in case you want it back later.
   const languages = useMemo(
@@ -345,23 +347,29 @@ export default function SiteNav() {
     transition: "padding 180ms ease, transform 180ms ease",
   };
 
+  /**
+   * ✅ Make the *top grid* full width too (remove ...container maxWidth behavior)
+   * Keep padding for breathing room, but no gutters from maxWidth/margin auto.
+   */
   const topGridStyle = !isMobile
     ? {
-        ...container,
+        width: "100%",
         padding: condensed ? "6px 12px 4px" : "12px 12px 8px",
         display: "grid",
         gridTemplateColumns: "1fr auto 1fr",
         alignItems: "center",
         columnGap: 12,
         transition: "padding 180ms ease",
+        boxSizing: "border-box",
       }
     : {
-        ...container,
+        width: "100%",
         padding: "8px 10px 10px",
         display: "grid",
         gridTemplateColumns: "auto 1fr auto",
         alignItems: "center",
         columnGap: 8,
+        boxSizing: "border-box",
       };
 
   const logoStyle = !isMobile
@@ -410,19 +418,12 @@ export default function SiteNav() {
         .tv-scrollfade::-webkit-scrollbar-thumb { background: transparent; }
         .tv-scrollfade::-webkit-scrollbar-track { background: transparent; }
 
-        /* ✅ Desktop: shrink the whole nav block to create left/right gutters for vertical ads */
+        /* ✅ FULL BLEED: no max-width, no auto margins -> no gutters */
         .tv-nav-shell{
           width: 100%;
-          max-width: 980px;
-          margin: 0 auto;
+          max-width: none;
+          margin: 0;
           box-shadow: 0 2px 12px rgba(0,0,0,0.18);
-        }
-
-        /* ✅ Mobile: keep full width */
-        @media (max-width: 768px){
-          .tv-nav-shell{
-            max-width: none;
-          }
         }
       `}</style>
 
@@ -570,11 +571,13 @@ export default function SiteNav() {
           )}
         </div>
 
+        {/* ✅ FULL BLEED primary nav: no maxWidth/margins/padding injected */}
         <PrimaryNav
           containerStyle={{
-            maxWidth: NAV_MAX,
-            margin: "0 auto",
-            padding: "0 12px",
+            width: "100%",
+            maxWidth: "none",
+            margin: 0,
+            padding: 0,
             boxSizing: "border-box",
           }}
         />
@@ -591,9 +594,7 @@ export default function SiteNav() {
               borderBottom: "1px solid rgba(0,0,0,0.06)",
             }}
           >
-            <div
-              style={{ ...container, padding: isMobile ? "8px 8px" : "0 12px" }}
-            >
+            <div style={{ ...container, padding: isMobile ? "8px 8px" : "0 12px" }}>
               {/* (your existing regions UI remains unchanged if you ever enable it) */}
             </div>
           </div>

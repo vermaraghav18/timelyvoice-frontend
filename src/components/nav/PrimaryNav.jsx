@@ -20,15 +20,18 @@ const LINKS = [
 ];
 
 const WRAP_STYLE = {
+  width: "100%",
   background: "#0B3D91",
   color: "#fff",
   borderTop: "1px solid rgba(255,255,255,0.15)",
   borderBottom: "1px solid rgba(0,0,0,0.2)",
+  boxSizing: "border-box",
 };
 
 /**
- * ✅ Outer holds height + alignment.
- * Container width (maxWidth/margin/padding) will be injected from SiteNav.
+ * ✅ FULL-BLEED outer: always edge-to-edge.
+ * We intentionally do NOT apply containerStyle (maxWidth/padding)
+ * because that creates gutters.
  */
 const OUTER_STYLE = {
   width: "100%",
@@ -38,6 +41,8 @@ const OUTER_STYLE = {
   justifyContent: "center",
   overflow: "hidden",
   boxSizing: "border-box",
+  margin: 0,
+  padding: 0,
 };
 
 const SCROLLER_STYLE = {
@@ -50,6 +55,9 @@ const SCROLLER_STYLE = {
   justifyContent: "center",
   WebkitOverflowScrolling: "touch",
   touchAction: "pan-x",
+  boxSizing: "border-box",
+  margin: 0,
+  padding: 0,
 };
 
 const UL_STYLE = {
@@ -148,11 +156,10 @@ export default function PrimaryNav({ containerStyle }) {
     }
   }, [pathname]);
 
-  // ✅ Inject container (maxWidth + centered) from SiteNav
-  const outerStyle = {
-    ...OUTER_STYLE,
-    ...(containerStyle || {}),
-  };
+  // ✅ IMPORTANT: full-bleed outer (ignore containerStyle gutters)
+  // If you *ever* want to allow SiteNav to control ONLY height etc,
+  // we can whitelist fields, but for now we ignore it completely.
+  const outerStyle = OUTER_STYLE;
 
   return (
     <nav style={WRAP_STYLE} aria-label="Primary">
@@ -200,7 +207,10 @@ export default function PrimaryNav({ containerStyle }) {
                 : LINK_BASE;
 
               return (
-                <li key={key} style={{ display: "inline-flex", alignItems: "center" }}>
+                <li
+                  key={key}
+                  style={{ display: "inline-flex", alignItems: "center" }}
+                >
                   <Link
                     to={href}
                     style={style}
@@ -212,7 +222,11 @@ export default function PrimaryNav({ containerStyle }) {
                   </Link>
 
                   {idx !== lastVisibleIndex && (
-                    <span aria-hidden="true" className="primary-sep" style={SEP_STYLE}>
+                    <span
+                      aria-hidden="true"
+                      className="primary-sep"
+                      style={SEP_STYLE}
+                    >
                       |
                     </span>
                   )}
