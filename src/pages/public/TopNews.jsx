@@ -25,6 +25,10 @@ const PROMO_RAIL_IMG = "/banners/advertise-with-us-rail-120x700.png";
 const PROMO_RAIL_TO_EMAIL =
   "https://mail.google.com/mail/?view=cm&fs=1&to=knotshorts1@gmail.com&su=Advertise%20With%20Us";
 
+/* ---------- ✅ NEW: Inline promo banner (after every 7th article card) ---------- */
+const PROMO_INLINE_IMG = "/banners/advertise-with-us-inline.png";
+const PROMO_INLINE_TO_EMAIL = PROMO_RAIL_TO_EMAIL;
+
 /**
  * ✅ Rails are fixed to viewport edges
  * Top offset should match your latest nav behavior (0 = touch top edge)
@@ -94,7 +98,7 @@ function InFeedAd() {
 
   return (
     <li className="tn-ad">
-      <div className="tn-ad-inner" aria-label="Advertiseme">
+      <div className="tn-ad-inner" aria-label="Advertisement">
         <ins
           className="adsbygoogle"
           style={{ display: "block" }}
@@ -104,6 +108,29 @@ function InFeedAd() {
           data-full-width-responsive="true"
         />
       </div>
+    </li>
+  );
+}
+
+/* ---------- ✅ NEW: Inline promo banner component ---------- */
+function PromoInlineBanner() {
+  return (
+    <li className="tn-promo" aria-label="promo banner">
+      <a
+        href={PROMO_INLINE_TO_EMAIL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="tn-promo-link"
+        aria-label="Advertise with us - email"
+      >
+        <img
+          src={PROMO_INLINE_IMG}
+          alt="Advertise with us"
+          className="tn-promo-img"
+          loading="lazy"
+          decoding="async"
+        />
+      </a>
     </li>
   );
 }
@@ -185,8 +212,7 @@ function PromoRailFixed({ side = "left" }) {
       style={{
         position: "fixed",
         top: RAIL_TOP_OFFSET,
-       [side]: side === "right" ? RIGHT_RAIL_INSET : -5,
-
+        [side]: side === "right" ? RIGHT_RAIL_INSET : -5,
         width: RAIL_WIDTH,
         height: RAIL_HEIGHT,
         zIndex: 9999, // ✅ below SiteNav (SiteNav uses higher stacking)
@@ -287,15 +313,21 @@ export default function TopNews() {
   // ✅ Insert one in-feed ad after every N cards
   const AD_EVERY = 5;
 
+  // ✅ Insert promo banner after every 7 cards
+  const PROMO_EVERY = 7;
+
   const listWithAds = useMemo(() => {
     const out = [];
     for (let i = 0; i < items.length; i++) {
       out.push({ kind: "article", item: items[i], idx: i });
 
-      const isAfterN = (i + 1) % AD_EVERY === 0;
       const notLast = i !== items.length - 1;
 
-      if (isAfterN && notLast) out.push({ kind: "ad", idx: i });
+      const isAfterAdN = (i + 1) % AD_EVERY === 0;
+      if (isAfterAdN && notLast) out.push({ kind: "ad", idx: i });
+
+      const isAfterPromoN = (i + 1) % PROMO_EVERY === 0;
+      if (isAfterPromoN && notLast) out.push({ kind: "promo", idx: i });
     }
     return out;
   }, [items]);
@@ -324,6 +356,10 @@ export default function TopNews() {
                 {listWithAds.map((row) => {
                   if (row.kind === "ad") {
                     return <InFeedAd key={`ad-${row.idx}`} />;
+                  }
+
+                  if (row.kind === "promo") {
+                    return <PromoInlineBanner key={`promo-${row.idx}`} />;
                   }
 
                   const a = row.item;
