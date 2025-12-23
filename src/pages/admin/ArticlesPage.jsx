@@ -8,6 +8,33 @@ import { getToken } from "../../utils/auth";
 // 🔁 Default Cloudinary fallback hero (admin preview only)
 const DEFAULT_IMAGE_URL = "/tv-default-hero.jpg";
 
+// ✅ Admin: only allow these 9 categories, always in this order
+const ALLOWED_CATEGORY_SLUGS = [
+  "india",
+  "world",
+  "health",
+  "finance",
+  "history",
+  "new-delhi",
+  "punjab",
+  "entertainment",
+  "general",
+];
+
+const CATEGORY_ORDER = new Map(
+  ALLOWED_CATEGORY_SLUGS.map((slug, i) => [slug, i])
+);
+
+function normalizeSlug(v) {
+  return String(v || "").trim().toLowerCase();
+}
+
+function categoryNameFromSlug(categories, slug) {
+  const s = normalizeSlug(slug);
+  return categories.find((c) => normalizeSlug(c?.slug) === s)?.name || "General";
+}
+
+
 // ——— Cloudinary helpers: strip transforms, version and tracking query ———
 function normalizeCloudinaryUrl(raw = "") {
   try {
@@ -141,7 +168,8 @@ export default function ArticlesPage() {
     summary: "",
     author: "",
     body: "",
-    category: "General",
+    category: "general",
+
     status: "draft",
     publishAt: "",
     imageUrl: "",
@@ -173,11 +201,8 @@ export default function ArticlesPage() {
     [categories]
   );
 
-  const isHistorySelected =
-    !!historyCategory &&
-    (form.category === historyCategory._id ||
-      form.category === historyCategory.slug ||
-      form.category === historyCategory.name);
+  const isHistorySelected = normalizeSlug(form.category) === "history";
+
 
   const [tagsInput, setTagsInput] = useState("");
 
@@ -223,19 +248,31 @@ export default function ArticlesPage() {
   }, [q]);
 
   // Load categories (for filter + editor select)
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await api.get("/categories", { params: { limit: 1000 } });
-        const payload = res.data || {};
-        setCategories(
-          Array.isArray(payload) ? payload : payload.items || payload.data || []
-        );
-      } catch {
-        /* non-fatal */
-      }
-    })();
-  }, []);
+useEffect(() => {
+  (async () => {
+    try {
+      const res = await api.get("/categories", { params: { limit: 1000 } });
+      const payload = res.data || {};
+      const raw = Array.isArray(payload)
+        ? payload
+        : payload.items || payload.data || [];
+
+      const filtered = raw
+        .filter((c) => ALLOWED_CATEGORY_SLUGS.includes(normalizeSlug(c?.slug)))
+        .sort((a, b) => {
+          const ai = CATEGORY_ORDER.get(normalizeSlug(a?.slug)) ?? 999;
+          const bi = CATEGORY_ORDER.get(normalizeSlug(b?.slug)) ?? 999;
+          return ai - bi;
+        });
+
+      setCategories(filtered);
+    } catch {
+      /* non-fatal */
+    }
+  })();
+}, []);
+
+
 
   useEffect(() => {
     return () => {
@@ -252,23 +289,7 @@ export default function ArticlesPage() {
   }
 
   // ---------- NEW: category resolver ----------
-  function resolveCategoryId(val) {
-    if (!val) return "";
-    // If it already looks like a Mongo ObjectId, keep it.
-    if (typeof val === "string" && /^[a-f0-9]{24}$/i.test(val)) return val;
-    // Try to match by slug or name.
-    const match =
-      categories.find((c) => c._id === val) ||
-      categories.find(
-        (c) =>
-          (c.slug || "").toLowerCase() === String(val).toLowerCase()
-      ) ||
-      categories.find(
-        (c) =>
-          (c.name || "").toLowerCase() === String(val).toLowerCase()
-      );
-    return match?._id || "";
-  }
+  
 
   // Fetch articles
   const fetchArticles = async () => {
@@ -482,7 +503,8 @@ export default function ArticlesPage() {
       summary: "",
       author: "",
       body: "",
-      category: categories[0]?._id || "",
+      category: normalizeSlug(categories[0]?.slug) || "general",
+
       status: "draft",
       publishAt: toLocalInputValue(),
       imageUrl: "",
@@ -522,7 +544,13 @@ export default function ArticlesPage() {
         summary: a.summary || "",
         author: a.author || "",
         body: a.body || "",
-        category: resolveCategoryId(a.category?._id || a.category || ""),
+        category:
+  normalizeSlug(a.categorySlug) ||
+  normalizeSlug(a.category?.slug) ||
+  normalizeSlug(a.category?.name) ||
+  normalizeSlug(a.category) ||
+  "general",
+
         status: a.status || "published",
         publishAt: a.publishedAt ? toLocalInputValue(a.publishedAt) : "",
         imageUrl: a.imageUrl || "",
@@ -595,7 +623,9 @@ export default function ArticlesPage() {
           summary: form.summary?.trim(),
           author: form.author?.trim(),
           body: form.body,
-          category: resolveCategoryId(form.category),
+         categorySlug: normalizeSlug(form.category) || "general",
+category: categoryNameFromSlug(categories, form.category),
+
           status: form.status === "published" ? "published" : "draft",
           publishedAt: form.publishAt
             ? new Date(form.publishAt).toISOString()
@@ -689,7 +719,9 @@ export default function ArticlesPage() {
         summary: form.summary?.trim(),
         author: form.author?.trim() || "Staff",
         body: form.body,
-        category: resolveCategoryId(form.category),
+        categorySlug: normalizeSlug(form.category) || "general",
+category: categoryNameFromSlug(categories, form.category),
+
         status: form.status === "published" ? "published" : "draft",
         publishedAt: form.publishAt
           ? new Date(form.publishAt).toISOString()
@@ -1033,10 +1065,11 @@ export default function ArticlesPage() {
         >
           <option value="">All categories</option>
           {categories.map((c) => (
-            <option key={c._id || c.slug} value={c.slug || c.name}>
-              {c.name}
-            </option>
-          ))}
+  <option key={c.slug} value={normalizeSlug(c.slug)}>
+    {c.name}
+  </option>
+))}
+
         </select>
 
         <input
@@ -1951,20 +1984,20 @@ export default function ArticlesPage() {
               <div style={grid3}>
                 <label style={lbl}>
                   Category
-                  <select
-                    value={form.category}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, category: e.target.value }))
-                    }
-                    style={inp}
-                  >
-                    {categories.map((c) => (
-                      <option key={c._id} value={c._id}>
-                        {c.name}
-                      </option>
-                    ))}
-                    <option value="">General</option>
-                  </select>
+                 <select
+  value={normalizeSlug(form.category) || "general"}
+  onChange={(e) =>
+    setForm((f) => ({ ...f, category: normalizeSlug(e.target.value) }))
+  }
+  style={inp}
+>
+  {categories.map((c) => (
+    <option key={c.slug} value={normalizeSlug(c.slug)}>
+      {c.name}
+    </option>
+  ))}
+</select>
+
                 </label>
 
                 {/* Year field – only when History category is selected */}

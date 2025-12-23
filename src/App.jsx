@@ -73,18 +73,17 @@ api.interceptors.request.use((config) => {
 /* ===================== Shared constants ===================== */
 export const CATEGORIES = [
   "All",
-  "General",
+  "India",
   "World",
-  "Politics",
-  "Business",
-  "Entertainment",
   "Health",
-  "Science",
-  "Sports",
-  "Tech",
-  "History",
   "Finance",
+  "History",
+  "New Delhi",
+  "Punjab",
+  "Entertainment",
+  "General",
 ];
+
 
 export const styles = {
   page: { padding: 16, maxWidth: 1120, margin: "0 auto" },
@@ -225,6 +224,11 @@ function AnyCategoryRoute() {
   const { slug } = useParams();
   const normalized = String(slug || "").toLowerCase();
 
+  // ✅ Redirect old slugs to new ones (SEO + no broken links)
+  if (normalized === "business") return <Navigate to="/category/finance" replace />;
+  if (normalized === "politics") return <Navigate to="/category/india" replace />;
+
+  // ✅ special pages
   if (normalized === "history") return <HistoryPage />;
 
   // ✅ ONLY finance uses FinanceCategoryPage
@@ -232,7 +236,7 @@ function AnyCategoryRoute() {
     return <FinanceCategoryPage categorySlug="finance" displayName="Finance" />;
   }
 
-  // ✅ business + all others use CategoryPage (this includes rails + rail ads)
+  // ✅ all other categories use CategoryPage (rails + rail ads)
   return <CategoryPage />;
 }
 

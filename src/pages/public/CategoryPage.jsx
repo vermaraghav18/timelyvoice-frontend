@@ -3,7 +3,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 
 import { cachedGet } from "../../lib/publicApi.js";
-import { removeManagedHeadTags, upsertTag, setJsonLd } from "../../lib/seoHead.js";
+import {
+  removeManagedHeadTags,
+  upsertTag,
+  setJsonLd,
+} from "../../lib/seoHead.js";
 
 import SiteNav from "../../components/SiteNav.jsx";
 import SiteFooter from "../../components/SiteFooter.jsx";
@@ -60,7 +64,10 @@ function parseTs(v) {
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
   const s = String(v).trim();
   if (/^\d+$/.test(s)) return Number(s);
-  const withT = s.replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/, "$1T$2");
+  const withT = s.replace(
+    /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/,
+    "$1T$2"
+  );
   const t = Date.parse(withT);
   return Number.isFinite(t) ? t : 0;
 }
@@ -97,65 +104,84 @@ function humanizeSlug(slug = "") {
     .join(" ");
 }
 
+/**
+ * ✅ Only keep copy for your allowed category set:
+ * India, World, Health, Finance, History, New Delhi, Punjab, Entertainment, General
+ */
 const CATEGORY_COPY_STATIC = {
   india: {
     metaTitle: `India News — ${BRAND_NAME}`,
     metaDescription:
-      "Follow key developments in Indian politics, policy, economy and society. The Timely Voice explains complex events in simple, exam-friendly language with clear background context.",
+      "Follow key developments in India — policy, society, economy and governance — explained in clear, neutral language with helpful background context.",
     intro:
-      "The India section of The Timely Voice tracks what is shaping the country today — from Parliament and state politics to economy, welfare schemes, foreign policy and social change. Each story is written in clear, neutral language so that students and serious readers can quickly connect the headline to the larger syllabus and real-world impact.",
+      "The India section of The Timely Voice covers what is shaping the country today — from government decisions and public policy to social issues and national debates. Each story is written in simple, neutral language so readers can quickly understand the headline and its real-world impact.",
   },
   world: {
     metaTitle: `World News & Geopolitics — ${BRAND_NAME}`,
     metaDescription:
-      "Daily coverage of major global events, conflicts, summits and climate decisions. Built for UPSC and exam-focused readers who need clean, balanced world news explainers.",
+      "Daily coverage of major global events, conflicts, summits and climate decisions, explained clearly for exam-focused and serious readers.",
     intro:
-      "Our World section keeps you updated on the big international stories that matter for exams and for understanding geopolitics — wars and ceasefires, global summits, climate talks, trade disputes and diplomacy. Articles focus on why an event is happening, which countries are involved, and what it means for India and the wider world.",
+      "Our World section keeps you updated on big international stories — wars and ceasefires, global summits, climate talks, trade disputes and diplomacy. Articles focus on why an event is happening, who is involved, and what it means for India and the wider world.",
   },
-  business: {
-    metaTitle: `Business & Economy News — ${BRAND_NAME}`,
+  health: {
+    metaTitle: `Health News — ${BRAND_NAME}`,
     metaDescription:
-      "Markets, RBI policy, trade deals and corporate moves explained in clear terms. Timely Voice Business focuses on economic trends that affect inflation, jobs and growth.",
+      "Evidence-based health coverage — research updates, public health alerts and lifestyle risks — explained clearly without sensationalism.",
     intro:
-      "The Business section covers the Indian and global economy with a focus on how decisions on interest rates, trade deals, regulations and corporate announcements affect ordinary people. Stories highlight key numbers, long-term trends and exam-relevant concepts like GDP, inflation, fiscal policy and financial stability.",
+      "The Health section brings together important updates from medical research and public health sources. We focus on what the findings mean in real life — with simple explanations, practical context, and no panic-driven headlines.",
   },
   finance: {
     metaTitle: `Finance & Markets — ${BRAND_NAME}`,
     metaDescription:
-      "Track interest rates, stock markets, banking updates and policy moves that shape money flows in India and abroad, explained in simple language.",
+      "Track markets, RBI policy, banking updates and key economic moves that shape money flows in India and abroad, explained in simple language.",
     intro:
-      "In Finance, The Timely Voice looks at how money moves through markets and banks — from RBI decisions and government borrowing to stock market volatility and global risk events. Articles aim to simplify technical terms so that even first-time readers can follow what is happening and why it matters.",
+      "In Finance, The Timely Voice covers money, markets and policy — from RBI decisions and inflation trends to stock market movements and banking updates. The goal is to simplify technical terms so you can follow what’s happening and why it matters.",
   },
-  health: {
-    metaTitle: `Health & Science News — ${BRAND_NAME}`,
+  entertainment: {
+    metaTitle: `Entertainment News — ${BRAND_NAME}`,
     metaDescription:
-      "Evidence-based coverage of medical research, public health alerts and lifestyle risks. Articles are written to help readers understand real-world impact, not create panic.",
+      "Film, OTT and celebrity updates with clean reporting, context and a focus on what audiences are watching and discussing.",
     intro:
-      "The Health section brings together important updates from medical research, public health agencies and major journals. We focus on how new findings relate to everyday life in India — from air pollution and lifestyle diseases to vaccines and hospital infrastructure — with clear explanations and no sensationalism.",
-  },
-  politics: {
-    metaTitle: `Politics & Governance — ${BRAND_NAME}`,
-    metaDescription:
-      "Neutral, exam-focused coverage of elections, policy decisions, governance debates and constitutional issues from across India.",
-    intro:
-      "Politics at The Timely Voice follows elections, campaigns and policy decisions across India with a focus on governance and institutions rather than drama. Reports look at what parties promise, what is actually notified in law, and how these choices affect citizens, federalism and long-term development.",
+      "Our Entertainment section tracks film and OTT releases, industry trends, and major pop-culture moments. We keep it clear, factual and easy to read — without unnecessary drama.",
   },
   history: {
-    metaTitle: `Ancient History Timeline (4000–0 BC) — ${BRAND_NAME}`,
+    metaTitle: `History — ${BRAND_NAME}`,
     metaDescription:
-      "Explore a structured timeline of ancient civilizations from 4000 BC to 0 BC, with exam-ready articles on Mesopotamia, Egypt, India and more.",
+      "Explore history through structured timelines and readable explainers designed for learners and serious readers.",
     intro:
-      "The History category is built as a continuous reading companion for learners who want to travel from 4000 BC to 0 BC in an organised way. Articles connect major kingdoms, wars, cultural shifts and trade routes across Mesopotamia, Egypt, India and the wider ancient world, so that dates and dynasties start making sense as one flowing story.",
+      "The History category is built as a reading companion for learners who want chronology and clarity. Articles connect events, kingdoms and shifts over time so that dates and themes make sense as one continuous story.",
+  },
+  "new-delhi": {
+    metaTitle: `New Delhi News — ${BRAND_NAME}`,
+    metaDescription:
+      "Local updates from New Delhi — civic issues, governance, public services and major city developments.",
+    intro:
+      "New Delhi coverage focuses on what affects people on the ground — civic updates, governance decisions, public services and major city developments — presented in clear, factual language.",
+  },
+  punjab: {
+    metaTitle: `Punjab News — ${BRAND_NAME}`,
+    metaDescription:
+      "Punjab updates — state news, governance, society, economy and local developments that matter.",
+    intro:
+      "Punjab coverage highlights state-level developments — governance decisions, society, economy and local issues — written simply so you can understand the story fast.",
+  },
+  general: {
+    metaTitle: `Top Stories & Updates — ${BRAND_NAME}`,
+    metaDescription:
+      "General news and top updates across topics — clean reporting and quick explainers from The Timely Voice.",
+    intro:
+      "General is where we publish important updates that cut across categories — quick, clear stories with the key context you need.",
   },
 };
 
 function getCategoryCopy(slug, category) {
   const key = String(slug || "").toLowerCase();
-  const baseName = category?.name || humanizeSlug(key || "News").trim() || "News";
+  const baseName =
+    category?.name || humanizeSlug(key || "News").trim() || "News";
 
   const fallbackMetaTitle = `${baseName} News & Analysis — ${BRAND_NAME}`;
-  const fallbackMetaDescription = `Latest ${baseName.toLowerCase()} stories, context and exam-ready explainers from ${BRAND_NAME}.`;
-  const fallbackIntro = `Explore the latest ${baseName.toLowerCase()} headlines with clean, neutral reporting and short explainers that help you connect the news to the bigger picture.`;
+  const fallbackMetaDescription = `Latest ${baseName.toLowerCase()} stories, context and explainers from ${BRAND_NAME}.`;
+  const fallbackIntro = `Explore the latest ${baseName.toLowerCase()} headlines with clean reporting and short explainers that help you connect the news to the bigger picture.`;
 
   const overrides = CATEGORY_COPY_STATIC[key] || {};
   return {
@@ -195,7 +221,12 @@ const listStyle = { display: "flex", flexDirection: "column", gap: 0 };
 const itemWrap = { width: "100%", marginBottom: 8 };
 
 /* ✅ NEW: ad spacing (gap above, almost none below) */
-const adWrap = { width: "100%", margin: "12px 0 2px", textAlign: "center", lineHeight: 0 };
+const adWrap = {
+  width: "100%",
+  margin: "12px 0 2px",
+  textAlign: "center",
+  lineHeight: 0,
+};
 
 const cardStyle = {
   background: "linear-gradient(135deg, #001236 0%, #001e49ff 100%)",
@@ -293,7 +324,9 @@ function FirstArticle({ a, isMobile }) {
     a.excerpt ||
     a.description ||
     a.seoDescription ||
-    (typeof a.body === "string" ? a.body.replace(/<[^>]*>/g, "").slice(0, 260) : "");
+    (typeof a.body === "string"
+      ? a.body.replace(/<[^>]*>/g, "").slice(0, 260)
+      : "");
 
   return (
     <div style={firstWrap}>
@@ -314,7 +347,10 @@ function FirstArticle({ a, isMobile }) {
       )}
 
       {summary && (
-        <Link to={articleUrl} style={{ textDecoration: "none", color: "inherit" }}>
+        <Link
+          to={articleUrl}
+          style={{ textDecoration: "none", color: "inherit" }}
+        >
           <p style={firstSummary}>{summary}</p>
         </Link>
       )}
@@ -394,7 +430,9 @@ function TopCard({ a }) {
     a.excerpt ||
     a.description ||
     a.seoDescription ||
-    (typeof a.body === "string" ? a.body.replace(/<[^>]*>/g, "").slice(0, 170) : "");
+    (typeof a.body === "string"
+      ? a.body.replace(/<[^>]*>/g, "").slice(0, 170)
+      : "");
 
   return (
     <div style={topCard}>
@@ -415,7 +453,10 @@ function TopCard({ a }) {
       )}
 
       {summary && (
-        <Link to={articleUrl} style={{ textDecoration: "none", color: "inherit" }}>
+        <Link
+          to={articleUrl}
+          style={{ textDecoration: "none", color: "inherit" }}
+        >
           <p style={topSummary}>{summary}</p>
         </Link>
       )}
@@ -432,7 +473,14 @@ function TwoUpGrid({ a1, a2, isMobile }) {
 
   if (isMobile) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 14 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+          marginBottom: 14,
+        }}
+      >
         {a1 && <TopCard a={a1} />}
         {a2 && <TopCard a={a2} />}
       </div>
@@ -451,35 +499,68 @@ function TwoUpGrid({ a1, a2, isMobile }) {
 }
 
 /* ---------- Article Row (rest) ---------- */
-function getCategoryName(a) {
-  const raw = typeof a?.category === "string" ? a.category : a?.category?.name ?? "General";
+const ALLOWED_SLUGS = new Set([
+  "india",
+  "world",
+  "health",
+  "finance",
+  "history",
+  "new-delhi",
+  "punjab",
+  "entertainment",
+  "general",
+]);
+
+function normalizeCategorySlugFromArticle(a) {
+  // Prefer explicit slug if present
+  const rawSlug =
+    (typeof a?.categorySlug === "string" && a.categorySlug) ||
+    (typeof a?.category === "string" ? a.category : "") ||
+    (typeof a?.category?.slug === "string" ? a.category.slug : "") ||
+    (typeof a?.category?.name === "string" ? a.category.name : "");
+
+  const s = toSlug(rawSlug);
+
+  // Redirect old slugs
+  if (s === "business") return "finance";
+  if (s === "politics") return "india";
+
+  // If not allowed -> general
+  if (!ALLOWED_SLUGS.has(s)) return "general";
+  return s;
+}
+
+function displayNameFromSlug(slug) {
   const map = {
+    india: "India",
     world: "World",
-    politics: "Politics",
-    business: "Business",
+    health: "Health",
+    finance: "Finance",
+    history: "History",
+    "new-delhi": "New Delhi",
+    punjab: "Punjab",
     entertainment: "Entertainment",
     general: "General",
-    health: "Health",
-    science: "Science",
-    sports: "Sports",
-    tech: "Tech",
-    technology: "Tech",
-    india: "India",
   };
-  return map[String(raw || "General").trim().toLowerCase()] || (raw || "General");
+  return map[slug] || humanizeSlug(slug) || "General";
 }
 
 function ArticleRow({ a, compact = false }) {
   const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
-  const categoryName = getCategoryName(a);
-  const categoryUrl = `/category/${encodeURIComponent(toSlug(categoryName))}`;
+
+  const categorySlug = normalizeCategorySlugFromArticle(a);
+  const categoryName = displayNameFromSlug(categorySlug);
+  const categoryUrl = `/category/${encodeURIComponent(categorySlug)}`;
+
   const updated = a.updatedAt || a.publishedAt || a.publishAt || a.createdAt;
 
   const thumbRaw = ensureRenderableImage(a);
   const thumb = toCloudinaryOptimized(thumbRaw, compact ? 300 : 360);
 
   const cardS = compact ? { ...cardStyle, padding: 8 } : cardStyle;
-  const titleS = compact ? { ...titleStyle, fontSize: 16, lineHeight: 1.2 } : titleStyle;
+  const titleS = compact
+    ? { ...titleStyle, fontSize: 16, lineHeight: 1.2 }
+    : titleStyle;
   const metaS = compact ? { ...metaRow, marginTop: 6 } : metaRow;
 
   const rowS = compact
@@ -505,6 +586,7 @@ function ArticleRow({ a, compact = false }) {
           <Link to={articleUrl} style={{ textDecoration: "none", color: "inherit" }}>
             <h3 style={titleS}>{a.title}</h3>
           </Link>
+
           <div style={metaS}>
             <Link to={categoryUrl} style={catLink}>
               {categoryName}
@@ -591,7 +673,9 @@ export default function CategoryPage() {
 
   const canonical = useMemo(() => {
     const origin =
-      typeof window !== "undefined" ? window.location.origin : "https://timelyvoice.com";
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "https://timelyvoice.com";
     return `${origin}/category/${encodeURIComponent(normalizedSlug)}`;
   }, [normalizedSlug]);
 
@@ -630,7 +714,8 @@ export default function CategoryPage() {
 
         if (cRes?.redirectTo) {
           const newSlug = extractCanonicalSlugFromRedirect({ data: cRes });
-          if (newSlug) navigate({ pathname: `/category/${newSlug}`, search }, { replace: true });
+          if (newSlug)
+            navigate({ pathname: `/category/${newSlug}`, search }, { replace: true });
           return;
         }
 
@@ -834,7 +919,9 @@ export default function CategoryPage() {
   }, [mainBlocks]);
 
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 720px)").matches : false
+    typeof window !== "undefined"
+      ? window.matchMedia("(max-width: 720px)").matches
+      : false
   );
 
   useEffect(() => {
@@ -926,8 +1013,7 @@ export default function CategoryPage() {
                     <h1>{categoryCopy.displayName}</h1>
                     <p style={{ marginTop: 8, textAlign: "center" }}>
                       New articles for this category are coming soon. Check{" "}
-                      <Link to="/top-news">Top News</Link> or <Link to="/world">World</Link> while
-                      you wait.
+                      <Link to="/top-news">Top News</Link> while you wait.
                     </p>
                   </>
                 ) : (

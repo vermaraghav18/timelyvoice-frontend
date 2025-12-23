@@ -6,18 +6,20 @@ const LINKS = [
   { label: "Home", path: "/" },
   { label: "Top News", path: "/top-news" },
 
-  // ✅ map to canonical category slugs (lowercase)
-  { label: "India", slug: "politics" },
+  { label: "India", slug: "india" },
   { label: "World", slug: "world" },
-
-  // dedicated page
   { label: "Health", path: "/health" },
 
-  { label: "Finance", slug: "business" },
+  { label: "Finance", slug: "finance" },
   { label: "History", slug: "history" },
-  { label: "FilmyBazaar", slug: "entertainment" },
-  { label: "Sports & Tech", slug: "sports" },
+
+  // ✅ add remaining allowed categories
+  { label: "Entertainment", slug: "entertainment" },
+  { label: "New Delhi", slug: "new-delhi" },
+  { label: "Punjab", slug: "punjab" },
+  { label: "General", slug: "general" },
 ];
+
 
 const WRAP_STYLE = {
   width: "100%",
@@ -124,9 +126,22 @@ export default function PrimaryNav({ containerStyle }) {
 
   // Only show these in the row
   const visibleLabels = useMemo(
-    () => ["Home", "Top News", "India", "World", "Health", "Finance", "History"],
-    []
-  );
+  () => [
+    "Home",
+    "Top News",
+    "India",
+    "World",
+    "Health",
+    "Finance",
+    "History",
+    "Entertainment",
+    "New Delhi",
+    "Punjab",
+    "General",
+  ],
+  []
+);
+
 
   const visibleIndexes = useMemo(
     () =>
@@ -157,8 +172,6 @@ export default function PrimaryNav({ containerStyle }) {
   }, [pathname]);
 
   // ✅ IMPORTANT: full-bleed outer (ignore containerStyle gutters)
-  // If you *ever* want to allow SiteNav to control ONLY height etc,
-  // we can whitelist fields, but for now we ignore it completely.
   const outerStyle = OUTER_STYLE;
 
   return (

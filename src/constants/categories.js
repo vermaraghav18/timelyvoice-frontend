@@ -1,16 +1,26 @@
 // frontend/src/constants/categories.js
 export const CATEGORIES = [
   "All",
+  "India",
   "World",
-  "Politics",
-  "Business",
+  "Health",
+  "Finance",
+  "History",
+  "New Delhi",
+  "Punjab",
   "Entertainment",
   "General",
-  "Health",
-  "Science",
-  "Sports",
-  "Tech",
-  "History",
-  "Finance",
-  "India",
+];
+
+// If any place needs slugs:
+export const CATEGORY_SLUGS = [
+  "india",
+  "world",
+  "health",
+  "finance",
+  "history",
+  "new-delhi",
+  "punjab",
+  "entertainment",
+  "general",
 ];
