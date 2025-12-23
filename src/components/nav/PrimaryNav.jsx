@@ -13,13 +13,11 @@ const LINKS = [
   { label: "Finance", slug: "finance" },
   { label: "History", slug: "history" },
 
-  // ✅ add remaining allowed categories
   { label: "Entertainment", slug: "entertainment" },
   { label: "New Delhi", slug: "new-delhi" },
   { label: "Punjab", slug: "punjab" },
   { label: "General", slug: "general" },
 ];
-
 
 const WRAP_STYLE = {
   width: "100%",
@@ -31,17 +29,15 @@ const WRAP_STYLE = {
 };
 
 /**
- * ✅ FULL-BLEED outer: always edge-to-edge.
- * We intentionally do NOT apply containerStyle (maxWidth/padding)
- * because that creates gutters.
+ * ✅ Outer must NOT block horizontal scroll.
+ * (Your previous overflow: hidden could prevent swipe feel / clip edges)
  */
 const OUTER_STYLE = {
   width: "100%",
-  height: 40,
+  height: 44,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  overflow: "hidden",
   boxSizing: "border-box",
   margin: 0,
   padding: 0,
@@ -54,24 +50,32 @@ const SCROLLER_STYLE = {
   overflowY: "hidden",
   display: "flex",
   alignItems: "center",
-  justifyContent: "center",
+  justifyContent: "flex-start", // ✅ mobile-first
   WebkitOverflowScrolling: "touch",
   touchAction: "pan-x",
   boxSizing: "border-box",
   margin: 0,
-  padding: 0,
+  padding: "0 10px",
 };
 
 const UL_STYLE = {
   display: "flex",
   alignItems: "center",
-  justifyContent: "center",
-  gap: 0,
+  justifyContent: "flex-start", // ✅ mobile-first
   listStyle: "none",
   padding: 0,
   margin: 0,
   flexWrap: "nowrap",
   whiteSpace: "nowrap",
+  // ✅ critical: prevent shrinking which causes "cluster"
+  gap: 0,
+};
+
+const LI_STYLE = {
+  display: "inline-flex",
+  alignItems: "center",
+  // ✅ critical: never shrink
+  flex: "0 0 auto",
 };
 
 const LINK_BASE = {
@@ -80,13 +84,15 @@ const LINK_BASE = {
   fontWeight: 700,
   fontSize: 14,
   letterSpacing: "0.04em",
-  padding: "0 11px",
-  lineHeight: "48px",
+  padding: "0 12px",
+  lineHeight: "44px",
   display: "inline-block",
   textTransform: "uppercase",
   whiteSpace: "nowrap",
   borderBottom: "3px solid transparent",
   scrollSnapAlign: "start",
+  // ✅ critical: never shrink
+  flex: "0 0 auto",
 };
 
 const ACTIVE_DECORATION = {
@@ -98,8 +104,9 @@ const ACTIVE_DECORATION = {
 const SEP_STYLE = {
   color: "rgba(255,255,255,0.35)",
   padding: "0 6px",
-  lineHeight: "48px",
+  lineHeight: "44px",
   userSelect: "none",
+  flex: "0 0 auto",
 };
 
 function hrefFor(link) {
@@ -126,22 +133,21 @@ export default function PrimaryNav({ containerStyle }) {
 
   // Only show these in the row
   const visibleLabels = useMemo(
-  () => [
-    "Home",
-    "Top News",
-    "India",
-    "World",
-    "Health",
-    "Finance",
-    "History",
-    "Entertainment",
-    "New Delhi",
-    "Punjab",
-    "General",
-  ],
-  []
-);
-
+    () => [
+      "Home",
+      "Top News",
+      "India",
+      "World",
+      "Health",
+      "Finance",
+      "History",
+      "Entertainment",
+      "New Delhi",
+      "Punjab",
+      "General",
+    ],
+    []
+  );
 
   const visibleIndexes = useMemo(
     () =>
@@ -160,9 +166,20 @@ export default function PrimaryNav({ containerStyle }) {
     const activeEl = activeRef.current;
     if (!scroller) return;
 
+    // ✅ On mobile: keep swipeable row, and bring active tab into view
     if (isMobile()) {
-      scroller.scrollTo({ left: 0, behavior: "auto" });
-    } else if (activeEl) {
+      if (activeEl?.scrollIntoView) {
+        activeEl.scrollIntoView({
+          behavior: "smooth",
+          inline: "center",
+          block: "nearest",
+        });
+      }
+      return;
+    }
+
+    // ✅ Desktop: center active link in scroller (nice UX)
+    if (activeEl) {
       const elRect = activeEl.getBoundingClientRect();
       const scRect = scroller.getBoundingClientRect();
       const delta =
@@ -171,7 +188,6 @@ export default function PrimaryNav({ containerStyle }) {
     }
   }, [pathname]);
 
-  // ✅ IMPORTANT: full-bleed outer (ignore containerStyle gutters)
   const outerStyle = OUTER_STYLE;
 
   return (
@@ -180,13 +196,14 @@ export default function PrimaryNav({ containerStyle }) {
         .nav-scroller {
           scrollbar-width: none;
           -ms-overflow-style: none;
-          scroll-snap-type: x proximity;
+          scroll-snap-type: x mandatory;
         }
         .nav-scroller::-webkit-scrollbar { display: none; }
 
         .primary-link:hover { opacity: 0.95; }
         .primary-link:focus-visible { outline: 2px solid #1D9A8E55; outline-offset: 2px; }
 
+        /* Mobile: swipe row, no wrap, no separators */
         @media (max-width: 768px) {
           .primary-outer { justify-content: flex-start !important; }
           .nav-scroller { justify-content: flex-start !important; overflow-x: auto !important; }
@@ -195,8 +212,10 @@ export default function PrimaryNav({ containerStyle }) {
           .primary-sep { display: none; }
         }
 
+        /* Desktop: allow center feel (but keep overflow for scroll if needed) */
         @media (min-width: 769px) {
-          .nav-scroller { overflow-x: visible !important; }
+          .nav-scroller { justify-content: center !important; }
+          .primary-list { justify-content: center !important; }
         }
       `}</style>
 
@@ -220,10 +239,7 @@ export default function PrimaryNav({ containerStyle }) {
                 : LINK_BASE;
 
               return (
-                <li
-                  key={key}
-                  style={{ display: "inline-flex", alignItems: "center" }}
-                >
+                <li key={key} style={LI_STYLE}>
                   <Link
                     to={href}
                     style={style}
