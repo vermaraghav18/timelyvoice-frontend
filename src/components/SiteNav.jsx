@@ -11,6 +11,14 @@ import { api, cachedGet } from "../lib/publicApi.js";
 // --- toggle to hide ALL region/city UI (and now also skips fetching categories) ---
 const HIDE_REGION_NAV = true;
 
+/* ✅ RAIL GUTTER SETTINGS (must match CategoryPage rails) */
+const RAIL_WIDTH = 120;
+const RAIL_GAP = 14;
+const RAIL_GUTTER = RAIL_WIDTH + RAIL_GAP;
+const NAV_EXTRA_GUTTER = 15; // ✅ make header/nav shorter (increase if needed)
+const RAILS_MIN_WIDTH = 1280;
+
+
 function useIsMobile(breakpoint = 768) {
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined"
@@ -51,14 +59,32 @@ export default function SiteNav() {
   const isMobile = useIsMobile(768);
   const condensed = useCondensedHeader(70);
 
+  // ✅ wide desktop detection (same breakpoint as rails)
+  const [isWideForRails, setIsWideForRails] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia(`(min-width:${RAILS_MIN_WIDTH}px)`).matches
+      : false
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia(`(min-width:${RAILS_MIN_WIDTH}px)`);
+    const onChange = (e) => setIsWideForRails(e.matches);
+    mq.addEventListener?.("change", onChange);
+    mq.addListener?.(onChange);
+    return () => {
+      mq.removeEventListener?.("change", onChange);
+      mq.removeListener?.(onChange);
+    };
+  }, []);
+
   const [dateStr, setDateStr] = useState("");
   const [breaking, setBreaking] = useState([]);
 
   const [allCats, setAllCats] = useState([]);
-  const [regionsOpen, setRegionsOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(8);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const [visibleCount, setVisibleCount] = useState(8);
   const wrapperRef = useRef(null);
   const moreRef = useRef(null);
   const measurerRef = useRef(null);
@@ -79,7 +105,6 @@ export default function SiteNav() {
     let alive = true;
     (async () => {
       try {
-        // 15s cache is a good balance for breaking bar
         const data = await cachedGet("/breaking", {}, 15_000);
         if (!alive) return;
         const items = Array.isArray(data) ? data : [];
@@ -93,7 +118,7 @@ export default function SiteNav() {
     };
   }, [loc.pathname, loc.search]);
 
-  // ✅ BIG WIN: If region nav is hidden, do NOT fetch categories at all.
+  // ✅ If region nav is hidden, do NOT fetch categories at all.
   useEffect(() => {
     if (HIDE_REGION_NAV) return;
 
@@ -124,29 +149,9 @@ export default function SiteNav() {
   }, [isMobile, mobileMenuOpen]);
 
   /**
-   * ✅ FULL BLEED container now.
-   * Previously: maxWidth 980 + margin auto → that created gutters.
+   * Full bleed container now.
    */
   const container = { width: "100%" };
-
-  // Languages removed from UI, but we keep this noop list/href in case you want it back later.
-  const languages = useMemo(
-    () => [
-      { code: "en", label: "ENGLISH", aria: "English" },
-      { code: "ta", label: "தமிழ்", aria: "Tamil" },
-      { code: "gu", label: "ગુજરાતી", aria: "Gujarati" },
-      { code: "hi", label: "हिंदी", aria: "Hindi" },
-      { code: "mr", label: "मराठी", aria: "Marathi" },
-    ],
-    []
-  );
-
-  const langHref = (code) => {
-    const sp = new URLSearchParams(loc.search || "");
-    sp.set("lang", code);
-    const qs = sp.toString();
-    return `${loc.pathname}${qs ? `?${qs}` : ""}`;
-  };
 
   // Regions list (only meaningful when region nav is enabled)
   const regions = useMemo(() => {
@@ -232,7 +237,7 @@ export default function SiteNav() {
     };
   }, [regions, isMobile]);
 
-  // --- Mobile full-screen sheet (languages removed, regions stays hidden when HIDE_REGION_NAV) ---
+  // --- Mobile full-screen sheet (regions stays hidden when HIDE_REGION_NAV) ---
   const MobileSheet = () => (
     <div
       role="dialog"
@@ -288,8 +293,6 @@ export default function SiteNav() {
             ✕
           </button>
         </div>
-
-        {/* Languages removed */}
 
         {!HIDE_REGION_NAV && (
           <div style={{ marginTop: 8 }}>
@@ -347,14 +350,13 @@ export default function SiteNav() {
     transition: "padding 180ms ease, transform 180ms ease",
   };
 
-  /**
-   * ✅ Make the *top grid* full width too (remove ...container maxWidth behavior)
-   * Keep padding for breathing room, but no gutters from maxWidth/margin auto.
-   */
+  // ✅ Desktop top grid (now includes wide-rail gutters)
   const topGridStyle = !isMobile
     ? {
         width: "100%",
-        padding: condensed ? "6px 12px 4px" : "12px 12px 8px",
+        padding: condensed
+          ? `6px ${isWideForRails ? RAIL_GUTTER : 12}px 4px`
+          : `12px ${isWideForRails ? RAIL_GUTTER : 12}px 8px`,
         display: "grid",
         gridTemplateColumns: "1fr auto 1fr",
         alignItems: "center",
@@ -405,6 +407,17 @@ export default function SiteNav() {
     boxShadow: "8px 11px 0 #000",
   };
 
+  // ✅ wrapper creates empty left/right space for vertical banners at top
+  const railWrapperStyle = !isMobile && isWideForRails
+  ? {
+      width: "100%",
+      paddingLeft: RAIL_GUTTER + NAV_EXTRA_GUTTER,
+      paddingRight: RAIL_GUTTER + NAV_EXTRA_GUTTER,
+      boxSizing: "border-box",
+    }
+  : { width: "100%" };
+
+
   return (
     <header style={{ position: "sticky", top: 0, zIndex: 50 }}>
       <style>{`
@@ -418,7 +431,6 @@ export default function SiteNav() {
         .tv-scrollfade::-webkit-scrollbar-thumb { background: transparent; }
         .tv-scrollfade::-webkit-scrollbar-track { background: transparent; }
 
-        /* ✅ FULL BLEED: no max-width, no auto margins -> no gutters */
         .tv-nav-shell{
           width: 100%;
           max-width: none;
@@ -427,182 +439,171 @@ export default function SiteNav() {
         }
       `}</style>
 
-      <div className="tv-nav-shell">
-        <div style={topBarStyle}>
-          {!isMobile ? (
-            <div style={topGridStyle}>
-              {/* LEFT AREA (social removed) */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  flexWrap: "wrap",
-                  justifyContent: "flex-start",
-                }}
-              >
-                {/* social chips removed */}
-              </div>
+      {/* ✅ this wrapper creates the gutters on desktop wide screens */}
+      <div style={railWrapperStyle}>
+        <div className="tv-nav-shell">
+          <div style={topBarStyle}>
+            {!isMobile ? (
+              <div style={topGridStyle}>
+                {/* LEFT AREA */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    flexWrap: "wrap",
+                    justifyContent: "flex-start",
+                  }}
+                />
 
-              {/* Logo with Google News overlay */}
-              <div style={{ textAlign: "center", minWidth: 0 }}>
-                <div style={{ position: "relative", display: "inline-block" }}>
-                  <Link
-                    to="/"
-                    aria-label="The Timely Voice — Home"
-                    style={{
-                      ...logoStyle,
-                      ...logoBadgeCommon,
-                      position: "relative",
-                      zIndex: 2,
-                    }}
-                  >
-                    The Timely Voice
-                  </Link>
-
-                  <div
-                    style={{
-                      position: "absolute",
-                      right: "-48px",
-                      top: "70%",
-                      transform: "translateY(-50%) rotate(3deg)",
-                      background: "#ffffff",
-                      borderRadius: "10px",
-                      border: "3px solid #000",
-                      boxShadow: "6px 8px 0 #000",
-                      padding: "4px",
-                      zIndex: 3,
-                    }}
-                  >
-                    <img
-                      src="/images/google-news.png"
-                      alt="Google News"
+                {/* Logo */}
+                <div style={{ textAlign: "center", minWidth: 0 }}>
+                  <div style={{ position: "relative", display: "inline-block" }}>
+                    <Link
+                      to="/"
+                      aria-label="The Timely Voice — Home"
                       style={{
-                        display: "block",
-                        width: "45px",
-                        height: "auto",
-                        pointerEvents: "none",
-                        userSelect: "none",
+                        ...logoStyle,
+                        ...logoBadgeCommon,
+                        position: "relative",
+                        zIndex: 2,
                       }}
-                    />
+                    >
+                      The Timely Voice
+                    </Link>
+
+                    <div
+                      style={{
+                        position: "absolute",
+                        right: "-48px",
+                        top: "70%",
+                        transform: "translateY(-50%) rotate(3deg)",
+                        background: "#ffffff",
+                        borderRadius: "10px",
+                        border: "3px solid #000",
+                        boxShadow: "6px 8px 0 #000",
+                        padding: "4px",
+                        zIndex: 3,
+                      }}
+                    >
+                      <img
+                        src="/images/google-news.png"
+                        alt="Google News"
+                        style={{
+                          display: "block",
+                          width: "45px",
+                          height: "auto",
+                          pointerEvents: "none",
+                          userSelect: "none",
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
+
+                {/* RIGHT AREA */}
+                <div style={{ display: "flex", justifyContent: "flex-end" }} />
               </div>
+            ) : (
+              <div style={topGridStyle}>
+                <button
+                  type="button"
+                  aria-label="Open menu"
+                  onClick={() => setMobileMenuOpen(true)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    background: "rgba(255,255,255,0.12)",
+                    color: "#fff",
+                    border: "1px solid rgba(255,255,255,0.18)",
+                  }}
+                >
+                  ☰
+                </button>
 
-              {/* RIGHT AREA (languages removed) */}
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                {/* language buttons removed */}
-              </div>
-            </div>
-          ) : (
-            <div style={topGridStyle}>
-              <button
-                type="button"
-                aria-label="Open menu"
-                onClick={() => setMobileMenuOpen(true)}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  background: "rgba(255,255,255,0.12)",
-                  color: "#fff",
-                  border: "1px solid rgba(255,255,255,0.18)",
-                }}
-              >
-                ☰
-              </button>
-
-              <div style={{ textAlign: "center", minWidth: 0 }}>
-                <div style={{ position: "relative", display: "inline-block" }}>
-                  <Link
-                    to="/"
-                    aria-label="The Timely Voice — Home"
-                    style={{
-                      ...logoStyle,
-                      ...logoBadgeCommon,
-                      position: "relative",
-                      zIndex: 2,
-                    }}
-                  >
-                    The Timely Voice
-                  </Link>
-
-                  <div
-                    style={{
-                      position: "absolute",
-                      right: "-38px",
-                      top: "70%",
-                      transform: "translateY(-50%) rotate(3deg)",
-                      background: "#ffffff",
-                      borderRadius: "10px",
-                      border: "3px solid #000",
-                      boxShadow: "6px 8px 0 #000",
-                      padding: "4px",
-                      zIndex: 3,
-                    }}
-                  >
-                    <img
-                      src="/images/google-news.png"
-                      alt="Google News"
+                <div style={{ textAlign: "center", minWidth: 0 }}>
+                  <div style={{ position: "relative", display: "inline-block" }}>
+                    <Link
+                      to="/"
+                      aria-label="The Timely Voice — Home"
                       style={{
-                        display: "block",
-                        width: "36px",
-                        height: "auto",
-                        pointerEvents: "none",
-                        userSelect: "none",
+                        ...logoStyle,
+                        ...logoBadgeCommon,
+                        position: "relative",
+                        zIndex: 2,
                       }}
-                    />
+                    >
+                      The Timely Voice
+                    </Link>
+
+                    <div
+                      style={{
+                        position: "absolute",
+                        right: "-38px",
+                        top: "70%",
+                        transform: "translateY(-50%) rotate(3deg)",
+                        background: "#ffffff",
+                        borderRadius: "10px",
+                        border: "3px solid #000",
+                        boxShadow: "6px 8px 0 #000",
+                        padding: "4px",
+                        zIndex: 3,
+                      }}
+                    >
+                      <img
+                        src="/images/google-news.png"
+                        alt="Google News"
+                        style={{
+                          display: "block",
+                          width: "36px",
+                          height: "auto",
+                          pointerEvents: "none",
+                          userSelect: "none",
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    justifyContent: "flex-end",
+                  }}
+                />
               </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  justifyContent: "flex-end",
-                }}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* ✅ FULL BLEED primary nav: no maxWidth/margins/padding injected */}
-        <PrimaryNav
-          containerStyle={{
-            width: "100%",
-            maxWidth: "none",
-            margin: 0,
-            padding: 0,
-            boxSizing: "border-box",
-          }}
-        />
-
-        {/* regions row — hidden */}
-        {!HIDE_REGION_NAV ? (
-          <div
-            style={{
-              width: "100%",
-              background: " #001431ff ",
-              color: "#fff",
-              fontSize: 14,
-              userSelect: "none",
-              borderBottom: "1px solid rgba(0,0,0,0.06)",
-            }}
-          >
-            <div style={{ ...container, padding: isMobile ? "8px 8px" : "0 12px" }}>
-              {/* (your existing regions UI remains unchanged if you ever enable it) */}
-            </div>
+            )}
           </div>
-        ) : null}
 
-        <BreakingNewsBar items={breaking} />
+          {/* ✅ IMPORTANT: do NOT override PrimaryNav containerStyle (it prevents gutters) */}
+          <PrimaryNav />
 
-        {isMobile && mobileMenuOpen && <MobileSheet />}
+          {/* regions row — hidden */}
+          {!HIDE_REGION_NAV ? (
+            <div
+              style={{
+                width: "100%",
+                background: " #001431ff ",
+                color: "#fff",
+                fontSize: 14,
+                userSelect: "none",
+                borderBottom: "1px solid rgba(0,0,0,0.06)",
+              }}
+            >
+              <div style={{ ...container, padding: isMobile ? "8px 8px" : "0 12px" }} />
+            </div>
+          ) : null}
+
+          <BreakingNewsBar items={breaking} />
+
+          {isMobile && mobileMenuOpen && <MobileSheet />}
+        </div>
       </div>
     </header>
   );

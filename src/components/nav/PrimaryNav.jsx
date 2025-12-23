@@ -19,6 +19,10 @@ const LINKS = [
   { label: "General", slug: "general" },
 ];
 
+/** ✅ Desktop gutters: adjust these two to control left/right gaps */
+const NAV_MAX_WIDTH = 1120; // reduce to 980 or 920 if you want more “gap”
+const DESKTOP_GUTTER_PX = 18; // increase to 24/30 if you want more “gap”
+
 const WRAP_STYLE = {
   width: "100%",
   background: "#0B3D91",
@@ -28,10 +32,16 @@ const WRAP_STYLE = {
   boxSizing: "border-box",
 };
 
-/**
- * ✅ Outer must NOT block horizontal scroll.
- * (Your previous overflow: hidden could prevent swipe feel / clip edges)
- */
+/** ✅ NEW: this is what creates the left/right gutters on desktop */
+const INNER_STYLE = {
+  width: "100%",
+  maxWidth: NAV_MAX_WIDTH,
+  margin: "0 auto",
+  paddingLeft: DESKTOP_GUTTER_PX,
+  paddingRight: DESKTOP_GUTTER_PX,
+  boxSizing: "border-box",
+};
+
 const OUTER_STYLE = {
   width: "100%",
   height: 44,
@@ -50,31 +60,29 @@ const SCROLLER_STYLE = {
   overflowY: "hidden",
   display: "flex",
   alignItems: "center",
-  justifyContent: "flex-start", // ✅ mobile-first
+  justifyContent: "flex-start", // mobile-first
   WebkitOverflowScrolling: "touch",
   touchAction: "pan-x",
   boxSizing: "border-box",
   margin: 0,
-  padding: "0 10px",
+  padding: 0, // ✅ do NOT add edge padding here; INNER_STYLE handles gutters
 };
 
 const UL_STYLE = {
   display: "flex",
   alignItems: "center",
-  justifyContent: "flex-start", // ✅ mobile-first
+  justifyContent: "flex-start",
   listStyle: "none",
   padding: 0,
   margin: 0,
   flexWrap: "nowrap",
   whiteSpace: "nowrap",
-  // ✅ critical: prevent shrinking which causes "cluster"
   gap: 0,
 };
 
 const LI_STYLE = {
   display: "inline-flex",
   alignItems: "center",
-  // ✅ critical: never shrink
   flex: "0 0 auto",
 };
 
@@ -91,7 +99,6 @@ const LINK_BASE = {
   whiteSpace: "nowrap",
   borderBottom: "3px solid transparent",
   scrollSnapAlign: "start",
-  // ✅ critical: never shrink
   flex: "0 0 auto",
 };
 
@@ -131,7 +138,6 @@ export default function PrimaryNav({ containerStyle }) {
   const scrollerRef = useRef(null);
   const activeRef = useRef(null);
 
-  // Only show these in the row
   const visibleLabels = useMemo(
     () => [
       "Home",
@@ -166,7 +172,7 @@ export default function PrimaryNav({ containerStyle }) {
     const activeEl = activeRef.current;
     if (!scroller) return;
 
-    // ✅ On mobile: keep swipeable row, and bring active tab into view
+    // ✅ Mobile: swipe + keep active tab visible
     if (isMobile()) {
       if (activeEl?.scrollIntoView) {
         activeEl.scrollIntoView({
@@ -178,7 +184,7 @@ export default function PrimaryNav({ containerStyle }) {
       return;
     }
 
-    // ✅ Desktop: center active link in scroller (nice UX)
+    // ✅ Desktop: center active link nicely
     if (activeEl) {
       const elRect = activeEl.getBoundingClientRect();
       const scRect = scroller.getBoundingClientRect();
@@ -187,8 +193,6 @@ export default function PrimaryNav({ containerStyle }) {
       scroller.scrollBy({ left: delta, behavior: "smooth" });
     }
   }, [pathname]);
-
-  const outerStyle = OUTER_STYLE;
 
   return (
     <nav style={WRAP_STYLE} aria-label="Primary">
@@ -203,8 +207,13 @@ export default function PrimaryNav({ containerStyle }) {
         .primary-link:hover { opacity: 0.95; }
         .primary-link:focus-visible { outline: 2px solid #1D9A8E55; outline-offset: 2px; }
 
-        /* Mobile: swipe row, no wrap, no separators */
+        /* ✅ Mobile: allow full-bleed swipe feel, but keep small side padding */
         @media (max-width: 768px) {
+          .nav-inner {
+            max-width: none !important;
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+          }
           .primary-outer { justify-content: flex-start !important; }
           .nav-scroller { justify-content: flex-start !important; overflow-x: auto !important; }
           .primary-list { justify-content: flex-start !important; }
@@ -212,57 +221,59 @@ export default function PrimaryNav({ containerStyle }) {
           .primary-sep { display: none; }
         }
 
-        /* Desktop: allow center feel (but keep overflow for scroll if needed) */
+        /* ✅ Desktop: centered row inside gutters */
         @media (min-width: 769px) {
           .nav-scroller { justify-content: center !important; }
           .primary-list { justify-content: center !important; }
         }
       `}</style>
 
-      <div className="primary-outer" style={outerStyle}>
-        <div
-          ref={scrollerRef}
-          className="nav-scroller primary-scroller"
-          style={SCROLLER_STYLE}
-          tabIndex={0}
-        >
-          <ul className="primary-list" style={UL_STYLE}>
-            {LINKS.map((l, idx) => {
-              const isVisible = visibleLabels.includes(l.label);
-              if (!isVisible) return null;
+      <div className="nav-inner" style={{ ...INNER_STYLE, ...(containerStyle || {}) }}>
+        <div className="primary-outer" style={OUTER_STYLE}>
+          <div
+            ref={scrollerRef}
+            className="nav-scroller"
+            style={SCROLLER_STYLE}
+            tabIndex={0}
+          >
+            <ul className="primary-list" style={UL_STYLE}>
+              {LINKS.map((l, idx) => {
+                const isVisible = visibleLabels.includes(l.label);
+                if (!isVisible) return null;
 
-              const href = hrefFor(l);
-              const key = l.slug || l.path || l.label;
-              const active = isActive(l, pathname);
-              const style = active
-                ? { ...LINK_BASE, ...ACTIVE_DECORATION }
-                : LINK_BASE;
+                const href = hrefFor(l);
+                const key = l.slug || l.path || l.label;
+                const active = isActive(l, pathname);
+                const style = active
+                  ? { ...LINK_BASE, ...ACTIVE_DECORATION }
+                  : LINK_BASE;
 
-              return (
-                <li key={key} style={LI_STYLE}>
-                  <Link
-                    to={href}
-                    style={style}
-                    className="primary-link"
-                    aria-current={active ? "page" : undefined}
-                    ref={active ? activeRef : null}
-                  >
-                    {l.label}
-                  </Link>
-
-                  {idx !== lastVisibleIndex && (
-                    <span
-                      aria-hidden="true"
-                      className="primary-sep"
-                      style={SEP_STYLE}
+                return (
+                  <li key={key} style={LI_STYLE}>
+                    <Link
+                      to={href}
+                      style={style}
+                      className="primary-link"
+                      aria-current={active ? "page" : undefined}
+                      ref={active ? activeRef : null}
                     >
-                      |
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+                      {l.label}
+                    </Link>
+
+                    {idx !== lastVisibleIndex && (
+                      <span
+                        aria-hidden="true"
+                        className="primary-sep"
+                        style={SEP_STYLE}
+                      >
+                        |
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </div>
       </div>
     </nav>

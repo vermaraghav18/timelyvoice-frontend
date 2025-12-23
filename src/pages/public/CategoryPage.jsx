@@ -29,6 +29,25 @@ const CONTENT_PAD_X = 12;
 const ADS_CLIENT = "ca-pub-8472487092329023";
 const ADS_SLOT_INLINE = "5931257525"; // category_fitin_ad (300x300)
 
+/* ---------- Promo Rail Banner (Left/Right) ---------- */
+const PROMO_RAIL_IMG = "/banners/advertise-with-us-rail-120x700.png";
+const PROMO_RAIL_TO_EMAIL =
+  "https://mail.google.com/mail/?view=cm&fs=1&to=knotshorts1@gmail.com&su=Advertise%20With%20Us";
+
+/* ---------- ✅ NEW: Inline promo banner (after every 7th article card) ---------- */
+const PROMO_INLINE_IMG = "/banners/advertise-with-us-inline.png";
+const PROMO_INLINE_TO_EMAIL = PROMO_RAIL_TO_EMAIL;
+
+/**
+ * ✅ IMPORTANT:
+ * These rails are "fixed" to the viewport edges.
+ * Adjust this if your SiteNav height changes.
+ */
+const RAIL_WIDTH = 150;
+const RAIL_HEIGHT = 635;
+
+const RAIL_TOP_OFFSET = 0; // ✅ push rails to the very top edge
+
 /* ---------- helper: relative time ---------- */
 function timeAgo(input) {
   const d = input ? new Date(input) : null;
@@ -55,7 +74,6 @@ const toSlug = (s = "") =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-/* ---------- small utils ---------- */
 const normPath = (p = "") => String(p).trim().replace(/\/+$/, "") || "/";
 
 /* ---------- timestamp normalization & sorting (LATEST FIRST) ---------- */
@@ -104,10 +122,6 @@ function humanizeSlug(slug = "") {
     .join(" ");
 }
 
-/**
- * ✅ Only keep copy for your allowed category set:
- * India, World, Health, Finance, History, New Delhi, Punjab, Entertainment, General
- */
 const CATEGORY_COPY_STATIC = {
   india: {
     metaTitle: `India News — ${BRAND_NAME}`,
@@ -192,7 +206,6 @@ function getCategoryCopy(slug, category) {
   };
 }
 
-/* ---------- Cloudinary perf transform helper ---------- */
 function toCloudinaryOptimized(url, width = 520) {
   const u = String(url || "");
   if (!u) return "";
@@ -214,18 +227,27 @@ const pageWrap = {
   fontFamily: "'Newsreader', serif",
 };
 
-/* ✅ CHANGE: remove list gap; we control spacing ourselves */
 const listStyle = { display: "flex", flexDirection: "column", gap: 0 };
-
-/* ✅ NEW: consistent card spacing */
 const itemWrap = { width: "100%", marginBottom: 8 };
 
-/* ✅ NEW: ad spacing (gap above, almost none below) */
 const adWrap = {
   width: "100%",
   margin: "12px 0 2px",
   textAlign: "center",
   lineHeight: 0,
+};
+
+const inlineBannerWrap = {
+  width: "100%",
+  margin: "12px 0 10px",
+  lineHeight: 0,
+};
+
+const inlineBannerImg = {
+  width: "100%",
+  height: "auto",
+  display: "block",
+  borderRadius: 8,
 };
 
 const cardStyle = {
@@ -269,11 +291,7 @@ const thumbStyle = {
   display: "block",
 };
 
-/* ---------- First article (no card) ---------- */
-const firstWrap = {
-  marginBottom: 14,
-  padding: 0,
-};
+const firstWrap = { marginBottom: 14, padding: 0 };
 
 const firstTitle = {
   margin: "0 0 10px",
@@ -347,10 +365,7 @@ function FirstArticle({ a, isMobile }) {
       )}
 
       {summary && (
-        <Link
-          to={articleUrl}
-          style={{ textDecoration: "none", color: "inherit" }}
-        >
+        <Link to={articleUrl} style={{ textDecoration: "none", color: "inherit" }}>
           <p style={firstSummary}>{summary}</p>
         </Link>
       )}
@@ -362,7 +377,7 @@ function FirstArticle({ a, isMobile }) {
   );
 }
 
-/* ---------- Top 2 grid (2nd & 3rd articles) ---------- */
+/* ---------- Top 2 grid ---------- */
 const topGridWrap = {
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
@@ -453,10 +468,7 @@ function TopCard({ a }) {
       )}
 
       {summary && (
-        <Link
-          to={articleUrl}
-          style={{ textDecoration: "none", color: "inherit" }}
-        >
+        <Link to={articleUrl} style={{ textDecoration: "none", color: "inherit" }}>
           <p style={topSummary}>{summary}</p>
         </Link>
       )}
@@ -473,14 +485,7 @@ function TwoUpGrid({ a1, a2, isMobile }) {
 
   if (isMobile) {
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-          marginBottom: 14,
-        }}
-      >
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 14 }}>
         {a1 && <TopCard a={a1} />}
         {a2 && <TopCard a={a2} />}
       </div>
@@ -498,7 +503,7 @@ function TwoUpGrid({ a1, a2, isMobile }) {
   );
 }
 
-/* ---------- Article Row (rest) ---------- */
+/* ---------- Article Row ---------- */
 const ALLOWED_SLUGS = new Set([
   "india",
   "world",
@@ -512,7 +517,6 @@ const ALLOWED_SLUGS = new Set([
 ]);
 
 function normalizeCategorySlugFromArticle(a) {
-  // Prefer explicit slug if present
   const rawSlug =
     (typeof a?.categorySlug === "string" && a.categorySlug) ||
     (typeof a?.category === "string" ? a.category : "") ||
@@ -521,11 +525,8 @@ function normalizeCategorySlugFromArticle(a) {
 
   const s = toSlug(rawSlug);
 
-  // Redirect old slugs
   if (s === "business") return "finance";
   if (s === "politics") return "india";
-
-  // If not allowed -> general
   if (!ALLOWED_SLUGS.has(s)) return "general";
   return s;
 }
@@ -558,24 +559,12 @@ function ArticleRow({ a, compact = false }) {
   const thumb = toCloudinaryOptimized(thumbRaw, compact ? 300 : 360);
 
   const cardS = compact ? { ...cardStyle, padding: 8 } : cardStyle;
-  const titleS = compact
-    ? { ...titleStyle, fontSize: 16, lineHeight: 1.2 }
-    : titleStyle;
+  const titleS = compact ? { ...titleStyle, fontSize: 16, lineHeight: 1.2 } : titleStyle;
   const metaS = compact ? { ...metaRow, marginTop: 6 } : metaRow;
 
   const rowS = compact
-    ? {
-        display: "grid",
-        gridTemplateColumns: thumb ? "1fr 96px" : "1fr",
-        gap: 6,
-        alignItems: "center",
-      }
-    : {
-        display: "grid",
-        gridTemplateColumns: thumb ? "1fr 110px" : "1fr",
-        gap: 8,
-        alignItems: "center",
-      };
+    ? { display: "grid", gridTemplateColumns: thumb ? "1fr 96px" : "1fr", gap: 6, alignItems: "center" }
+    : { display: "grid", gridTemplateColumns: thumb ? "1fr 110px" : "1fr", gap: 8, alignItems: "center" };
 
   const thumbS = compact ? { ...thumbStyle, width: 96, height: 64 } : thumbStyle;
 
@@ -612,7 +601,7 @@ function ArticleRow({ a, compact = false }) {
   );
 }
 
-/* ---------- Inline Ad (300×300) shown after every 4 cards ---------- */
+/* ---------- Inline Ad (300×300) ---------- */
 function InlineAd() {
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -647,6 +636,67 @@ function InlineAd() {
         data-ad-client={ADS_CLIENT}
         data-ad-slot={ADS_SLOT_INLINE}
       />
+    </div>
+  );
+}
+
+/* ---------- ✅ NEW: Inline promo banner component ---------- */
+function PromoInlineBanner() {
+  return (
+    <div style={inlineBannerWrap} aria-label="promo inline banner">
+      <a
+        href={PROMO_INLINE_TO_EMAIL}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display: "block" }}
+        aria-label="Advertise with us - email"
+      >
+        <img
+          src={PROMO_INLINE_IMG}
+          alt="Advertise with us"
+          style={inlineBannerImg}
+          loading="lazy"
+          decoding="async"
+        />
+      </a>
+    </div>
+  );
+}
+
+/* ---------- ✅ FIXED Promo Rails (edge pinned, no top gap) ---------- */
+function PromoRailFixed({ side = "left" }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: RAIL_TOP_OFFSET,
+        [side]: side === "right" ? 15 : 0, // ✅ only right banner moves left by 18px
+        width: RAIL_WIDTH,
+        height: RAIL_HEIGHT,
+        zIndex: 50,
+      }}
+      aria-label={`${side} promo rail`}
+    >
+      <a
+        href={PROMO_RAIL_TO_EMAIL}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display: "block", width: RAIL_WIDTH, height: RAIL_HEIGHT }}
+        aria-label="Advertise with us - email"
+      >
+        <img
+          src={PROMO_RAIL_IMG}
+          alt="Advertise with us"
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "block",
+            objectFit: "cover", // ✅ fills the rail perfectly
+          }}
+          loading="lazy"
+          decoding="async"
+        />
+      </a>
     </div>
   );
 }
@@ -924,6 +974,13 @@ export default function CategoryPage() {
       : false
   );
 
+  // ✅ show rails only if enough viewport width for them
+  const [showRails, setShowRails] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(min-width: 1280px)").matches
+      : false
+  );
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -932,9 +989,17 @@ export default function CategoryPage() {
     mqMobile.addEventListener?.("change", onMobile);
     mqMobile.addListener?.(onMobile);
 
+    const mqRails = window.matchMedia("(min-width: 1280px)");
+    const onRails = (e) => setShowRails(e.matches);
+    mqRails.addEventListener?.("change", onRails);
+    mqRails.addListener?.(onRails);
+
     return () => {
       mqMobile.removeEventListener?.("change", onMobile);
       mqMobile.removeListener?.(onMobile);
+
+      mqRails.removeEventListener?.("change", onRails);
+      mqRails.removeListener?.(onRails);
     };
   }, []);
 
@@ -979,6 +1044,14 @@ export default function CategoryPage() {
     <>
       <SiteNav />
 
+      {/* ✅ rails pinned to screen edges */}
+      {showRails && (
+        <>
+          <PromoRailFixed side="left" />
+          <PromoRailFixed side="right" />
+        </>
+      )}
+
       <div className="category-container">
         <div style={pageWrap}>
           {headBlocks.map((sec) => (
@@ -1022,19 +1095,27 @@ export default function CategoryPage() {
                     <TwoUpGrid a1={second} a2={third} isMobile={isMobile} />
 
                     <div style={listStyle}>
-                      {rest.map((a, idx) => (
-                        <div key={a._id || a.id || a.slug || idx} style={{ width: "100%" }}>
-                          {/* ✅ card row spacing controlled here */}
-                          <div style={itemWrap}>
-                            <ArticleRow a={a} compact={!isMobile} />
+                      {rest.map((a, idx) => {
+                        // Global index across the full article list:
+                        // first=1, second=2, third=3, rest starts at 4
+                        const globalIndex = idx + 4;
+
+                        return (
+                          <div key={a._id || a.id || a.slug || idx} style={{ width: "100%" }}>
+                            <div style={itemWrap}>
+                              <ArticleRow a={a} compact={!isMobile} />
+                            </div>
+
+                            {/* existing AdSense rule (kept as-is) */}
+                            {(idx + 1) % 4 === 0 && <InlineAd />}
+
+                            {/* ✅ NEW: promo banner after every 7th article card */}
+                            {globalIndex % 7 === 0 && <PromoInlineBanner />}
+
+                            {renderInsetAfter(idx + 1)}
                           </div>
-
-                          {/* ✅ ad is its own row -> no huge bottom gap */}
-                          {(idx + 1) % 4 === 0 && <InlineAd />}
-
-                          {renderInsetAfter(idx + 1)}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </>
                 )}

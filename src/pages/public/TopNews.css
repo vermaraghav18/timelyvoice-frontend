@@ -3,12 +3,13 @@
 /* ✅ PT Serif (title only) */
 @import url("https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&display=swap");
 
-/* ---------- Page-skin layout (TopNews) ---------- */
+/* ---------- Page layout (TopNews) ---------- */
 .tn-shell{
   position: relative;
   min-height: 60vh;
 }
 
+/* ✅ FIX: single column stage (remove left/right grid columns) */
 .tn-stage{
   width: 100%;
   max-width: none;
@@ -16,407 +17,15 @@
   padding: 14px 12px 30px;
   box-sizing: border-box;
 
-  display: grid;
-
-  /* ✅ left rail, center, right rail */
-  grid-template-columns: 240px 1fr 240px;
-
-  gap: 14px;
-  align-items: start;
+  display: block;     /* ✅ was grid */
 }
 
-/* ✅ push rails fully to the viewport edge (remove stage padding effect) */
-.tn-opinion{ margin-left: -8px; }
-.tn-bolly{ margin-right: -8px; }
-
-/* ✅ allow the main center to expand beyond the old 980 max */
-.tn-container{ max-width: none; }
-
-/* content column */
+/* ✅ allow the main center to expand */
 .tn-container{
   max-width: 980px;
   width: 100%;
   margin: 0 auto;
   padding: 0;
-}
-
-/* Hide side rails on smaller screens */
-@media (max-width: 1200px){
-  .tn-stage{
-    grid-template-columns: 1fr;
-    max-width: 980px;
-  }
-  .tn-opinion,
-  .tn-bolly{
-    display: none;
-  }
-  .tn-container{
-    max-width: 980px;
-  }
-}
-
-/* ---------- LEFT rail sticky ---------- */
-.tn-opinion{
-  position: sticky;
-  top: 120px;
-  z-index: 5;
-}
-
-/* stack containers inside left rail */
-.tn-left-stack{
-  display: grid;
-  gap: 10px; /* ✅ tighter */
-}
-
-/* ---------- OPINION rail ---------- */
-.op-card{
-  border: 1px solid #000;
-  border-radius: 0 !important;
-  box-shadow: 3px 3px 0 #000 !important;
-  overflow: hidden;
-}
-
-.op-head{
-  padding: 8px 10px 5px; /* ✅ tighter */
-  text-align: center;
-}
-
-/* ✅ reduced OPINION heading */
-.op-title{
-  font-family: "PT Serif", Georgia, "Times New Roman", serif;
-  font-weight: 700;
-  font-size: 18px;          /* ✅ smaller */
-  letter-spacing: 0.02em;
-  color: #fff;
-  line-height: 1;
-}
-
-.op-underline{
-  margin: 5px auto 0;       /* ✅ tighter */
-  width: 74%;
-  height: 2px;
-  background: rgba(255,255,255,0.50);
-  border: 1px solid rgba(0,0,0,0.45);
-}
-
-.op-empty{
-  padding: 8px 10px 10px;   /* ✅ tighter */
-  color: rgba(255,255,255,0.9);
-  font-weight: 500;
-  font-size: 12.5px;        /* ✅ smaller */
-}
-
-.op-rows{
-  padding: 7px 7px 9px;     /* ✅ tighter */
-  display: grid;
-  gap: 7px;                 /* ✅ tighter */
-}
-
-/* Swipe animation */
-.op-in{ animation: opIn 220ms ease-out both; }
-.op-out{ animation: opOut 220ms ease-in both; }
-
-@keyframes opOut{
-  from { transform: translateX(0); opacity: 1; }
-  to   { transform: translateX(-16px); opacity: 0.0; }
-}
-@keyframes opIn{
-  from { transform: translateX(12px); opacity: 0.0; }
-  to   { transform: translateX(0); opacity: 1; }
-}
-
-.op-row{
-  display: grid;
-  grid-template-columns: 48px 1fr; /* ✅ smaller image column */
-  gap: 8px;
-  align-items: center;
-
-  text-decoration: none;
-  color: #fff;
-
-  padding: 7px; /* ✅ tighter */
-  border: 1px solid rgba(0,0,0,0.55);
-  background: rgba(255,255,255,0.12);
-}
-
-.op-row:hover{ background: rgba(255,255,255,0.18); }
-
-.op-img{
-  width: 48px;   /* ✅ smaller */
-  height: 48px;  /* ✅ smaller */
-  border: 1px solid #000;
-  background: rgba(0,0,0,0.15);
-  overflow: hidden;
-}
-
-.op-img img{
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.op-text{ min-width: 0; }
-
-.op-source{
-  font-size: 10.5px; /* ✅ slightly smaller */
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #00ff6a;
-  margin-bottom: 2px;
-  text-transform: lowercase;
-}
-
-.op-news-title{
-  font-size: 12.5px; /* ✅ smaller */
-  font-weight: 600;
-  line-height: 1.22;
-  color: #ffffff !important;
-
-  display: block;
-  overflow: visible;
-  -webkit-line-clamp: unset;
-  -webkit-box-orient: unset;
-  white-space: normal;
-  word-break: break-word;
-}
-
-/* ---------- FITNESS FUNDAS (Health) container ---------- */
-.ff-card{
-  border: 1px solid #000;
-  border-radius: 0 !important;
-  box-shadow: 3px 3px 0 #000 !important;
-  overflow: hidden;
-
-  /* ✅ green container color */
-  background: linear-gradient(180deg, #003516 0%, #00200e 100%);
-}
-
-.ff-head{
-  padding: 7px 10px 5px;  /* ✅ tighter */
-  text-align: center;
-}
-
-/* ✅ smaller title */
-.ff-title{
-  font-family: "PT Serif", Georgia, "Times New Roman", serif;
-  font-weight: 700;
-  font-size: 15px;        /* ✅ smaller */
-  letter-spacing: 0.02em;
-  color: #fff;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.ff-underline{
-  margin: 5px auto 0;     /* ✅ tighter */
-  width: 74%;
-  height: 2px;
-  background: rgba(255,255,255,0.50);
-  border: 1px solid rgba(0,0,0,0.45);
-}
-
-.ff-empty{
-  padding: 8px 10px 10px; /* ✅ tighter */
-  color: rgba(255,255,255,0.9);
-  font-weight: 500;
-  font-size: 12.5px;
-}
-
-.ff-rows{
-  padding: 7px 7px 9px;   /* ✅ tighter */
-  display: grid;
-  gap: 7px;
-}
-
-/* Swipe animation */
-.ff-in{ animation: ffIn 220ms ease-out both; }
-.ff-out{ animation: ffOut 220ms ease-in both; }
-
-@keyframes ffOut{
-  from { transform: translateX(0); opacity: 1; }
-  to   { transform: translateX(-16px); opacity: 0.0; }
-}
-@keyframes ffIn{
-  from { transform: translateX(12px); opacity: 0.0; }
-  to   { transform: translateX(0); opacity: 1; }
-}
-
-.ff-row{
-  display: grid;
-  grid-template-columns: 46px 1fr; /* ✅ smaller */
-  gap: 8px;
-  align-items: center;
-
-  text-decoration: none;
-  color: #fff;
-
-  padding: 7px; /* ✅ tighter */
-  border: 1px solid rgba(0,0,0,0.55);
-  background: rgba(255,255,255,0.10);
-}
-
-.ff-row:hover{ background: rgba(255,255,255,0.16); }
-
-.ff-img{
-  width: 46px;  /* ✅ smaller */
-  height: 46px; /* ✅ smaller */
-  border: 1px solid #000;
-  background: rgba(0,0,0,0.15);
-  overflow: hidden;
-}
-
-.ff-img img{
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.ff-text{ min-width: 0; }
-
-.ff-source{
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #66ff9b; /* ✅ green accent */
-  margin-bottom: 2px;
-  text-transform: lowercase;
-}
-
-.ff-news-title{
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: 1.22;
-  color: #ffffff !important;
-
-  display: block;
-  overflow: visible;
-  -webkit-line-clamp: unset;
-  -webkit-box-orient: unset;
-  white-space: normal;
-  word-break: break-word;
-}
-
-/* ---------- BOLLY BOX rail (RIGHT) ---------- */
-.tn-bolly{
-  position: sticky;
-  top: 120px;
-  z-index: 5;
-}
-
-.bb-card{
-  border: 1px solid #000;
-  border-radius: 0 !important;
-  box-shadow: 3px 3px 0 #000 !important;
-  overflow: hidden;
-
-  background: linear-gradient(180deg, #1b002e 0%, #0a0014 100%);
-}
-
-.bb-head{
-  padding: 7px 10px 5px;   /* ✅ smaller */
-  text-align: center;
-}
-
-.bb-title{
-  font-family: "PT Serif", Georgia, "Times New Roman", serif;
-  font-weight: 700;
-  font-size: 18px;         /* ✅ smaller (was 22px) */
-  letter-spacing: 0.02em;
-  color: #fff;
-  line-height: 1;
-}
-
-.bb-underline{
-  margin: 5px auto 0;      /* ✅ tighter */
-  width: 74%;
-  height: 2px;
-  background: rgba(255,255,255,0.50);
-  border: 1px solid rgba(0,0,0,0.45);
-}
-
-
-.bb-empty{
-  padding: 10px 10px 12px;
-  color: rgba(255,255,255,0.9);
-  font-weight: 500;
-  font-size: 13px;
-}
-
-.bb-rows{
-  padding: 8px 8px 10px;
-  display: grid;
-  gap: 8px;
-}
-
-/* Swipe animation */
-.bb-in{ animation: bbIn 220ms ease-out both; }
-.bb-out{ animation: bbOut 220ms ease-in both; }
-
-@keyframes bbOut{
-  from { transform: translateX(0); opacity: 1; }
-  to   { transform: translateX(16px); opacity: 0.0; }
-}
-@keyframes bbIn{
-  from { transform: translateX(-12px); opacity: 0.0; }
-  to   { transform: translateX(0); opacity: 1; }
-}
-
-.bb-row{
-  display: grid;
-  grid-template-columns: 56px 1fr;
-  gap: 9px;
-  align-items: center;
-
-  text-decoration: none;
-  color: #fff;
-
-  padding: 8px;
-  border: 1px solid rgba(0,0,0,0.55);
-  background: rgba(255,255,255,0.12);
-}
-
-.bb-row:hover{ background: rgba(255,255,255,0.18); }
-
-.bb-img{
-  width: 56px;
-  height: 56px;
-  border: 1px solid #000;
-  background: rgba(0,0,0,0.15);
-  overflow: hidden;
-}
-
-.bb-img img{
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.bb-text{ min-width: 0; }
-
-.bb-source{
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #ff5cff;
-  margin-bottom: 3px;
-  text-transform: lowercase;
-}
-
-.bb-news-title{
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.25;
-  color: #ffffff !important;
-
-  display: block;
-  overflow: visible;
-  -webkit-line-clamp: unset;
-  -webkit-box-orient: unset;
-  white-space: normal;
-  word-break: break-word;
 }
 
 /* ---------- In-feed ads (between cards) ---------- */
@@ -596,12 +205,21 @@
 }
 
 @media (max-width: 720px) {
+  .tn-stage{
+    padding: 14px 10px 26px;
+  }
+
   .tn-item{
     grid-template-columns: 1fr;
     grid-template-areas: "thumb" "left";
   }
+
   .tn-thumb{ height: 280px; }
   .tn-item-title{ font-size: clamp(20px, 6vw, 28px); }
+
+  .tn-container{
+    max-width: 980px;
+  }
 }
 
 .tn-item:hover,
@@ -629,76 +247,4 @@
   background: rgba(0,0,0,0.7);
   border-top: 1px solid #000;
   box-shadow: 0 -2px 0 #000;
-}
-
-/* =========================
-   RIGHT rail stack (Bolly + Ad box)
-   ========================= */
-.tn-right-stack{
-  display: grid;
-  gap: 12px;
-}
-
-/* =========================
-   Advertisement Box (square image)
-   ========================= */
-.adbox-card{
-  border: 1px solid #000;
-  border-radius: 0 !important;
-  box-shadow: 3px 3px 0 #000 !important;
-  overflow: hidden;
-
-  /* match your dark theme */
-  background: linear-gradient(180deg, #0b0b2a 0%, #050514 100%);
-}
-
-.adbox-head{
-  padding: 7px 10px 5px;   /* ✅ smaller */
-  text-align: center;
-}
-
-.adbox-title{
-  font-family: "PT Serif", Georgia, "Times New Roman", serif;
-  font-weight: 700;
-  font-size: 16px;         /* ✅ smaller */
-  letter-spacing: 0.02em;
-  color: #fff;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.adbox-underline{
-  margin: 5px auto 0;      /* ✅ tighter */
-  width: 74%;
-  height: 2px;
-  background: rgba(255,255,255,0.50);
-  border: 1px solid rgba(0,0,0,0.45);
-}
-
-.adbox-link{
-  display: block;
-  text-decoration: none;
-  padding: 10px;
-}
-
-.adbox-square{
-  width: 100%;
-  aspect-ratio: 1 / 1;     /* ✅ perfect square */
-  border: 1px solid #000;
-  overflow: hidden;
-  background: rgba(255,255,255,0.06);
-  box-shadow: 3px 3px 0 #000 !important;
-}
-
-.adbox-square img{
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-/* hover effect */
-.adbox-link:hover .adbox-square{
-  box-shadow: 5px 5px 0 #000 !important;
-  transform: none !important;
 }

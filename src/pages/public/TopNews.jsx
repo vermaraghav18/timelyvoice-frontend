@@ -20,9 +20,21 @@ const ADS_CLIENT = "ca-pub-8472487092329023";
 const ADS_SLOT_INFEED_DESKTOP = "8428632191"; // TopNews InFeed Desktop
 const ADS_SLOT_INFEED_MOBILE = "6748719010"; // TopNews InFeed Mobile
 
-/* ---------- Advertisement Box (Right rail) ---------- */
-const AD_MAIL_TO = "knotshorts1@gmail.com";
-const ADVERT_IMG = "/ads/advertise-square.png"; // ✅ save image here: frontend/public/ads/advertise-square.png
+/* ---------- Promo Rail Banner (Left/Right) ---------- */
+const PROMO_RAIL_IMG = "/banners/advertise-with-us-rail-120x700.png";
+const PROMO_RAIL_TO_EMAIL =
+  "https://mail.google.com/mail/?view=cm&fs=1&to=knotshorts1@gmail.com&su=Advertise%20With%20Us";
+
+/**
+ * ✅ Rails are fixed to viewport edges
+ * Top offset should match your latest nav behavior (0 = touch top edge)
+ */
+const RAIL_WIDTH = 160;
+const RAIL_HEIGHT = 635;
+const RAIL_TOP_OFFSET = 0;
+
+// ✅ only right banner slightly left (same logic you used in CategoryPage)
+const RIGHT_RAIL_INSET = 10;
 
 /* Load AdSense script once (safe in SPA) */
 function ensureAdsenseScript(client) {
@@ -43,9 +55,7 @@ function ensureAdsenseScript(client) {
 function useIsMobile(breakpointPx = 720) {
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === "undefined") return false;
-    return (
-      window.matchMedia?.(`(max-width: ${breakpointPx}px)`)?.matches ?? false
-    );
+    return window.matchMedia?.(`(max-width: ${breakpointPx}px)`)?.matches ?? false;
   });
 
   useEffect(() => {
@@ -168,262 +178,40 @@ function normalizeTopNews(items = []) {
     .sort((a, b) => (b._ts === a._ts ? a._idx - b._idx : b._ts - a._ts));
 }
 
-/* ================================
-   OPINION: fetch helpers (robust)
-   ================================ */
-function isOpinionArticle(a) {
-  const slug = String(a?.categorySlug || "").toLowerCase().trim();
-  const name = String(
-    a?.categoryName || a?.category?.name || a?.category || ""
-  )
-    .toLowerCase()
-    .trim();
-  return slug === "opinion" || name === "opinion";
-}
-
-// Try multiple endpoints so it works no matter which route your backend exposes.
-async function fetchOpinionArticles() {
-  const candidates = [
-    () =>
-      cachedGet(
-        "/public/categories/opinion/articles",
-        { params: { page: 1, limit: 30 } },
-        30_000
-      ),
-    () =>
-      cachedGet(
-        "/public/categories/opinion/articles",
-        { params: { limit: 30 } },
-        30_000
-      ),
-    () =>
-      cachedGet(
-        "/public/categories/opinion",
-        { params: { page: 1, limit: 30 } },
-        30_000
-      ),
-    async () => {
-      const data = await cachedGet(
-        "/top-news",
-        { params: { page: 1, limit: 80, mode: "public" } },
-        30_000
-      );
-      const items = Array.isArray(data?.items) ? data.items : [];
-      return { items: items.filter(isOpinionArticle) };
-    },
-  ];
-
-  let lastErr = null;
-  for (const run of candidates) {
-    try {
-      const res = await run();
-      const items =
-        Array.isArray(res?.items)
-          ? res.items
-          : Array.isArray(res)
-          ? res
-          : Array.isArray(res?.data?.items)
-          ? res.data.items
-          : Array.isArray(res?.data)
-          ? res.data
-          : [];
-
-      const onlyOpinion = items.filter(isOpinionArticle);
-      if (onlyOpinion.length) return onlyOpinion;
-      if (items.length === 0) return [];
-    } catch (e) {
-      lastErr = e;
-    }
-  }
-
-  throw lastErr || new Error("Opinion fetch failed");
-}
-
-function pickOpinionImage(a) {
-  const raw = ensureRenderableImage(a);
-  return optimizeCloudinary(raw || FALLBACK_HERO_IMAGE, 360);
-}
-
-/* ================================
-   FITNESS FUNDAS (HEALTH): helpers
-   ================================ */
-function isHealthArticle(a) {
-  const slug = String(a?.categorySlug || "").toLowerCase().trim();
-  const name = String(
-    a?.categoryName || a?.category?.name || a?.category || ""
-  )
-    .toLowerCase()
-    .trim();
-  return slug === "health" || name === "health";
-}
-
-async function fetchHealthArticles() {
-  const candidates = [
-    () =>
-      cachedGet(
-        "/public/categories/health/articles",
-        { params: { page: 1, limit: 40 } },
-        30_000
-      ),
-    () =>
-      cachedGet(
-        "/public/categories/health/articles",
-        { params: { limit: 40 } },
-        30_000
-      ),
-    () =>
-      cachedGet(
-        "/public/categories/health",
-        { params: { page: 1, limit: 40 } },
-        30_000
-      ),
-    async () => {
-      const data = await cachedGet(
-        "/top-news",
-        { params: { page: 1, limit: 120, mode: "public" } },
-        30_000
-      );
-      const items = Array.isArray(data?.items) ? data.items : [];
-      return { items: items.filter(isHealthArticle) };
-    },
-  ];
-
-  let lastErr = null;
-  for (const run of candidates) {
-    try {
-      const res = await run();
-      const items =
-        Array.isArray(res?.items)
-          ? res.items
-          : Array.isArray(res)
-          ? res
-          : Array.isArray(res?.data?.items)
-          ? res.data.items
-          : Array.isArray(res?.data)
-          ? res.data
-          : [];
-
-      const onlyHealth = items.filter(isHealthArticle);
-      if (onlyHealth.length) return onlyHealth;
-      if (items.length === 0) return [];
-    } catch (e) {
-      lastErr = e;
-    }
-  }
-
-  throw lastErr || new Error("Health fetch failed");
-}
-
-function pickFitnessImage(a) {
-  const raw = ensureRenderableImage(a);
-  return optimizeCloudinary(raw || FALLBACK_HERO_IMAGE, 360);
-}
-
-/* ================================
-   BOLLY BOX (ENTERTAINMENT): helpers
-   ================================ */
-function isEntertainmentArticle(a) {
-  const slug = String(a?.categorySlug || "").toLowerCase().trim();
-  const name = String(
-    a?.categoryName || a?.category?.name || a?.category || ""
-  )
-    .toLowerCase()
-    .trim();
-  return slug === "entertainment" || name === "entertainment";
-}
-
-async function fetchEntertainmentArticles() {
-  const candidates = [
-    () =>
-      cachedGet(
-        "/public/categories/entertainment/articles",
-        { params: { page: 1, limit: 30 } },
-        30_000
-      ),
-    () =>
-      cachedGet(
-        "/public/categories/entertainment/articles",
-        { params: { limit: 30 } },
-        30_000
-      ),
-    () =>
-      cachedGet(
-        "/public/categories/entertainment",
-        { params: { page: 1, limit: 30 } },
-        30_000
-      ),
-    async () => {
-      const data = await cachedGet(
-        "/top-news",
-        { params: { page: 1, limit: 100, mode: "public" } },
-        30_000
-      );
-      const items = Array.isArray(data?.items) ? data.items : [];
-      return { items: items.filter(isEntertainmentArticle) };
-    },
-  ];
-
-  let lastErr = null;
-  for (const run of candidates) {
-    try {
-      const res = await run();
-      const items =
-        Array.isArray(res?.items)
-          ? res.items
-          : Array.isArray(res)
-          ? res
-          : Array.isArray(res?.data?.items)
-          ? res.data.items
-          : Array.isArray(res?.data)
-          ? res.data
-          : [];
-
-      const onlyEnt = items.filter(isEntertainmentArticle);
-      if (onlyEnt.length) return onlyEnt;
-      if (items.length === 0) return [];
-    } catch (e) {
-      lastErr = e;
-    }
-  }
-
-  throw lastErr || new Error("Entertainment fetch failed");
-}
-
-function pickBollyImage(a) {
-  const raw = ensureRenderableImage(a);
-  return optimizeCloudinary(raw || FALLBACK_HERO_IMAGE, 360);
-}
-
-/* ---------- Right-rail Advertisement Box component ---------- */
-function AdvertisementBox() {
-  // Opens Gmail compose with "To" filled.
-  // Using gmail web compose link is the most reliable across browsers.
-  const href = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
-    AD_MAIL_TO
-  )}`;
-
+/* ---------- ✅ FIXED Promo Rails (same behavior as CategoryPage) ---------- */
+function PromoRailFixed({ side = "left" }) {
   return (
-    <div className="adbox-card" aria-label="Advertisement Box">
-      <div className="adbox-head">
-        <div className="adbox-title">ADVERTISEMENT</div>
-        <div className="adbox-underline" />
-      </div>
+    <div
+      style={{
+        position: "fixed",
+        top: RAIL_TOP_OFFSET,
+       [side]: side === "right" ? RIGHT_RAIL_INSET : -5,
 
+        width: RAIL_WIDTH,
+        height: RAIL_HEIGHT,
+        zIndex: 9999, // ✅ below SiteNav (SiteNav uses higher stacking)
+      }}
+      aria-label={`${side} promo rail`}
+    >
       <a
-        className="adbox-link"
-        href={href}
+        href={PROMO_RAIL_TO_EMAIL}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label={`Advertise with us. Email ${AD_MAIL_TO}`}
+        style={{ display: "block", width: RAIL_WIDTH, height: RAIL_HEIGHT }}
+        aria-label="Advertise with us - email"
       >
-        <div className="adbox-square">
-          <img
-            src={ADVERT_IMG}
-            alt="Advertise with The Timely Voice"
-            loading="lazy"
-            decoding="async"
-          />
-        </div>
+        <img
+          src={PROMO_RAIL_IMG}
+          alt="Advertise with us"
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "block",
+            objectFit: "contain", // ✅ no cropping
+          }}
+          loading="lazy"
+          decoding="async"
+        />
       </a>
     </div>
   );
@@ -434,20 +222,26 @@ export default function TopNews() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // Opinion rail state
-  const [opinion, setOpinion] = useState([]);
-  const [opIndex, setOpIndex] = useState(0);
-  const [opAnim, setOpAnim] = useState("in"); // "in" | "out"
+  // ✅ show rails only if enough viewport width for them
+  const [showRails, setShowRails] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(min-width: 1280px)").matches
+      : false
+  );
 
-  // Fitness Fundas (Health) rail state
-  const [fitness, setFitness] = useState([]);
-  const [ffIndex, setFfIndex] = useState(0);
-  const [ffAnim, setFfAnim] = useState("in"); // "in" | "out"
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(min-width: 1280px)");
+    const onChange = (e) => setShowRails(e.matches);
 
-  // Bolly Box rail state (Entertainment)
-  const [bolly, setBolly] = useState([]);
-  const [bbIndex, setBbIndex] = useState(0);
-  const [bbAnim, setBbAnim] = useState("in"); // "in" | "out"
+    mq.addEventListener?.("change", onChange);
+    mq.addListener?.(onChange);
+
+    return () => {
+      mq.removeEventListener?.("change", onChange);
+      mq.removeListener?.(onChange);
+    };
+  }, []);
 
   /* ---------- SEO ---------- */
   useEffect(() => {
@@ -490,126 +284,6 @@ export default function TopNews() {
     };
   }, []);
 
-  /* ---------- Fetch OPINION (cached) ---------- */
-  useEffect(() => {
-    let cancel = false;
-
-    (async () => {
-      try {
-        const list = await fetchOpinionArticles();
-        if (cancel) return;
-
-        const shuffled = [...list].sort(() => Math.random() - 0.5);
-        setOpinion(shuffled);
-        setOpIndex(0);
-      } catch {
-        if (!cancel) setOpinion([]);
-      }
-    })();
-
-    return () => {
-      cancel = true;
-    };
-  }, []);
-
-  /* ---------- OPINION swipe every ~2.6s ---------- */
-  useEffect(() => {
-    if (!opinion || opinion.length < 2) return;
-
-    const TICK = 2600;
-    const OUT_MS = 260;
-
-    const t = setInterval(() => {
-      setOpAnim("out");
-      setTimeout(() => {
-        setOpIndex((i) => (i + 1) % opinion.length);
-        setOpAnim("in");
-      }, OUT_MS);
-    }, TICK);
-
-    return () => clearInterval(t);
-  }, [opinion]);
-
-  /* ---------- Fetch FITNESS FUNDAS (HEALTH) (cached) ---------- */
-  useEffect(() => {
-    let cancel = false;
-
-    (async () => {
-      try {
-        const list = await fetchHealthArticles();
-        if (cancel) return;
-
-        const shuffled = [...list].sort(() => Math.random() - 0.5);
-        setFitness(shuffled);
-        setFfIndex(0);
-      } catch {
-        if (!cancel) setFitness([]);
-      }
-    })();
-
-    return () => {
-      cancel = true;
-    };
-  }, []);
-
-  /* ---------- FITNESS FUNDAS swipe every 7s (one at a time) ---------- */
-  useEffect(() => {
-    if (!fitness || fitness.length < 2) return;
-
-    const TICK = 7000;
-    const OUT_MS = 260;
-
-    const t = setInterval(() => {
-      setFfAnim("out");
-      setTimeout(() => {
-        setFfIndex((i) => (i + 1) % fitness.length);
-        setFfAnim("in");
-      }, OUT_MS);
-    }, TICK);
-
-    return () => clearInterval(t);
-  }, [fitness]);
-
-  /* ---------- Fetch BOLLY BOX (cached) ---------- */
-  useEffect(() => {
-    let cancel = false;
-
-    (async () => {
-      try {
-        const list = await fetchEntertainmentArticles();
-        if (cancel) return;
-
-        const shuffled = [...list].sort(() => Math.random() - 0.5);
-        setBolly(shuffled);
-        setBbIndex(0);
-      } catch {
-        if (!cancel) setBolly([]);
-      }
-    })();
-
-    return () => {
-      cancel = true;
-    };
-  }, []);
-
-  /* ---------- BOLLY BOX swipe every 5s ---------- */
-  useEffect(() => {
-    if (!bolly || bolly.length < 2) return;
-
-    const TICK = 5000;
-    const OUT_MS = 260;
-
-    const t = setInterval(() => {
-      setBbAnim("out");
-      setTimeout(() => {
-        setBbIndex((i) => (i + 1) % bolly.length);
-        setBbAnim("in");
-      }, OUT_MS);
-    }, TICK);
-
-    return () => clearInterval(t);
-  }, [bolly]);
-
   // ✅ Insert one in-feed ad after every N cards
   const AD_EVERY = 5;
 
@@ -626,84 +300,21 @@ export default function TopNews() {
     return out;
   }, [items]);
 
-  // ✅ Opinion: show 3 at a time
-  const opA = opinion.length ? opinion[opIndex % opinion.length] : null;
-  const opB = opinion.length > 1 ? opinion[(opIndex + 1) % opinion.length] : null;
-  const opC = opinion.length > 2 ? opinion[(opIndex + 2) % opinion.length] : null;
-
-  // ✅ Fitness Fundas: show 1 at a time
-  const ffA = fitness.length ? fitness[ffIndex % fitness.length] : null;
-
-  // ✅ Bolly Box: show 2 at a time
-  const bbA = bolly.length ? bolly[bbIndex % bolly.length] : null;
-  const bbB = bolly.length > 1 ? bolly[(bbIndex + 1) % bolly.length] : null;
-
   return (
     <>
       <SiteNav />
 
+      {/* ✅ Add same fixed rails on TopNews page */}
+      {showRails && (
+        <>
+          <PromoRailFixed side="left" />
+          <PromoRailFixed side="right" />
+        </>
+      )}
+
+      {/* ✅ Keep shell, but remove left/right asides (only center list remains) */}
       <div className="tn-shell">
         <div className="tn-stage">
-          {/* LEFT: OPINION rail + Fitness Fundas below */}
-          <aside className="tn-opinion" aria-label="Opinion and Fitness Fundas">
-            <div className="tn-left-stack">
-              {/* OPINION */}
-              <div className="op-card" aria-label="Opinion">
-                <div className="op-head">
-                  <div className="op-title">OPINION</div>
-                  <div className="op-underline" />
-                </div>
-
-                {opinion.length === 0 ? (
-                  <div className="op-empty">No opinion articles yet</div>
-                ) : (
-                  <div className={`op-rows op-${opAnim}`}>
-                    {opA && (
-                      <OpinionRow
-                        key={`${opA._id || opA.id || opA.slug || "opA"}-0`}
-                        a={opA}
-                      />
-                    )}
-                    {opB && (
-                      <OpinionRow
-                        key={`${opB._id || opB.id || opB.slug || "opB"}-1`}
-                        a={opB}
-                      />
-                    )}
-                    {opC && (
-                      <OpinionRow
-                        key={`${opC._id || opC.id || opC.slug || "opC"}-2`}
-                        a={opC}
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* FITNESS FUNDAS (Health) */}
-              <div className="ff-card" aria-label="Fitness Fundas">
-                <div className="ff-head">
-                  <div className="ff-title">Fitness Fundas</div>
-                  <div className="ff-underline" />
-                </div>
-
-                {fitness.length === 0 ? (
-                  <div className="ff-empty">No health articles yet</div>
-                ) : (
-                  <div className={`ff-rows ff-${ffAnim}`}>
-                    {ffA && (
-                      <FitnessRow
-                        key={`${ffA._id || ffA.id || ffA.slug || "ffA"}-0`}
-                        a={ffA}
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </aside>
-
-          {/* CENTER: main list */}
           <main className="tn-container">
             {loading && <div className="tn-status">Loading…</div>}
             {err && <div className="tn-error">{err}</div>}
@@ -789,123 +400,10 @@ export default function TopNews() {
               </ul>
             )}
           </main>
-
-          {/* RIGHT: BOLLY BOX rail + Advertisement box below */}
-          <aside className="tn-bolly" aria-label="Bolly Box and Advertisement">
-            <div className="tn-right-stack">
-              {/* BOLLY BOX */}
-              <div className="bb-card">
-                <div className="bb-head">
-                  <div className="bb-title">BOLLY BOX</div>
-                  <div className="bb-underline" />
-                </div>
-
-                {bolly.length === 0 ? (
-                  <div className="bb-empty">No entertainment articles yet</div>
-                ) : (
-                  <div className={`bb-rows bb-${bbAnim}`}>
-                    {bbA && (
-                      <BollyRow
-                        key={`${bbA._id || bbA.id || bbA.slug || "bbA"}-0`}
-                        a={bbA}
-                      />
-                    )}
-                    {bbB && (
-                      <BollyRow
-                        key={`${bbB._id || bbB.id || bbB.slug || "bbB"}-1`}
-                        a={bbB}
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* ADVERTISEMENT BOX (square image) */}
-              <AdvertisementBox />
-            </div>
-          </aside>
         </div>
       </div>
 
       <SiteFooter />
     </>
-  );
-}
-
-function OpinionRow({ a }) {
-  const href = articleHref(a.slug);
-  const img = pickOpinionImage(a);
-
-  return (
-    <Link to={href} className="op-row">
-      <div className="op-img">
-        <img
-          src={img}
-          alt={a.imageAlt || a.title || "Opinion"}
-          loading="lazy"
-          decoding="async"
-          onError={(e) => {
-            e.currentTarget.src = FALLBACK_HERO_IMAGE;
-          }}
-        />
-      </div>
-
-      <div className="op-text">
-        <div className="op-source">The Timely Voice</div>
-        <div className="op-news-title">{a.title}</div>
-      </div>
-    </Link>
-  );
-}
-
-function FitnessRow({ a }) {
-  const href = articleHref(a.slug);
-  const img = pickFitnessImage(a);
-
-  return (
-    <Link to={href} className="ff-row">
-      <div className="ff-img">
-        <img
-          src={img}
-          alt={a.imageAlt || a.title || "Fitness Fundas"}
-          loading="lazy"
-          decoding="async"
-          onError={(e) => {
-            e.currentTarget.src = FALLBACK_HERO_IMAGE;
-          }}
-        />
-      </div>
-
-      <div className="ff-text">
-        <div className="ff-source">The Timely Voice</div>
-        <div className="ff-news-title">{a.title}</div>
-      </div>
-    </Link>
-  );
-}
-
-function BollyRow({ a }) {
-  const href = articleHref(a.slug);
-  const img = pickBollyImage(a);
-
-  return (
-    <Link to={href} className="bb-row">
-      <div className="bb-img">
-        <img
-          src={img}
-          alt={a.imageAlt || a.title || "Bolly Box"}
-          loading="lazy"
-          decoding="async"
-          onError={(e) => {
-            e.currentTarget.src = FALLBACK_HERO_IMAGE;
-          }}
-        />
-      </div>
-
-      <div className="bb-text">
-        <div className="bb-source">The Timely Voice</div>
-        <div className="bb-news-title">{a.title}</div>
-      </div>
-    </Link>
   );
 }
