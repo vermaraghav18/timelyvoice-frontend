@@ -1021,10 +1021,17 @@ export default function ReaderArticle() {
                 {(() => {
                   const playable = toPlayableVideoSrc(article?.videoUrl);
 
+                  // ✅ FIX: show controls and allow sound (no forced mute)
+                  // Autoplay-with-sound is blocked by browsers, so we use user-initiated play.
                   if (playable) {
                     return (
                       <figure className="article-hero-inline article-hero-video">
-                        <video src={playable} autoPlay loop muted playsInline preload="metadata" />
+                        <video
+                          src={playable}
+                          controls
+                          playsInline
+                          preload="metadata"
+                        />
                       </figure>
                     );
                   }
