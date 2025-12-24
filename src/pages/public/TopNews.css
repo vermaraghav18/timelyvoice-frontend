@@ -214,7 +214,18 @@
     grid-template-areas: "thumb" "left";
   }
 
-  .tn-thumb{ height: 280px; }
+  /* ✅ SHOW FULL IMAGE ON MOBILE (NO CROP) */
+  .tn-thumb{
+    height: 280px;
+    background: rgba(0,0,0,0.35);
+  }
+
+  .tn-thumb img,
+  .tn-thumb video{
+    object-fit: contain !important;
+    background: transparent;
+  }
+
   .tn-item-title{ font-size: clamp(20px, 6vw, 28px); }
 
   .tn-container{
@@ -247,4 +258,29 @@
   background: rgba(0,0,0,0.7);
   border-top: 1px solid #000;
   box-shadow: 0 -2px 0 #000;
+}
+
+/* ------------------------------------------------------ */
+/* ✅ Inline promo banner (reduced size + centered)         */
+/* ------------------------------------------------------ */
+
+.tn-promo{
+  list-style: none;
+  width: 100%;
+  margin: 16px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.tn-promo-link{
+  display: block;
+  width: 100%;
+  max-width: 520px; /* ✅ reduce banner size on desktop */
+}
+
+.tn-promo-img{
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 0px;
 }
