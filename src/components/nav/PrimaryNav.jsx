@@ -8,7 +8,7 @@ const LINKS = [
 
   { label: "India", slug: "india" },
   { label: "World", slug: "world" },
-  { label: "Health", path: "/health" },
+  { label: "Health", slug: "health" },
 
   { label: "Finance", slug: "finance" },
   { label: "History", slug: "history" },
@@ -20,8 +20,8 @@ const LINKS = [
 ];
 
 /** ✅ Desktop gutters: adjust these two to control left/right gaps */
-const NAV_MAX_WIDTH = 1120; // reduce to 980 or 920 if you want more “gap”
-const DESKTOP_GUTTER_PX = 18; // increase to 24/30 if you want more “gap”
+const NAV_MAX_WIDTH = 1120;
+const DESKTOP_GUTTER_PX = 18;
 
 const WRAP_STYLE = {
   width: "100%",
@@ -32,7 +32,6 @@ const WRAP_STYLE = {
   boxSizing: "border-box",
 };
 
-/** ✅ NEW: this is what creates the left/right gutters on desktop */
 const INNER_STYLE = {
   width: "100%",
   maxWidth: NAV_MAX_WIDTH,
@@ -60,12 +59,12 @@ const SCROLLER_STYLE = {
   overflowY: "hidden",
   display: "flex",
   alignItems: "center",
-  justifyContent: "flex-start", // mobile-first
+  justifyContent: "flex-start",
   WebkitOverflowScrolling: "touch",
   touchAction: "pan-x",
   boxSizing: "border-box",
   margin: 0,
-  padding: 0, // ✅ do NOT add edge padding here; INNER_STYLE handles gutters
+  padding: 0,
 };
 
 const UL_STYLE = {
@@ -121,11 +120,22 @@ function hrefFor(link) {
   return `/category/${encodeURIComponent(link.slug)}`;
 }
 
+// ✅ NEW: extract the real active category slug once from the URL
+function getActiveCategorySlug(pathname) {
+  const m = pathname.match(/^\/category\/([^/]+)(\/|$)/i);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+// ✅ FIX: only ONE category tab can be active
 function isActive(link, pathname) {
   if (link.path === "/") return pathname === "/";
-  if (link.path) return pathname.startsWith(link.path);
-  const catPath = `/category/${encodeURIComponent(link.slug)}`;
-  return pathname === catPath || pathname.startsWith(`${catPath}/`);
+
+  if (link.path) {
+    return pathname === link.path || pathname.startsWith(`${link.path}/`);
+  }
+
+  const activeSlug = getActiveCategorySlug(pathname);
+  return activeSlug === link.slug;
 }
 
 function isMobile() {
@@ -172,7 +182,6 @@ export default function PrimaryNav({ containerStyle }) {
     const activeEl = activeRef.current;
     if (!scroller) return;
 
-    // ✅ Mobile: swipe + keep active tab visible
     if (isMobile()) {
       if (activeEl?.scrollIntoView) {
         activeEl.scrollIntoView({
@@ -184,7 +193,6 @@ export default function PrimaryNav({ containerStyle }) {
       return;
     }
 
-    // ✅ Desktop: center active link nicely
     if (activeEl) {
       const elRect = activeEl.getBoundingClientRect();
       const scRect = scroller.getBoundingClientRect();
@@ -207,7 +215,6 @@ export default function PrimaryNav({ containerStyle }) {
         .primary-link:hover { opacity: 0.95; }
         .primary-link:focus-visible { outline: 2px solid #1D9A8E55; outline-offset: 2px; }
 
-        /* ✅ Mobile: allow full-bleed swipe feel, but keep small side padding */
         @media (max-width: 768px) {
           .nav-inner {
             max-width: none !important;
@@ -221,14 +228,16 @@ export default function PrimaryNav({ containerStyle }) {
           .primary-sep { display: none; }
         }
 
-        /* ✅ Desktop: centered row inside gutters */
         @media (min-width: 769px) {
           .nav-scroller { justify-content: center !important; }
           .primary-list { justify-content: center !important; }
         }
       `}</style>
 
-      <div className="nav-inner" style={{ ...INNER_STYLE, ...(containerStyle || {}) }}>
+      <div
+        className="nav-inner"
+        style={{ ...INNER_STYLE, ...(containerStyle || {}) }}
+      >
         <div className="primary-outer" style={OUTER_STYLE}>
           <div
             ref={scrollerRef}
@@ -244,6 +253,7 @@ export default function PrimaryNav({ containerStyle }) {
                 const href = hrefFor(l);
                 const key = l.slug || l.path || l.label;
                 const active = isActive(l, pathname);
+
                 const style = active
                   ? { ...LINK_BASE, ...ACTIVE_DECORATION }
                   : LINK_BASE;
