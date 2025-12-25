@@ -3,16 +3,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 
 import { cachedGet } from "../../lib/publicApi.js";
-import {
-  removeManagedHeadTags,
-  upsertTag,
-  setJsonLd,
-} from "../../lib/seoHead.js";
+import { removeManagedHeadTags, upsertTag, setJsonLd } from "../../lib/seoHead.js";
 
 import SiteNav from "../../components/SiteNav.jsx";
 import SiteFooter from "../../components/SiteFooter.jsx";
 import SectionRenderer from "../../components/sections/SectionRenderer.jsx";
-import "../../styles/category.css";
+
+import "../../styles/category.css"; // keep (rails/layout-critical)
+import "../../styles/categoryHub.css"; // NEW
 
 import { ensureRenderableImage } from "../../lib/images.js";
 
@@ -20,10 +18,10 @@ import { ensureRenderableImage } from "../../lib/images.js";
 const BRAND_NAME = "The Timely Voice";
 
 /* ✅ Desktop content width (normal target) */
-const DESKTOP_CONTENT_MAX = 920;
+const DESKTOP_CONTENT_MAX = 1100;
 
 /* ✅ Content padding inside the center column */
-const CONTENT_PAD_X = 12;
+const CONTENT_PAD_X = 14;
 
 /* ---------- AdSense: Category inline card ---------- */
 const ADS_CLIENT = "ca-pub-8472487092329023";
@@ -34,19 +32,18 @@ const PROMO_RAIL_IMG = "/banners/advertise-with-us-rail-120x700.png";
 const PROMO_RAIL_TO_EMAIL =
   "https://mail.google.com/mail/?view=cm&fs=1&to=knotshorts1@gmail.com&su=Advertise%20With%20Us";
 
-/* ---------- ✅ NEW: Inline promo banner (after every 7th article card) ---------- */
+/* ---------- ✅ Inline promo banner (after every 7th article card) ---------- */
 const PROMO_INLINE_IMG = "/banners/advertise-with-us-inline.png";
 const PROMO_INLINE_TO_EMAIL = PROMO_RAIL_TO_EMAIL;
 
 /**
  * ✅ IMPORTANT:
  * These rails are "fixed" to the viewport edges.
- * Adjust this if your SiteNav height changes.
+ * DO NOT TOUCH.
  */
 const RAIL_WIDTH = 150;
 const RAIL_HEIGHT = 635;
-
-const RAIL_TOP_OFFSET = 0; // ✅ push rails to the very top edge
+const RAIL_TOP_OFFSET = 0;
 
 /* ---------- helper: relative time ---------- */
 function timeAgo(input) {
@@ -190,8 +187,7 @@ const CATEGORY_COPY_STATIC = {
 
 function getCategoryCopy(slug, category) {
   const key = String(slug || "").toLowerCase();
-  const baseName =
-    category?.name || humanizeSlug(key || "News").trim() || "News";
+  const baseName = category?.name || humanizeSlug(key || "News").trim() || "News";
 
   const fallbackMetaTitle = `${baseName} News & Analysis — ${BRAND_NAME}`;
   const fallbackMetaDescription = `Latest ${baseName.toLowerCase()} stories, context and explainers from ${BRAND_NAME}.`;
@@ -213,297 +209,34 @@ function toCloudinaryOptimized(url, width = 520) {
   return u.replace("/upload/", `/upload/f_auto,q_auto,w_${width}/`);
 }
 
-/* ---------- layout styles ---------- */
-const TOP_GAP = 16;
-
-const pageWrap = {
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "flex-start",
-  paddingTop: 0,
-  marginTop: TOP_GAP,
-  marginBottom: 40,
-  fontFamily: "'Newsreader', serif",
-};
-
-const listStyle = { display: "flex", flexDirection: "column", gap: 0 };
-const itemWrap = { width: "100%", marginBottom: 8 };
-
-const adWrap = {
-  width: "100%",
-  margin: "12px 0 2px",
-  textAlign: "center",
-  lineHeight: 0,
-};
-
-const inlineBannerWrap = {
-  width: "100%",
-  margin: "12px 0 10px",
-  lineHeight: 0,
-};
-
-const inlineBannerImg = {
-  width: "100%",
-  height: "auto",
-  display: "block",
-  borderRadius: 8,
-};
-
-const cardStyle = {
-  background: "linear-gradient(135deg, #001236 0%, #001e49ff 100%)",
-  borderRadius: 1,
-  border: "0px solid #e5e7eb",
-  padding: 10,
-  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-};
-
-const titleStyle = {
-  margin: 0,
-  fontSize: 18,
-  fontWeight: 500,
-  lineHeight: 1.3,
-  color: "#ffffffff",
-  fontFamily: "'Merriweather Sans', sans-serif",
-};
-
-const metaRow = {
-  marginTop: 14,
-  fontSize: 12,
-  color: "#6b7280",
-  display: "flex",
-  gap: 4,
-  alignItems: "center",
-  flexWrap: "wrap",
-};
-
-const catLink = {
-  color: "#1d4ed8",
-  textDecoration: "none",
-  fontWeight: 600,
-};
-
-const thumbStyle = {
-  width: 110,
-  height: 75,
-  objectFit: "cover",
-  borderRadius: 1,
-  display: "block",
-};
-
-const firstWrap = { marginBottom: 14, padding: 0 };
-
-const firstTitle = {
-  margin: "0 0 10px",
-  fontSize: 26,
-  lineHeight: 1.15,
-  fontWeight: 800,
-  color: "#ffffff",
-  fontFamily: "'Merriweather Sans', sans-serif",
-};
-
-const firstImg = (isMobile) => ({
-  width: "100%",
-  height: isMobile ? 260 : 380,
-  objectFit: "cover",
-  borderRadius: 2,
-  display: "block",
-  marginBottom: 10,
-});
-
-const firstSummary = {
-  fontSize: 18,
-  color: "#b9b9b9ff",
-  marginTop: 6,
-  lineHeight: 1.6,
-};
-
-const firstMeta = {
-  marginTop: 8,
-  fontSize: 12,
-  color: "#ee6affff",
-  display: "flex",
-  gap: 6,
-  alignItems: "center",
-  flexWrap: "wrap",
-};
-
-function FirstArticle({ a, isMobile }) {
-  if (!a) return null;
-
-  const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
-  const updated = a.updatedAt || a.publishedAt || a.publishAt || a.createdAt;
-
-  const imgRaw = ensureRenderableImage(a);
-  const img = toCloudinaryOptimized(imgRaw, 1400);
-
-  const summary =
-    a.summary ||
-    a.excerpt ||
-    a.description ||
-    a.seoDescription ||
-    (typeof a.body === "string"
-      ? a.body.replace(/<[^>]*>/g, "").slice(0, 260)
-      : "");
-
-  return (
-    <div style={firstWrap}>
-      <Link to={articleUrl} style={{ textDecoration: "none", color: "inherit" }}>
-        <h1 style={firstTitle}>{a.title}</h1>
-      </Link>
-
-      {img && (
-        <Link to={articleUrl} style={{ display: "block" }}>
-          <img
-            src={img}
-            alt={a.imageAlt || a.title || ""}
-            style={firstImg(isMobile)}
-            loading="lazy"
-            decoding="async"
-          />
-        </Link>
-      )}
-
-      {summary && (
-        <Link to={articleUrl} style={{ textDecoration: "none", color: "inherit" }}>
-          <p style={firstSummary}>{summary}</p>
-        </Link>
-      )}
-
-      <div style={firstMeta}>
-        <span>Updated {timeAgo(updated)}</span>
-      </div>
-    </div>
-  );
-}
-
-/* ---------- Top 2 grid ---------- */
-const topGridWrap = {
-  display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gap: 12,
-  marginBottom: 14,
-};
-
-const topCard = {
-  background: "#001236ff",
-  border: "0px solid #e5e7eb",
-  borderRadius: 1,
-  padding: 10,
-  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-  overflow: "hidden",
-};
-
-const topImg = {
-  width: "100%",
-  height: 190,
-  objectFit: "cover",
-  borderRadius: 2,
-  display: "block",
-  marginTop: 8,
-};
-
-const topTitle = {
-  margin: 0,
-  fontSize: 18,
-  lineHeight: 1.25,
-  fontWeight: 700,
-  color: "#ffffff",
-};
-
-const topMeta = {
-  marginTop: 8,
-  fontSize: 12,
-  color: "#ee6affff",
-  display: "flex",
-  gap: 6,
-  alignItems: "center",
-  flexWrap: "wrap",
-};
-
-const topSummary = {
-  marginTop: 8,
-  fontSize: 14,
-  lineHeight: 1.5,
-  color: "#cbd5ff",
-  display: "-webkit-box",
-  WebkitLineClamp: 3,
-  WebkitBoxOrient: "vertical",
-  overflow: "hidden",
-};
-
-function TopCard({ a }) {
-  if (!a) return null;
-  const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
-  const updated = a.updatedAt || a.publishedAt || a.publishAt || a.createdAt;
-
-  const imgRaw = ensureRenderableImage(a);
-  const img = toCloudinaryOptimized(imgRaw, 900);
-
-  const summary =
-    a.summary ||
-    a.excerpt ||
-    a.description ||
-    a.seoDescription ||
-    (typeof a.body === "string"
-      ? a.body.replace(/<[^>]*>/g, "").slice(0, 170)
-      : "");
-
-  return (
-    <div style={topCard}>
-      <Link to={articleUrl} style={{ textDecoration: "none", color: "inherit" }}>
-        <h2 style={topTitle}>{a.title}</h2>
-      </Link>
-
-      {img && (
-        <Link to={articleUrl} style={{ display: "block" }}>
-          <img
-            src={img}
-            alt={a.imageAlt || a.title || ""}
-            style={topImg}
-            loading="lazy"
-            decoding="async"
-          />
-        </Link>
-      )}
-
-      {summary && (
-        <Link to={articleUrl} style={{ textDecoration: "none", color: "inherit" }}>
-          <p style={topSummary}>{summary}</p>
-        </Link>
-      )}
-
-      <div style={topMeta}>
-        <span>Updated {timeAgo(updated)}</span>
-      </div>
-    </div>
-  );
-}
-
-function TwoUpGrid({ a1, a2, isMobile }) {
-  if (!a1 && !a2) return null;
-
-  if (isMobile) {
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 14 }}>
-        {a1 && <TopCard a={a1} />}
-        {a2 && <TopCard a={a2} />}
-      </div>
-    );
+/* ---------- deterministic shuffle (stable “Trending”) ---------- */
+function hashSeed(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
   }
-
-  if (a1 && !a2) return <TopCard a={a1} />;
-  if (!a1 && a2) return <TopCard a={a2} />;
-
-  return (
-    <div style={topGridWrap}>
-      <TopCard a={a1} />
-      <TopCard a={a2} />
-    </div>
-  );
+  return h >>> 0;
+}
+function mulberry32(a) {
+  return function () {
+    let t = (a += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function shuffleDeterministic(items, seedStr) {
+  const arr = items.slice();
+  const rand = mulberry32(hashSeed(seedStr));
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
-/* ---------- Article Row ---------- */
+/* ---------- Article row (feed) ---------- */
 const ALLOWED_SLUGS = new Set([
   "india",
   "world",
@@ -546,7 +279,18 @@ function displayNameFromSlug(slug) {
   return map[slug] || humanizeSlug(slug) || "General";
 }
 
-function ArticleRow({ a, compact = false }) {
+/* ✅ robust title fallback (fixes “no title showing”) */
+function getSafeTitle(a) {
+  const t =
+    (typeof a?.title === "string" && a.title.trim()) ||
+    (typeof a?.headline === "string" && a.headline.trim()) ||
+    (typeof a?.name === "string" && a.name.trim()) ||
+    "";
+  return t || "Untitled";
+}
+
+function ArticleRow({ a }) {
+  const title = getSafeTitle(a);
   const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
 
   const categorySlug = normalizeCategorySlugFromArticle(a);
@@ -556,48 +300,40 @@ function ArticleRow({ a, compact = false }) {
   const updated = a.updatedAt || a.publishedAt || a.publishAt || a.createdAt;
 
   const thumbRaw = ensureRenderableImage(a);
-  const thumb = toCloudinaryOptimized(thumbRaw, compact ? 300 : 360);
-
-  const cardS = compact ? { ...cardStyle, padding: 8 } : cardStyle;
-  const titleS = compact ? { ...titleStyle, fontSize: 16, lineHeight: 1.2 } : titleStyle;
-  const metaS = compact ? { ...metaRow, marginTop: 6 } : metaRow;
-
-  const rowS = compact
-    ? { display: "grid", gridTemplateColumns: thumb ? "1fr 96px" : "1fr", gap: 6, alignItems: "center" }
-    : { display: "grid", gridTemplateColumns: thumb ? "1fr 110px" : "1fr", gap: 8, alignItems: "center" };
-
-  const thumbS = compact ? { ...thumbStyle, width: 96, height: 64 } : thumbStyle;
+  const thumb = toCloudinaryOptimized(thumbRaw, 360);
 
   return (
-    <div style={cardS}>
-      <div style={rowS}>
-        <div style={{ minWidth: 0 }}>
-          <Link to={articleUrl} style={{ textDecoration: "none", color: "inherit" }}>
-            <h3 style={titleS}>{a.title}</h3>
+    <article className="hubRowCard">
+      <div className="hubRowInner">
+        <div className="hubRowText">
+          <Link to={articleUrl} className="hubRowTitleLink">
+            <h3 className="hubRowTitle">{title}</h3>
           </Link>
 
-          <div style={metaS}>
-            <Link to={categoryUrl} style={catLink}>
+          <div className="hubMeta">
+            <Link to={categoryUrl} className="hubMetaCat">
               {categoryName}
             </Link>
-            <span aria-hidden>•</span>
-            <span>Updated {timeAgo(updated)}</span>
+            <span className="hubMetaDot" aria-hidden>
+              •
+            </span>
+            <span className="hubMetaTime">Updated {timeAgo(updated)}</span>
           </div>
         </div>
 
         {thumb && (
-          <Link to={articleUrl}>
+          <Link to={articleUrl} className="hubRowThumbLink">
             <img
               src={thumb}
-              alt={a.imageAlt || a.title || ""}
-              style={thumbS}
+              alt={a.imageAlt || title || ""}
+              className="hubRowThumb"
               loading="lazy"
               decoding="async"
             />
           </Link>
         )}
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -623,38 +359,39 @@ function InlineAd() {
     try {
       window.adsbygoogle = window.adsbygoogle || [];
       window.adsbygoogle.push({});
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, []);
 
   return (
-    <div style={adWrap}>
-      <ins
-        className="adsbygoogle"
-        style={{ display: "inline-block", width: 300, height: 300, margin: 0 }}
-        data-ad-client={ADS_CLIENT}
-        data-ad-slot={ADS_SLOT_INLINE}
-      />
+    <div className="hubAdSlot" aria-label="advertisement">
+      <div className="hubAdSlotLabel">ADVERTISEMENT</div>
+      <div className="hubAdSlotInner">
+        <ins
+          className="adsbygoogle"
+          style={{ display: "inline-block", width: 300, height: 300, margin: 0 }}
+          data-ad-client={ADS_CLIENT}
+          data-ad-slot={ADS_SLOT_INLINE}
+        />
+      </div>
     </div>
   );
 }
 
-/* ---------- ✅ NEW: Inline promo banner component ---------- */
+/* ---------- Inline promo banner component ---------- */
 function PromoInlineBanner() {
   return (
-    <div style={inlineBannerWrap} aria-label="promo inline banner">
+    <div className="hubInlinePromo" aria-label="promo inline banner">
       <a
         href={PROMO_INLINE_TO_EMAIL}
         target="_blank"
         rel="noopener noreferrer"
-        style={{ display: "block" }}
+        className="hubInlinePromoLink"
         aria-label="Advertise with us - email"
       >
         <img
           src={PROMO_INLINE_IMG}
           alt="Advertise with us"
-          style={inlineBannerImg}
+          className="hubInlinePromoImg"
           loading="lazy"
           decoding="async"
         />
@@ -663,14 +400,14 @@ function PromoInlineBanner() {
   );
 }
 
-/* ---------- ✅ FIXED Promo Rails (edge pinned, no top gap) ---------- */
+/* ---------- ✅ FIXED Promo Rails (DO NOT TOUCH) ---------- */
 function PromoRailFixed({ side = "left" }) {
   return (
     <div
       style={{
         position: "fixed",
         top: RAIL_TOP_OFFSET,
-        [side]: side === "right" ? 15 : 0, // ✅ only right banner moves left by 18px
+        [side]: side === "right" ? 15 : 0,
         width: RAIL_WIDTH,
         height: RAIL_HEIGHT,
         zIndex: 50,
@@ -691,13 +428,141 @@ function PromoRailFixed({ side = "left" }) {
             width: "100%",
             height: "100%",
             display: "block",
-            objectFit: "cover", // ✅ fills the rail perfectly
+            objectFit: "cover",
           }}
           loading="lazy"
           decoding="async"
         />
       </a>
     </div>
+  );
+}
+
+/* ---------- Small card helpers (hub) ---------- */
+function HubHero({ a, labelSlug }) {
+  if (!a) return null;
+  const title = getSafeTitle(a);
+  const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
+  const updated = a.updatedAt || a.publishedAt || a.publishAt || a.createdAt;
+
+  const imgRaw = ensureRenderableImage(a);
+  const img = toCloudinaryOptimized(imgRaw, 1400);
+
+  return (
+    <section className="hubHero">
+      <Link to={articleUrl} className="hubHeroMediaLink">
+        <div className="hubHeroMedia">
+          {img && (
+            <img
+              src={img}
+              alt={a.imageAlt || title || ""}
+              className="hubHeroImg"
+              loading="lazy"
+              decoding="async"
+            />
+          )}
+          <div className="hubHeroOverlay">
+            <span className="hubPill">{displayNameFromSlug(labelSlug)}</span>
+            <h2 className="hubHeroTitle">{title}</h2>
+            <div className="hubHeroMeta">Updated {timeAgo(updated)}</div>
+          </div>
+        </div>
+      </Link>
+    </section>
+  );
+}
+
+function HubHeadlineList({ items = [] }) {
+  if (!items.length) return null;
+  return (
+    <section className="hubHeadlines">
+      <ul className="hubHeadlinesList">
+        {items.map((a, i) => {
+          const title = getSafeTitle(a);
+          const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
+          return (
+            <li key={a._id || a.id || a.slug || i} className="hubHeadlinesItem">
+              <Link to={articleUrl} className="hubHeadlinesLink">
+                {title}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="hubPagerMock" aria-hidden>
+        <span className="hubPagerBtn">‹</span>
+        <span className="hubPagerBtn">2</span>
+        <span className="hubPagerBtn">›</span>
+      </div>
+    </section>
+  );
+}
+
+function HubMiniCard({ a }) {
+  if (!a) return null;
+  const title = getSafeTitle(a);
+  const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
+  const updated = a.updatedAt || a.publishedAt || a.publishAt || a.createdAt;
+
+  const imgRaw = ensureRenderableImage(a);
+  const img = toCloudinaryOptimized(imgRaw, 520);
+
+  return (
+    <article className="hubMiniCard">
+      <Link to={articleUrl} className="hubMiniCardLink">
+        {img ? (
+          <img
+            src={img}
+            alt={a.imageAlt || title || ""}
+            className="hubMiniImg"
+            loading="lazy"
+            decoding="async"
+          />
+        ) : null}
+        <div className="hubMiniText">
+          <h4 className="hubMiniTitle">{title}</h4>
+          <div className="hubMiniMeta">• {timeAgo(updated)}</div>
+        </div>
+      </Link>
+    </article>
+  );
+}
+
+function HubGridCard({ a }) {
+  if (!a) return null;
+  const title = getSafeTitle(a);
+  const articleUrl = `/article/${encodeURIComponent(a.slug)}`;
+  const updated = a.updatedAt || a.publishedAt || a.publishAt || a.createdAt;
+
+  const imgRaw = ensureRenderableImage(a);
+  const img = toCloudinaryOptimized(imgRaw, 720);
+
+  return (
+    <article className="hubGridCard">
+      <Link to={articleUrl} className="hubGridCardLink">
+        {img ? (
+          <img
+            src={img}
+            alt={a.imageAlt || title || ""}
+            className="hubGridImg"
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <div className="hubGridImg hubGridImgFallback" aria-hidden />
+        )}
+
+        <div className="hubGridText">
+          <h3 className="hubGridTitle">{title}</h3>
+          <div className="hubGridMeta">
+            <span className="hubMetaDot" aria-hidden>
+              •
+            </span>{" "}
+            {timeAgo(updated)}
+          </div>
+        </div>
+      </Link>
+    </article>
   );
 }
 
@@ -842,7 +707,9 @@ export default function CategoryPage() {
         rel: "alternate",
         type: "application/rss+xml",
         title: `Timely Voice — ${category?.name || slug}`,
-        href: `${window.location.origin}/rss/${encodeURIComponent(normalizedSlug)}.xml`,
+        href: `${window.location.origin}/rss/${encodeURIComponent(
+          normalizedSlug
+        )}.xml`,
       });
     }
 
@@ -863,8 +730,18 @@ export default function CategoryPage() {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
         itemListElement: [
-          { "@type": "ListItem", position: 1, name: "Home", item: `${window.location.origin}/` },
-          { "@type": "ListItem", position: 2, name: displayName || slug, item: canonical },
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: `${window.location.origin}/`,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: displayName || slug,
+            item: canonical,
+          },
         ],
       };
 
@@ -901,7 +778,9 @@ export default function CategoryPage() {
             deduped.push(s);
           }
         }
-        deduped.sort((a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0));
+        deduped.sort(
+          (a, b) => (a.placementIndex ?? 0) - (b.placementIndex ?? 0)
+        );
         if (!cancel) setPageSections(deduped);
       } catch {
         if (!cancel) setPageSections([]);
@@ -963,7 +842,9 @@ export default function CategoryPage() {
       else insets.push({ ...s, __after: n });
     }
     insets.sort(
-      (a, b) => a.__after - b.__after || (a.placementIndex ?? 0) - (b.placementIndex ?? 0)
+      (a, b) =>
+        a.__after - b.__after ||
+        (a.placementIndex ?? 0) - (b.placementIndex ?? 0)
     );
     return { topBlocks: tops, insetBlocks: insets };
   }, [mainBlocks]);
@@ -974,7 +855,6 @@ export default function CategoryPage() {
       : false
   );
 
-  // ✅ show rails only if enough viewport width for them
   const [showRails, setShowRails] = useState(() =>
     typeof window !== "undefined"
       ? window.matchMedia("(min-width: 1280px)").matches
@@ -1003,10 +883,30 @@ export default function CategoryPage() {
     };
   }, []);
 
-  const first = articles?.[0] || null;
-  const second = articles?.[1] || null;
-  const third = articles?.[2] || null;
-  const rest = Array.isArray(articles) && articles.length > 3 ? articles.slice(3) : [];
+  /* ---------- HUB sectioning logic ----------
+     ✅ REMOVED TABS (Latest/Trending/Explainers)
+     We always use the latest-sorted list.
+  ------------------------------------------ */
+  const now = Date.now();
+  const last48hTs = now - 48 * 60 * 60 * 1000;
+
+  // Keeping these pools (not used now) is harmless, but we'll remove them to keep file clean.
+  // const trendingPool = useMemo(() => { ... }, []);
+  // const explainersPool = useMemo(() => { ... }, []);
+
+  const drivingList = articles;
+
+  const hero = drivingList?.[0] || null;
+  const headlineList = drivingList.slice(1, 5);
+  const featured = drivingList?.[5] || null;
+  const moreTop = drivingList.slice(6, 10);
+
+  // ✅ FULL-WIDTH Latest News (5 items) — placed UNDER the whole top grid
+  const latestGrid = drivingList.slice(10, 15);
+
+  const feedStartIndex = 14;
+  const feedItems =
+    drivingList.length > feedStartIndex ? drivingList.slice(feedStartIndex) : [];
 
   const renderInsetAfter = (idx) => {
     const blocks = insetBlocks.filter((b) => b.__after === idx);
@@ -1044,7 +944,6 @@ export default function CategoryPage() {
     <>
       <SiteNav />
 
-      {/* ✅ rails pinned to screen edges */}
       {showRails && (
         <>
           <PromoRailFixed side="left" />
@@ -1053,70 +952,117 @@ export default function CategoryPage() {
       )}
 
       <div className="category-container">
-        <div style={pageWrap}>
-          {headBlocks.map((sec) => (
-            <div key={sec._id || sec.id || sec.slug} style={headWrapStyle}>
-              <SectionRenderer section={sec} />
-            </div>
-          ))}
-
+        <div className="hubPage">
           <div style={contentWrapStyle}>
-            {loading && <p>Loading…</p>}
+            {headBlocks.map((sec) => (
+              <div key={sec._id || sec.id || sec.slug} style={headWrapStyle}>
+                <SectionRenderer section={sec} />
+              </div>
+            ))}
+
+            {loading && <p className="hubLoading">Loading…</p>}
 
             {!loading && notFound && (
-              <>
-                <h1>{categoryCopy.displayName}</h1>
-                <p style={{ marginTop: 8 }}>
+              <div className="hubNotFound">
+                <h1 className="hubTitle">{categoryCopy.displayName}</h1>
+                <p className="hubMuted" style={{ marginTop: 8 }}>
                   We’re updating this section. You can read our latest{" "}
-                  <Link to="/top-news">top stories</Link> in the meantime.
+                  <Link to="/top-news" className="hubLink">
+                    top stories
+                  </Link>{" "}
+                  in the meantime.
                 </p>
-              </>
+              </div>
             )}
 
             {!loading && !notFound && (
               <>
                 {topBlocks.map((sec) => (
-                  <div key={sec._id || sec.id || sec.slug} style={{ marginBottom: 12 }}>
+                  <div key={sec._id || sec.id || sec.slug} className="hubTopBlock">
                     <SectionRenderer section={sec} />
                   </div>
                 ))}
 
                 {!articles || articles.length === 0 ? (
-                  <>
-                    <h1>{categoryCopy.displayName}</h1>
-                    <p style={{ marginTop: 8, textAlign: "center" }}>
+                  <div className="hubEmpty">
+                    <h1 className="hubTitle">{categoryCopy.displayName}</h1>
+                    <p className="hubMuted" style={{ marginTop: 8 }}>
                       New articles for this category are coming soon. Check{" "}
-                      <Link to="/top-news">Top News</Link> while you wait.
+                      <Link to="/top-news" className="hubLink">
+                        Top News
+                      </Link>{" "}
+                      while you wait.
                     </p>
-                  </>
+                  </div>
                 ) : (
                   <>
-                    <FirstArticle a={first} isMobile={isMobile} />
-                    <TwoUpGrid a1={second} a2={third} isMobile={isMobile} />
+                    {/* ✅ TOP GRID (Hero + Headlines + Right column) */}
+                    <section className="hubTopGrid">
+                      <div className="hubTopLeft">
+                        <HubHero a={hero} labelSlug={normalizedSlug} />
+                      </div>
 
-                    <div style={listStyle}>
-                      {rest.map((a, idx) => {
-                        // Global index across the full article list:
-                        // first=1, second=2, third=3, rest starts at 4
-                        const globalIndex = idx + 4;
+                      <div className="hubTopMid">
+                        <HubHeadlineList items={headlineList} />
+                      </div>
 
-                        return (
-                          <div key={a._id || a.id || a.slug || idx} style={{ width: "100%" }}>
-                            <div style={itemWrap}>
-                              <ArticleRow a={a} compact={!isMobile} />
+                      <aside className="hubTopRight" aria-label="more top stories">
+                        {featured ? (
+                          <div className="hubFeatured">
+                            <div className="hubFeaturedMedia">
+                              <HubMiniCard a={featured} />
                             </div>
-
-                            {/* existing AdSense rule (kept as-is) */}
-                            {(idx + 1) % 4 === 0 && <InlineAd />}
-
-                            {/* ✅ NEW: promo banner after every 7th article card */}
-                            {globalIndex % 7 === 0 && <PromoInlineBanner />}
-
-                            {renderInsetAfter(idx + 1)}
                           </div>
-                        );
-                      })}
-                    </div>
+                        ) : null}
+
+                        <div className="hubRightSectionTitle">More Top Stories</div>
+                        <div className="hubMoreTopGrid">
+                          {moreTop.map((a, i) => (
+                            <HubMiniCard key={a._id || a.id || a.slug || i} a={a} />
+                          ))}
+                        </div>
+                      </aside>
+                    </section>
+
+                    {/* ✅ MOVED: FULL-WIDTH Latest News (5 cards) */}
+                    {latestGrid.length > 0 && (
+                      <section className="hubHeroLatest hubHeroLatestFull">
+                        <h3 className="hubHeroLatestTitle">Latest News</h3>
+                        <div className="hubHeroLatestGrid">
+                          {latestGrid.slice(0, 5).map((a, i) => (
+                            <HubGridCard key={a._id || a.id || a.slug || i} a={a} />
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    <section className="hubSection">
+                      <h2 className="hubSectionTitle">Latest News</h2>
+
+                      <div className="hubFeed">
+                        {feedItems.map((a, idx) => {
+                          const globalIndex = idx + (feedStartIndex + 1);
+
+                          return (
+                            <div key={a._id || a.id || a.slug || idx} style={{ width: "100%" }}>
+                              <ArticleRow a={a} />
+
+                              {(idx + 1) % 4 === 0 && <InlineAd />}
+
+                              {globalIndex % 7 === 0 && <PromoInlineBanner />}
+
+                              {renderInsetAfter(idx + 1)}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="hubLoadMoreWrap">
+                        <button type="button" className="hubLoadMoreBtn">
+                          Load More <span aria-hidden>›</span>
+                        </button>
+                      </div>
+                    </section>
                   </>
                 )}
               </>

@@ -18,7 +18,6 @@ const RAIL_GUTTER = RAIL_WIDTH + RAIL_GAP;
 const NAV_EXTRA_GUTTER = 15; // ✅ make header/nav shorter (increase if needed)
 const RAILS_MIN_WIDTH = 1280;
 
-
 function useIsMobile(breakpoint = 768) {
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined"
@@ -303,7 +302,11 @@ export default function SiteNav() {
               <div style={{ opacity: 0.75, fontSize: 13 }}>No regions yet</div>
             ) : (
               <div
-                style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 8,
+                }}
               >
                 {regions.map((r) => (
                   <Link
@@ -338,7 +341,9 @@ export default function SiteNav() {
           </div>
         )}
 
-        <div style={{ opacity: 0.6, fontSize: 11, marginTop: 16 }}>{dateStr}</div>
+        <div style={{ opacity: 0.6, fontSize: 11, marginTop: 16 }}>
+          {dateStr}
+        </div>
       </div>
     </div>
   );
@@ -374,16 +379,17 @@ export default function SiteNav() {
         boxSizing: "border-box",
       };
 
+  // ✅ UPDATED: smaller logo text (desktop + mobile)
   const logoStyle = !isMobile
     ? {
         display: "inline-block",
         textDecoration: "none",
         color: "#fff",
         fontWeight: 900,
-        fontSize: condensed ? 26 : "clamp(22px, 5vw, 40px)",
+        fontSize: condensed ? 20 : "clamp(18px, 3.2vw, 30px)",
         letterSpacing: "0.02em",
         textTransform: "capitalize",
-        lineHeight: 1.1,
+        lineHeight: 1.05,
         transition: "font-size 180ms ease",
       }
     : {
@@ -391,32 +397,33 @@ export default function SiteNav() {
         textDecoration: "none",
         color: "#fff",
         fontWeight: 900,
-        fontSize: 26,
+        fontSize: 20,
         letterSpacing: "0.02em",
         textTransform: "capitalize",
-        lineHeight: 1.1,
+        lineHeight: 1.05,
       };
 
+  // ✅ UPDATED: smaller badge (padding/border/shadow reduced)
   const logoBadgeCommon = {
     background: "linear-gradient(130deg, #008080 0%, #00aaaaff 100%)",
     color: "#fff",
-    border: "3px solid #000",
-    padding: "6px 14px",
+    border: "2px solid #000",
+    padding: "4px 10px",
     borderRadius: "1px",
     display: "inline-block",
-    boxShadow: "8px 11px 0 #000",
+    boxShadow: "6px 8px 0 #000",
   };
 
   // ✅ wrapper creates empty left/right space for vertical banners at top
-  const railWrapperStyle = !isMobile && isWideForRails
-  ? {
-      width: "100%",
-      paddingLeft: RAIL_GUTTER + NAV_EXTRA_GUTTER,
-      paddingRight: RAIL_GUTTER + NAV_EXTRA_GUTTER,
-      boxSizing: "border-box",
-    }
-  : { width: "100%" };
-
+  const railWrapperStyle =
+    !isMobile && isWideForRails
+      ? {
+          width: "100%",
+          paddingLeft: RAIL_GUTTER + NAV_EXTRA_GUTTER,
+          paddingRight: RAIL_GUTTER + NAV_EXTRA_GUTTER,
+          boxSizing: "border-box",
+        }
+      : { width: "100%" };
 
   return (
     <header style={{ position: "sticky", top: 0, zIndex: 50 }}>
@@ -457,8 +464,16 @@ export default function SiteNav() {
                 />
 
                 {/* Logo */}
-                <div style={{ textAlign: "center", minWidth: 0 }}>
-                  <div style={{ position: "relative", display: "inline-block" }}>
+                {/* Logo */}
+<div style={{ textAlign: "center", minWidth: 0 }}>
+  <div
+    style={{
+      position: "relative",
+      display: "inline-block",
+      transform: "translateX(-135px)", // ✅ shift left (change -40px to what you want)
+    }}
+  >
+
                     <Link
                       to="/"
                       aria-label="The Timely Voice — Home"
@@ -472,17 +487,18 @@ export default function SiteNav() {
                       The Timely Voice
                     </Link>
 
+                    {/* ✅ UPDATED: smaller Google News badge */}
                     <div
                       style={{
                         position: "absolute",
-                        right: "-48px",
+                        right: "-38px",
                         top: "70%",
                         transform: "translateY(-50%) rotate(3deg)",
                         background: "#ffffff",
-                        borderRadius: "10px",
-                        border: "3px solid #000",
-                        boxShadow: "6px 8px 0 #000",
-                        padding: "4px",
+                        borderRadius: "8px",
+                        border: "2px solid #000",
+                        boxShadow: "5px 6px 0 #000",
+                        padding: "3px",
                         zIndex: 3,
                       }}
                     >
@@ -491,7 +507,7 @@ export default function SiteNav() {
                         alt="Google News"
                         style={{
                           display: "block",
-                          width: "45px",
+                          width: "34px",
                           height: "auto",
                           pointerEvents: "none",
                           userSelect: "none",
@@ -502,7 +518,50 @@ export default function SiteNav() {
                 </div>
 
                 {/* RIGHT AREA */}
-                <div style={{ display: "flex", justifyContent: "flex-end" }} />
+               {/* RIGHT AREA – Languages (inactive for now) */}
+              {/* RIGHT AREA – Languages (inactive for now) */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-start", // 👈 pull closer to logo
+                  gap: 8,                        // 👈 tighter spacing
+                  marginLeft: "-94px",           // 👈 IMPORTANT: brings block closer
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {/* Vertical separator */}
+                <span
+                  style={{
+                    width: "1px",
+                    height: "18px",              // 👈 shorter line
+                    background: "rgba(255,255,255,0.5)", // 👈 lighter line
+                    display: "inline-block",
+                  }}
+                />
+
+                {/* Languages */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,                     // 👈 closer words
+                    fontSize: 12,                // 👈 slightly smaller
+                    fontWeight: 500,             // 👈 MUCH less bold
+                    letterSpacing: "0.04em",     // 👈 reduced spacing
+                    textTransform: "uppercase",
+                    color: "rgba(255,255,255,0.75)", // 👈 softer
+                    cursor: "default",
+                    userSelect: "none",
+                  }}
+                >
+                  <span>English</span>
+                  <span>Hindi</span>
+                  <span>Punjabi</span>
+                </div>
+              </div>
+
+
               </div>
             ) : (
               <div style={topGridStyle}>
@@ -540,17 +599,18 @@ export default function SiteNav() {
                       The Timely Voice
                     </Link>
 
+                    {/* ✅ UPDATED: smaller Google News badge (mobile) */}
                     <div
                       style={{
                         position: "absolute",
-                        right: "-38px",
+                        right: "-32px",
                         top: "70%",
                         transform: "translateY(-50%) rotate(3deg)",
                         background: "#ffffff",
-                        borderRadius: "10px",
-                        border: "3px solid #000",
-                        boxShadow: "6px 8px 0 #000",
-                        padding: "4px",
+                        borderRadius: "8px",
+                        border: "2px solid #000",
+                        boxShadow: "5px 6px 0 #000",
+                        padding: "3px",
                         zIndex: 3,
                       }}
                     >
@@ -559,7 +619,7 @@ export default function SiteNav() {
                         alt="Google News"
                         style={{
                           display: "block",
-                          width: "36px",
+                          width: "28px",
                           height: "auto",
                           pointerEvents: "none",
                           userSelect: "none",
@@ -596,7 +656,12 @@ export default function SiteNav() {
                 borderBottom: "1px solid rgba(0,0,0,0.06)",
               }}
             >
-              <div style={{ ...container, padding: isMobile ? "8px 8px" : "0 12px" }} />
+              <div
+                style={{
+                  ...container,
+                  padding: isMobile ? "8px 8px" : "0 12px",
+                }}
+              />
             </div>
           ) : null}
 

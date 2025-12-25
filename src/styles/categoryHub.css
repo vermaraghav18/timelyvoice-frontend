@@ -1,0 +1,553 @@
+/* frontend/src/styles/categoryHub.css */
+
+/* Full-page “modern newsroom” blue background */
+.hubPage {
+  min-height: 100vh;
+  padding: 18px 0 48px;
+  background: radial-gradient(
+    1200px 700px at 50% 0%,
+    #143b79 0%,
+    #0b2a5a 35%,
+    #061a3a 70%,
+    #03102a 100%
+  );
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* Text helpers */
+.hubLink,
+.hubBreadcrumbLink {
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: none;
+}
+.hubLink:hover,
+.hubBreadcrumbLink:hover {
+  text-decoration: underline;
+}
+
+.hubLoading,
+.hubMuted {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.hubTopBlock {
+  margin: 0 0 14px;
+}
+
+/* Tabs */
+.hubTabs {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
+  padding-top: 12px;
+}
+
+.hubTab {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.2px;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.hubTab:hover {
+  color: #fff;
+}
+.hubTab.isActive {
+  color: #fff;
+  border-bottom-color: rgba(255, 255, 255, 0.9);
+}
+
+/* Tabs when header is removed */
+.hubTabsOnly {
+  margin: 8px 0 18px;
+  border-top: none;
+  padding-top: 0;
+}
+
+/* Top grid */
+.hubTopGrid {
+  display: grid;
+  grid-template-columns: 1.35fr 0.9fr 0.75fr;
+  gap: 16px;
+  align-items: start;
+  margin: 16px 0 18px;
+}
+
+@media (max-width: 980px) {
+  .hubTopGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Hero */
+.hubHeroMedia {
+  position: relative;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.18);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.22);
+}
+
+.hubHeroImg {
+  width: 100%;
+  height: 320px;
+  object-fit: cover;
+  display: block;
+  filter: saturate(1.05);
+}
+
+@media (max-width: 720px) {
+  .hubHeroImg {
+    height: 240px;
+  }
+}
+
+.hubHeroOverlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 14px 14px 12px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.10));
+}
+
+.hubPill {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  padding: 3px 8px;
+  background: rgba(29, 154, 142, 0.88);
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.hubHeroTitle {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.18;
+  color: #fff;
+}
+
+.hubHeroMeta {
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* Headlines list (middle) */
+.hubHeadlines {
+  padding: 8px 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.10);
+  border-right: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+@media (max-width: 980px) {
+  .hubHeadlines {
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.10);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  }
+}
+
+.hubHeadlinesList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.hubHeadlinesItem {
+  padding-left: 14px;
+  position: relative;
+}
+
+.hubHeadlinesItem::before {
+  content: "■";
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0.85;
+  font-size: 10px;
+  transform: translateY(5px);
+}
+
+.hubHeadlinesLink {
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.35;
+}
+.hubHeadlinesLink:hover {
+  text-decoration: underline;
+}
+
+.hubPagerMock {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+  opacity: 0.7;
+}
+
+.hubPagerBtn {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
+/* Right column */
+.hubRightSectionTitle {
+  margin: 12px 0 10px;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+  color: rgba(255, 255, 255, 0.92);
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
+  padding-top: 10px;
+}
+
+.hubMoreTopGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* Mini cards */
+.hubMiniCard {
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.hubMiniCardLink {
+  display: grid;
+  grid-template-columns: 1fr;
+  text-decoration: none;
+  color: inherit;
+}
+
+.hubMiniImg {
+  width: 100%;
+  height: 92px;
+  object-fit: cover;
+  display: block;
+}
+
+.hubMiniText {
+  padding: 8px 8px 10px;
+}
+
+.hubMiniTitle {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 500;
+}
+
+.hubMiniMeta {
+  margin-top: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+/* ================================
+   FORCE SHARP EDGES (NO RADIUS)
+   ================================ */
+.hubHeroMedia,
+.hubMiniCard,
+.hubGridCard,
+.hubRowCard,
+.hubAdSlot,
+.hubInlinePromoImg,
+.hubLoadMoreBtn,
+.hubPill,
+.hubPagerBtn,
+.hubHeroImg,
+.hubMiniImg,
+.hubGridImg,
+.hubRowThumb {
+  border-radius: 0 !important;
+}
+
+/* Section titles */
+.hubSection {
+  margin-top: 16px;
+}
+
+.hubSectionTitle {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 900;
+  color: #fff;
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
+  padding-top: 12px;
+}
+
+/* =========================================
+   ✅ FULL-WIDTH Latest News (UNDER TOP GRID)
+   - 5 cards
+   - wider cards
+   - NO slider / NO horizontal scroll
+   ========================================= */
+
+.hubHeroLatest {
+  margin-top: 8px;
+}
+
+.hubHeroLatestFull {
+  margin: 0 0 18px;
+  width: 100%;
+}
+
+.hubHeroLatestTitle {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 900;
+  color: #fff;
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
+  padding-top: 10px;
+}
+
+/* ✅ key: fixed min card width, auto wrap, no overflow */
+.hubHeroLatestGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(190px, 1fr));
+  gap: 14px;
+  width: 100%;
+  overflow: visible; /* kills slider */
+}
+
+/* card container */
+.hubGridCard {
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  width: 100%;
+}
+
+/* vertical layout inside card */
+.hubGridCardLink {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* constant thumbnail */
+.hubGridImg,
+.hubGridImgFallback {
+  width: 100%;
+  height: 130px;
+  object-fit: cover;
+  display: block;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* title + meta visible */
+.hubGridText {
+  padding: 10px 10px 12px;
+  min-width: 0;
+}
+
+.hubGridTitle {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.92);
+
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hubGridMeta {
+  margin-top: 8px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+/* responsive: wrap to fewer columns smoothly */
+@media (max-width: 1180px) {
+  .hubHeroLatestGrid {
+    grid-template-columns: repeat(3, minmax(200px, 1fr));
+  }
+}
+@media (max-width: 880px) {
+  .hubHeroLatestGrid {
+    grid-template-columns: repeat(2, minmax(200px, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .hubHeroLatestGrid {
+    grid-template-columns: 1fr;
+  }
+  .hubGridImg,
+  .hubGridImgFallback {
+    height: 110px;
+  }
+}
+
+/* Feed rows */
+.hubFeed {
+  display: grid;
+  gap: 10px;
+}
+
+.hubRowCard {
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  padding: 10px;
+}
+
+.hubRowInner {
+  display: grid;
+  grid-template-columns: 1fr 110px;
+  gap: 10px;
+  align-items: center;
+}
+
+@media (max-width: 520px) {
+  .hubRowInner {
+    grid-template-columns: 1fr 96px;
+  }
+}
+
+.hubRowTitle {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.25;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.hubRowTitleLink {
+  text-decoration: none;
+  color: inherit;
+}
+
+.hubMeta {
+  margin-top: 8px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.72);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.hubMetaCat {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.hubMetaCat:hover {
+  text-decoration: underline;
+}
+
+.hubMetaDot {
+  opacity: 0.8;
+}
+
+.hubRowThumb {
+  width: 100%;
+  height: 74px;
+  object-fit: cover;
+  display: block;
+}
+
+@media (max-width: 520px) {
+  .hubRowThumb {
+    height: 64px;
+  }
+}
+
+/* Inline promo */
+.hubInlinePromo {
+  width: 100%;
+  margin: 12px 0 10px;
+  line-height: 0;
+}
+
+.hubInlinePromoLink {
+  display: block;
+}
+
+.hubInlinePromoImg {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+/* Ad slot styling */
+.hubAdSlot {
+  margin-top: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.14);
+  overflow: hidden;
+}
+
+.hubAdSlotLabel {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  padding: 10px 10px 6px;
+  color: rgba(255, 255, 255, 0.70);
+}
+
+.hubAdSlotInner {
+  padding: 6px 10px 12px;
+  display: flex;
+  justify-content: center;
+}
+
+/* Load more */
+.hubLoadMoreWrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.hubLoadMoreBtn {
+  background: rgba(29, 154, 142, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-weight: 900;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.hubLoadMoreBtn:hover {
+  background: rgba(29, 154, 142, 0.95);
+}
+
+/* ✅ Reserve space for the fixed left/right promo rails on wide screens (DO NOT TOUCH rails) */
+@media (min-width: 1280px) {
+  .hubPage {
+    padding-left: 145px;
+    padding-right: 145px;
+  }
+}
+
+/* tighten gap between SiteNav and category content */
+.category-container {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+.hubPage {
+  padding-top: 1px !important; /* change to 0 if you want zero gap */
+}

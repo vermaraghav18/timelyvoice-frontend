@@ -3,11 +3,18 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { api } from "../../App.jsx";
 import { upsertTag, removeManagedHeadTags } from "../../lib/seoHead.js";
+import { ensureRenderableImage } from "../../lib/images.js";
+
+// ✅ AdSense helper (same as TopNews)
+import { pushAd } from "../../lib/adsense.js";
 
 import SiteNav from "../../components/SiteNav.jsx";
 import SiteFooter from "../../components/SiteFooter.jsx";
-import "../public/TopNews.css";
+import "../public/TopNews.css"; // ✅ reuse the same styling
+
 import SectionRenderer from "../../components/sections/SectionRenderer.jsx";
+
+const FALLBACK_HERO_IMAGE = "/tv-default-hero.jpg";
 
 /* ---------- helpers ---------- */
 const normPath = (p = "") => String(p).trim().replace(/\/+$/, "") || "/";
@@ -46,6 +53,7 @@ const CAT_COLORS = {
 function articleHref(slug) {
   if (!slug) return "#";
   if (/^https?:\/\//i.test(slug)) return slug;
+  if (slug.startsWith("/article/")) return slug;
   return `/article/${slug}`;
 }
 
@@ -64,105 +72,167 @@ function getCategoryLabel(article, fallback) {
   return fallback;
 }
 
+/* ---------- Cloudinary optimizer (same as TopNews) ---------- */
+function optimizeCloudinary(url, width = 520) {
+  if (!url || !url.includes("/upload/")) return url;
+  return url.replace("/upload/", `/upload/f_auto,q_auto,w_${width}/`);
+}
+
 /* =========================================================
-   ✅ Google AdSense (same approach as CategoryPage.jsx)
+   ✅ TOPNEWS STYLE ADS + PROMO BANNERS (replicated)
    ========================================================= */
+
+/* ---------- AdSense (TopNews in-feed) ---------- */
 const ADS_CLIENT = "ca-pub-8472487092329023";
+const ADS_SLOT_INFEED_DESKTOP = "8428632191"; // TopNews InFeed Desktop
+const ADS_SLOT_INFEED_MOBILE = "6748719010"; // TopNews InFeed Mobile
 
-// In-feed slots (your existing)
-const ADS_SLOT_MAIN = "3149743917";
-const ADS_SLOT_SECOND = "3149743917";
-const ADS_SLOT_FLUID_KEY = "1442744724";
-const ADS_SLOT_IN_ARTICLE = "9569163673";
-const ADS_SLOT_AUTORELAXED = "2545424475";
+/* ---------- Promo Rail Banner (Left/Right) ---------- */
+const PROMO_RAIL_IMG = "/banners/advertise-with-us-rail-120x700.png";
+const PROMO_RAIL_TO_EMAIL =
+  "https://mail.google.com/mail/?view=cm&fs=1&to=knotshorts1@gmail.com&su=Advertise%20With%20Us";
 
-// ✅ NEW: desktop rails (vertical)
-const ADS_SLOT_DESKTOP_LEFT_RAIL = "7102575252";
-const ADS_SLOT_DESKTOP_RIGHT_RAIL = "4599700848";
+/* ---------- Inline promo banner ---------- */
+const PROMO_INLINE_IMG = "/banners/advertise-with-us-inline.png";
+const PROMO_INLINE_TO_EMAIL = PROMO_RAIL_TO_EMAIL;
 
-function useAdsPush(deps = []) {
+/* Rails fixed settings */
+const RAIL_WIDTH = 160;
+const RAIL_HEIGHT = 635;
+const RAIL_TOP_OFFSET = 0;
+const RIGHT_RAIL_INSET = 10;
+
+/* Load AdSense script once (safe in SPA) */
+function ensureAdsenseScript(client) {
+  if (typeof document === "undefined") return;
+
+  const src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`;
+  const exists = Array.from(document.scripts).some((s) => s.src === src);
+  if (exists) return;
+
+  const s = document.createElement("script");
+  s.async = true;
+  s.src = src;
+  s.crossOrigin = "anonymous";
+  document.head.appendChild(s);
+}
+
+function useIsMobile(breakpointPx = 720) {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia?.(`(max-width: ${breakpointPx}px)`)?.matches ?? false;
+  });
+
   useEffect(() => {
-    try {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch {}
+    if (typeof window === "undefined" || !window.matchMedia) return;
+
+    const mq = window.matchMedia(`(max-width: ${breakpointPx}px)`);
+    const onChange = () => setIsMobile(mq.matches);
+
+    setIsMobile(mq.matches);
+
+    if (mq.addEventListener) mq.addEventListener("change", onChange);
+    else mq.addListener(onChange);
+
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener("change", onChange);
+      else mq.removeListener(onChange);
+    };
+  }, [breakpointPx]);
+
+  return isMobile;
+}
+
+/* ✅ In-feed AdSense block (between cards) */
+function InFeedAd() {
+  const isMobile = useIsMobile(720);
+  const slot = isMobile ? ADS_SLOT_INFEED_MOBILE : ADS_SLOT_INFEED_DESKTOP;
+
+  useEffect(() => {
+    ensureAdsenseScript(ADS_CLIENT);
+
+    // SPA timing: push now + delayed push
+    pushAd();
+    const t = setTimeout(() => pushAd(), 450);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-}
+  }, [slot, isMobile]);
 
-function AdSenseAuto({ slot, style }) {
-  useAdsPush([slot]);
   return (
-    <ins
-      className="adsbygoogle"
-      style={{ display: "block", width: "100%", maxWidth: "100%", ...style }}
-      data-ad-client={ADS_CLIENT}
-      data-ad-slot={slot}
-      data-ad-format="auto"
-      data-full-width-responsive="true"
-    />
+    <li className="tn-ad">
+      <div className="tn-ad-inner" aria-label="Advertisement">
+        <ins
+          className="adsbygoogle"
+          style={{ display: "block" }}
+          data-ad-client={ADS_CLIENT}
+          data-ad-slot={slot}
+          data-ad-format="auto"
+          data-full-width-responsive="true"
+        />
+      </div>
+    </li>
   );
 }
 
-function AdSenseFluidKey({ style }) {
-  useAdsPush([]);
+/* ✅ Inline promo banner component */
+function PromoInlineBanner() {
   return (
-    <ins
-      className="adsbygoogle"
-      style={{ display: "block", ...style }}
-      data-ad-format="fluid"
-      data-ad-layout-key="-ge-1b-1q-el+13l"
-      data-ad-client={ADS_CLIENT}
-      data-ad-slot={ADS_SLOT_FLUID_KEY}
-    />
+    <li className="tn-promo" aria-label="promo banner">
+      <a
+        href={PROMO_INLINE_TO_EMAIL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="tn-promo-link"
+        aria-label="Advertise with us - email"
+      >
+        <img
+          src={PROMO_INLINE_IMG}
+          alt="Advertise with us"
+          className="tn-promo-img"
+          loading="lazy"
+          decoding="async"
+        />
+      </a>
+    </li>
   );
 }
 
-function AdSenseInArticle({ style }) {
-  useAdsPush([]);
+/* ✅ Fixed promo rails */
+function PromoRailFixed({ side = "left" }) {
   return (
-    <ins
-      className="adsbygoogle"
-      style={{ display: "block", textAlign: "center", ...style }}
-      data-ad-layout="in-article"
-      data-ad-format="fluid"
-      data-ad-client={ADS_CLIENT}
-      data-ad-slot={ADS_SLOT_IN_ARTICLE}
-    />
+    <div
+      style={{
+        position: "fixed",
+        top: RAIL_TOP_OFFSET,
+        [side]: side === "right" ? RIGHT_RAIL_INSET : -5,
+        width: RAIL_WIDTH,
+        height: RAIL_HEIGHT,
+        zIndex: 9999,
+      }}
+      aria-label={`${side} promo rail`}
+    >
+      <a
+        href={PROMO_RAIL_TO_EMAIL}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display: "block", width: RAIL_WIDTH, height: RAIL_HEIGHT }}
+        aria-label="Advertise with us - email"
+      >
+        <img
+          src={PROMO_RAIL_IMG}
+          alt="Advertise with us"
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "block",
+            objectFit: "contain",
+          }}
+          loading="lazy"
+          decoding="async"
+        />
+      </a>
+    </div>
   );
-}
-
-function AdSenseAutoRelaxed({ style }) {
-  useAdsPush([]);
-  return (
-    <ins
-      className="adsbygoogle"
-      style={{ display: "block", ...style }}
-      data-ad-format="autorelaxed"
-      data-ad-client={ADS_CLIENT}
-      data-ad-slot={ADS_SLOT_AUTORELAXED}
-    />
-  );
-}
-
-// ✅ Rail units: keep responsive but constrain width via container
-function AdSenseRail({ slot }) {
-  useAdsPush([slot]);
-  return (
-    <ins
-      className="adsbygoogle"
-      style={{ display: "block", width: "100%" }}
-      data-ad-client={ADS_CLIENT}
-      data-ad-slot={slot}
-      data-ad-format="auto"
-      data-full-width-responsive="true"
-    />
-  );
-}
-
-// Insert ads: after 3rd, 8th, 13th items
-function shouldShowAdAtIndex(idx0) {
-  const pos = idx0 + 1;
-  return [3, 8, 13].includes(pos);
 }
 
 /* ---------- layout styles ---------- */
@@ -175,24 +245,8 @@ const pageWrap = {
   marginBottom: 40,
 };
 
-const gridWrap = {
-  width: "100%",
-  maxWidth: 1200,
-  padding: "0 12px",
-  display: "grid",
-  gridTemplateColumns: "260px minmax(0, 1fr) 260px",
-  gap: 16,
-};
-
-const singleColWrap = { width: "100%", maxWidth: 1200, padding: "0 12px" };
-
-const railCol = { minWidth: 0 };
-const railSticky = {
-  position: "sticky",
-  top: 88, // below nav
-};
-
-const mainCol = { minWidth: 0 };
+// ✅ single column like TopNews stage
+const singleColWrap = { width: "100%", maxWidth: 1080, padding: "0 12px" };
 
 /* ---------- PAGE ---------- */
 export default function FinanceCategoryPage({
@@ -207,39 +261,24 @@ export default function FinanceCategoryPage({
   const [err, setErr] = useState("");
   const [pageSections, setPageSections] = useState([]);
 
-  const [isMobile, setIsMobile] = useState(() =>
+  // ✅ show rails only if enough viewport width
+  const [showRails, setShowRails] = useState(() =>
     typeof window !== "undefined"
-      ? window.matchMedia("(max-width: 720px)").matches
-      : false
-  );
-
-  const [isNarrow, setIsNarrow] = useState(() =>
-    typeof window !== "undefined"
-      ? window.matchMedia("(max-width: 1100px)").matches
+      ? window.matchMedia("(min-width: 1280px)").matches
       : false
   );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(min-width: 1280px)");
+    const onChange = (e) => setShowRails(e.matches);
 
-    const mqMobile = window.matchMedia("(max-width: 720px)");
-    const mqNarrow = window.matchMedia("(max-width: 1100px)");
-
-    const onMobile = (e) => setIsMobile(e.matches);
-    const onNarrow = (e) => setIsNarrow(e.matches);
-
-    mqMobile.addEventListener?.("change", onMobile);
-    mqMobile.addListener?.(onMobile);
-
-    mqNarrow.addEventListener?.("change", onNarrow);
-    mqNarrow.addListener?.(onNarrow);
+    mq.addEventListener?.("change", onChange);
+    mq.addListener?.(onChange);
 
     return () => {
-      mqMobile.removeEventListener?.("change", onMobile);
-      mqMobile.removeListener?.(onMobile);
-
-      mqNarrow.removeEventListener?.("change", onNarrow);
-      mqNarrow.removeListener?.(onNarrow);
+      mq.removeEventListener?.("change", onChange);
+      mq.removeListener?.(onChange);
     };
   }, []);
 
@@ -259,7 +298,7 @@ export default function FinanceCategoryPage({
     if (canonical) upsertTag("link", { rel: "canonical", href: canonical });
   }, [canonical, displayName]);
 
-  /* ---------- FETCH ARTICLES (PUBLIC CATEGORY ENDPOINT) ---------- */
+  /* ---------- FETCH ARTICLES ---------- */
   useEffect(() => {
     let alive = true;
 
@@ -274,10 +313,7 @@ export default function FinanceCategoryPage({
       try {
         const r = await api.get(
           `/public/categories/${encodeURIComponent(effective)}/articles`,
-          {
-            params: { limit: 60 },
-            validateStatus: () => true,
-          }
+          { params: { limit: 60 }, validateStatus: () => true }
         );
 
         if (!alive) return;
@@ -333,36 +369,78 @@ export default function FinanceCategoryPage({
     };
   }, [pagePath]);
 
-  const isDesktopRails = !isMobile && !isNarrow;
+  // ✅ TopNews rules
+  const AD_EVERY = 5;
+  const PROMO_EVERY = 7;
 
-  const renderList = () => (
+  const listWithAds = useMemo(() => {
+    const out = [];
+    for (let i = 0; i < items.length; i++) {
+      out.push({ kind: "article", item: items[i], idx: i });
+
+      const notLast = i !== items.length - 1;
+
+      const isAfterAdN = (i + 1) % AD_EVERY === 0;
+      if (isAfterAdN && notLast) out.push({ kind: "ad", idx: i });
+
+      const isAfterPromoN = (i + 1) % PROMO_EVERY === 0;
+      if (isAfterPromoN && notLast) out.push({ kind: "promo", idx: i });
+    }
+    return out;
+  }, [items]);
+
+  return (
     <>
-      {/* ✅ Optional: top ad under heading */}
-      {!loading && !err && (
-        <div style={{ margin: "10px 0 14px", textAlign: "center" }}>
-          <AdSenseAuto slot={ADS_SLOT_MAIN} />
-        </div>
+      <SiteNav />
+
+      {/* ✅ Fixed promo rails like TopNews */}
+      {showRails && (
+        <>
+          <PromoRailFixed side="left" />
+          <PromoRailFixed side="right" />
+        </>
       )}
 
-      {loading && <div className="tn-status">Loading…</div>}
-      {err && <div className="tn-error">{err}</div>}
+      <div style={pageWrap}>
+        <div style={singleColWrap}>
+          <main className="container">
+            {pageSections.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                {pageSections.map((sec) => (
+                  <div
+                    key={sec._id || sec.id || sec.slug}
+                    style={{ marginBottom: 12 }}
+                  >
+                    <SectionRenderer section={sec} />
+                  </div>
+                ))}
+              </div>
+            )}
 
-      {!loading && !err && (
-        <>
-          {items.length === 0 ? (
-            <div className="tn-status">
-              No {displayName.toLowerCase()} stories yet.
-            </div>
-          ) : (
-            <ul className="tn-list">
-              {items.map((a, idx) => {
-                const href = articleHref(a.slug);
-                const catLabel = getCategoryLabel(a, displayName);
-                const pillBg = CAT_COLORS[catLabel] || "#4B5563";
-                const summary = a.summary || a.description || a.excerpt || "";
+            {loading && <div className="tn-status">Loading…</div>}
+            {err && <div className="tn-error">{err}</div>}
 
-                return (
-                  <div key={(a._id || a.id || a.slug || idx) + "-wrap"}>
+            {!loading && !err && (
+              <ul className="tn-list">
+                {listWithAds.map((row) => {
+                  if (row.kind === "ad") return <InFeedAd key={`ad-${row.idx}`} />;
+                  if (row.kind === "promo")
+                    return <PromoInlineBanner key={`promo-${row.idx}`} />;
+
+                  const a = row.item;
+                  const href = articleHref(a.slug);
+
+                  const catLabel = getCategoryLabel(a, displayName);
+                  const pillBg = CAT_COLORS[catLabel] || "#4B5563";
+                  const summary = a.summary || a.description || a.excerpt || "";
+
+                  const rawImage = ensureRenderableImage(a);
+                  const thumbSrc = optimizeCloudinary(
+                    rawImage || FALLBACK_HERO_IMAGE,
+                    520
+                  );
+
+                  return (
                     <li className="tn-item" key={a._id || a.id || a.slug}>
                       <div className="tn-left">
                         <Link to={href} className="tn-item-title">
@@ -390,10 +468,7 @@ export default function FinanceCategoryPage({
                           <span className="tn-source">
                             The Timely Voice • Updated{" "}
                             {timeAgo(
-                              a.updatedAt ||
-                                a.publishedAt ||
-                                a.publishAt ||
-                                a.createdAt
+                              a.updatedAt || a.publishedAt || a.publishAt || a.createdAt
                             )}
                           </span>
                         </div>
@@ -406,129 +481,23 @@ export default function FinanceCategoryPage({
                           </span>
                         </span>
 
-                        {a.imageUrl ? (
-                          <img
-                            src={a.imageUrl}
-                            alt={a.imageAlt || a.title || ""}
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="tn-thumb ph" />
-                        )}
+                        <img
+                          src={thumbSrc}
+                          alt={a.imageAlt || a.title || ""}
+                          loading="lazy"
+                          decoding="async"
+                          onError={(e) => {
+                            e.currentTarget.src = FALLBACK_HERO_IMAGE;
+                          }}
+                        />
                       </Link>
                     </li>
-
-                    {/* ✅ In-feed ads */}
-                    {shouldShowAdAtIndex(idx) && (
-                      <>
-                        {idx + 1 === 3 && (
-                          <div style={{ margin: "12px 0", textAlign: "center" }}>
-                            <AdSenseInArticle />
-                          </div>
-                        )}
-
-                        {idx + 1 === 8 && (
-                          <div style={{ margin: "12px 0" }}>
-                            <AdSenseFluidKey />
-                          </div>
-                        )}
-
-                        {idx + 1 === 13 && (
-                          <div style={{ margin: "12px 0", textAlign: "center" }}>
-                            <AdSenseAuto slot={ADS_SLOT_SECOND} />
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </ul>
-          )}
-
-          {/* ✅ Bottom relaxed ad */}
-          {items.length >= 6 && (
-            <div style={{ margin: "16px 0" }}>
-              <AdSenseAutoRelaxed />
-            </div>
-          )}
-        </>
-      )}
-    </>
-  );
-
-  return (
-    <>
-      <SiteNav />
-
-      <div style={pageWrap}>
-        {/* ====== Desktop (3 columns with rails) ====== */}
-        {isDesktopRails ? (
-          <div style={gridWrap}>
-            {/* LEFT rail */}
-            <aside style={railCol}>
-              <div style={railSticky}>
-                <div style={{ marginBottom: 12 }}>
-                  <AdSenseRail slot={ADS_SLOT_DESKTOP_LEFT_RAIL} />
-                </div>
-
-                {/* Optional: show some page sections in rail if you want later */}
-                {/* <SectionRenderer section={...} /> */}
-              </div>
-            </aside>
-
-            {/* MAIN */}
-            <main style={mainCol} className="container">
-              <h1 className="tn-title">{displayName}</h1>
-
-              {pageSections.length > 0 && (
-                <div style={{ marginBottom: 12 }}>
-                  {pageSections.map((sec) => (
-                    <div
-                      key={sec._id || sec.id || sec.slug}
-                      style={{ marginBottom: 12 }}
-                    >
-                      <SectionRenderer section={sec} />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {renderList()}
-            </main>
-
-            {/* RIGHT rail */}
-            <aside style={railCol}>
-              <div style={railSticky}>
-                <div style={{ marginBottom: 12 }}>
-                  <AdSenseRail slot={ADS_SLOT_DESKTOP_RIGHT_RAIL} />
-                </div>
-              </div>
-            </aside>
-          </div>
-        ) : (
-          /* ====== Mobile/Narrow: single column ====== */
-          <div style={singleColWrap}>
-            <main className="container">
-              <h1 className="tn-title">{displayName}</h1>
-
-              {pageSections.length > 0 && (
-                <div style={{ marginBottom: 12 }}>
-                  {pageSections.map((sec) => (
-                    <div
-                      key={sec._id || sec.id || sec.slug}
-                      style={{ marginBottom: 12 }}
-                    >
-                      <SectionRenderer section={sec} />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {renderList()}
-            </main>
-          </div>
-        )}
+                  );
+                })}
+              </ul>
+            )}
+          </main>
+        </div>
       </div>
 
       <SiteFooter />

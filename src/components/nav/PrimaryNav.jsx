@@ -182,23 +182,13 @@ export default function PrimaryNav({ containerStyle }) {
     const activeEl = activeRef.current;
     if (!scroller) return;
 
-    if (isMobile()) {
-      if (activeEl?.scrollIntoView) {
-        activeEl.scrollIntoView({
-          behavior: "smooth",
-          inline: "center",
-          block: "nearest",
-        });
-      }
-      return;
-    }
-
-    if (activeEl) {
-      const elRect = activeEl.getBoundingClientRect();
-      const scRect = scroller.getBoundingClientRect();
-      const delta =
-        (elRect.left + elRect.right) / 2 - (scRect.left + scRect.right) / 2;
-      scroller.scrollBy({ left: delta, behavior: "smooth" });
+    // ✅ ONLY auto-center on MOBILE (desktop should not auto-scroll or it hides "Home")
+    if (isMobile() && activeEl?.scrollIntoView) {
+      activeEl.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
     }
   }, [pathname]);
 
@@ -228,9 +218,10 @@ export default function PrimaryNav({ containerStyle }) {
           .primary-sep { display: none; }
         }
 
+        /* ✅ FIX: do NOT center on desktop when overflow exists (this hides "Home") */
         @media (min-width: 769px) {
-          .nav-scroller { justify-content: center !important; }
-          .primary-list { justify-content: center !important; }
+          .nav-scroller { justify-content: flex-start !important; }
+          .primary-list { justify-content: flex-start !important; }
         }
       `}</style>
 
