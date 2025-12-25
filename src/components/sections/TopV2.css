@@ -1,32 +1,32 @@
 /* Container */
 .topv2 {
   margin: 16px 0 24px;
-  padding-bottom: 24px; /* 4) gap below the cards row */
-  color: #fff;          /* 1) make all text white by default */
+  padding-bottom: 24px;
+  color: #fff;
 }
 
-.topv2 a {             /* ensure links are white and not underlined */
+.topv2 a {
   color: #fff;
   text-decoration: none;
 }
 
 .topv2 a:hover,
 .topv2 a:focus {
-  text-decoration: none; /* 3) no underline on hover/focus anywhere */
+  text-decoration: none;
 }
 
 .topv2-title {
   font-weight: 800;
   font-size: clamp(18px, 2.4vw, 22px);
   line-height: 1.25;
-  margin: 0 0 18px; /* increased to fit shadow */
+  margin: 0 0 18px;
   color: #fff;
 }
 
-/* Title badge (same style as SiteNav teal box) */
+/* Title badge */
 .topv2-title-badge {
   display: inline-block;
-  background: linear-gradient(130deg, #008080 0%, #00AAAA 100%);
+  background: linear-gradient(130deg, #008080 0%, #00aaaa 100%);
   color: #fff;
   border: 3px solid #000;
   padding: 6px 14px;
@@ -46,8 +46,8 @@
   display: grid;
   grid-template-columns: 1.2fr 0.8fr;
   gap: 16px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 1px;
   padding: 16px;
 }
@@ -56,11 +56,12 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0; /* ✅ prevents overflow */
 }
 
 .topv2-updated {
   font-size: 11px;
-  letter-spacing: .06em;
+  letter-spacing: 0.06em;
   font-weight: 700;
   color: #fff;
 }
@@ -91,16 +92,22 @@
   position: relative;
 }
 
-.topv2-img {
-  width: 100%;
+/* ✅ hero image should fill the right column nicely */
+.topv2-hero-media .topv2-img {
   height: 100%;
   max-height: 420px;
   object-fit: cover;
+}
+
+/* base img */
+.topv2-img {
+  width: 100%;
   display: block;
   background: #111;
   border-radius: 1px;
 }
 
+/* placeholder */
 .topv2-img.placeholder {
   min-height: 260px;
   background: linear-gradient(120deg, #2a2a2a, #1c1c1c);
@@ -112,17 +119,20 @@
   margin-top: 14px;
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(6, 1fr);
+
+  /* ✅ FIX: you want 4 cards -> 4 columns */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .topv2-card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 1px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   min-height: 100%;
+  min-width: 0;
 }
 
 .topv2-card-media {
@@ -132,10 +142,11 @@
   border-radius: 1px;
 }
 
+/* ✅ fixed card image height for consistency */
 .topv2-card-media .topv2-img {
   height: 140px;
   max-height: 140px;
-  border-radius: 1px;
+  object-fit: cover;
 }
 
 .topv2-chip {
@@ -144,21 +155,29 @@
   top: 8px;
   font-size: 11px;
   font-weight: 700;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0, 0, 0, 0.85);
   color: #fff;
   border-radius: 1px;
   padding: 4px 8px;
   pointer-events: none;
+  z-index: 2;
 }
 
 .topv2-card-title {
   display: block;
   color: #fff;
-  text-decoration: none;
   padding: 10px 12px 12px;
   font-weight: 700;
   line-height: 1.25;
   font-size: 14px;
+}
+
+/* ✅ prevent layout break when title is long */
+.topv2-card-title {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
 .topv2-card-title:hover,
@@ -169,7 +188,7 @@
 /* ---------- Responsive ---------- */
 @media (max-width: 1100px) {
   .topv2-cards {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -177,18 +196,22 @@
   .topv2-hero {
     grid-template-columns: 1fr;
   }
-  .topv2-img {
+
+  .topv2-hero-media .topv2-img {
     max-height: 360px;
   }
+
+  /* ✅ keep 2 columns at this width so it doesn't look cramped */
   .topv2-cards {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 620px) {
   .topv2-cards {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
   .topv2-card-media .topv2-img {
     height: 120px;
     max-height: 120px;

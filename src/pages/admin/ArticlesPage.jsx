@@ -169,6 +169,8 @@ export default function ArticlesPage() {
     author: "",
     body: "",
     category: "general",
+    homepagePlacement: "none",
+
 
     status: "draft",
     publishAt: "",
@@ -504,6 +506,7 @@ useEffect(() => {
       author: "",
       body: "",
       category: normalizeSlug(categories[0]?.slug) || "general",
+      homepagePlacement: "none",
 
       status: "draft",
       publishAt: toLocalInputValue(),
@@ -550,6 +553,7 @@ useEffect(() => {
   normalizeSlug(a.category?.name) ||
   normalizeSlug(a.category) ||
   "general",
+                homepagePlacement: a.homepagePlacement || "none",
 
         status: a.status || "published",
         publishAt: a.publishedAt ? toLocalInputValue(a.publishedAt) : "",
@@ -625,6 +629,7 @@ useEffect(() => {
           body: form.body,
          categorySlug: normalizeSlug(form.category) || "general",
 category: categoryNameFromSlug(categories, form.category),
+                    homepagePlacement: form.homepagePlacement || "none",
 
           status: form.status === "published" ? "published" : "draft",
           publishedAt: form.publishAt
@@ -721,6 +726,7 @@ category: categoryNameFromSlug(categories, form.category),
         body: form.body,
         categorySlug: normalizeSlug(form.category) || "general",
 category: categoryNameFromSlug(categories, form.category),
+                    homepagePlacement: form.homepagePlacement || "none",
 
         status: form.status === "published" ? "published" : "draft",
         publishedAt: form.publishAt
@@ -1209,6 +1215,11 @@ category: categoryNameFromSlug(categories, form.category),
                     saving: "idle",
                     syncOg: true,
                   };
+
+                  /* ✅ ADD THESE 2 LINES RIGHT HERE */
+  const placement = placementLabel(a.homepagePlacement);
+  const placementStyle = placementBadgeStyle(a.homepagePlacement);
+
                 const dotColor =
                   imgState.saving === "saving"
                     ? "#f59e0b"
@@ -1312,9 +1323,28 @@ category: categoryNameFromSlug(categories, form.category),
       </span>
     )}
   </div>
- <span className="status-inline" style={{ ...badge, ...statusBadge }}>
-  {a.status}
-</span>
+ <div
+  style={{
+    display: "flex",
+    gap: 6,
+    alignItems: "center",
+    flexWrap: "wrap",
+  }}
+>
+  <span className="status-inline" style={{ ...badge, ...statusBadge }}>
+    {a.status}
+  </span>
+
+  {placement ? (
+    <span
+      className="placement-inline"
+      style={{ ...badge, ...(placementStyle || {}) }}
+      title={`Homepage placement: ${placement}`}
+    >
+      {placement}
+    </span>
+  ) : null}
+</div>
 
 </div>
 
@@ -1659,11 +1689,15 @@ category: categoryNameFromSlug(categories, form.category),
                     </td>
 
                     {/* Status column (desktop only; hidden on mobile via CSS) */}
-                    <td style={td}>
-                      <span style={{ ...badge, ...statusBadge }}>
-                        {a.status}
-                      </span>
-                    </td>
+                   <td style={td}>
+  <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+    <span style={{ ...badge, ...statusBadge }}>{a.status}</span>
+    {placement ? (
+      <span style={{ ...badge, ...(placementStyle || {}) }}>{placement}</span>
+    ) : null}
+  </div>
+</td>
+
                     <td style={td}>{a.category?.name || a.category || "—"}</td>
                     <td style={td}>{fmt(a.publishedAt) || "—"}</td>
                     <td style={td}>{fmt(a.updatedAt)}</td>
@@ -1906,6 +1940,7 @@ category: categoryNameFromSlug(categories, form.category),
                   author: d.author ?? f.author,
                   category: d.category ?? f.category,
                   status: d.status ?? f.status,
+                  homepagePlacement: d.homepagePlacement ?? f.homepagePlacement,
                   publishAt: d.publishAt ?? f.publishAt,
                   imageUrl: d.imageUrl ?? f.imageUrl,
                   imagePublicId: d.imagePublicId ?? f.imagePublicId,
@@ -1985,19 +2020,34 @@ category: categoryNameFromSlug(categories, form.category),
                 <label style={lbl}>
                   Category
                  <select
-  value={normalizeSlug(form.category) || "general"}
-  onChange={(e) =>
-    setForm((f) => ({ ...f, category: normalizeSlug(e.target.value) }))
-  }
-  style={inp}
->
-  {categories.map((c) => (
-    <option key={c.slug} value={normalizeSlug(c.slug)}>
-      {c.name}
-    </option>
-  ))}
-</select>
+                  value={normalizeSlug(form.category) || "general"}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, category: normalizeSlug(e.target.value) }))
+                  }
+                  style={inp}
+                >
+                  {categories.map((c) => (
+                    <option key={c.slug} value={normalizeSlug(c.slug)}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
 
+                </label>
+                                <label style={lbl}>
+                  Homepage Placement
+                  <select
+                    value={form.homepagePlacement || "none"}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, homepagePlacement: e.target.value }))
+                    }
+                    style={inp}
+                  >
+                    <option value="none">None</option>
+                    <option value="top">Top Stories</option>
+                    <option value="latest">Latest News</option>
+                    <option value="trending">Trending News</option>
+                  </select>
                 </label>
 
                 {/* Year field – only when History category is selected */}
@@ -2502,6 +2552,61 @@ function fmt(d) {
     return String(d);
   }
 }
+
+/* ✅ PASTE THIS BLOCK RIGHT HERE (AFTER fmt, BEFORE styles) */
+function normalizePlacement(v) {
+  const s = String(v || "").trim().toLowerCase();
+
+  // accept both code values and labels
+  if (s === "top" || s === "top stories") return "top";
+  if (s === "latest" || s === "latest news") return "latest";
+  if (s === "trending" || s === "trending news") return "trending";
+
+  // treat none/empty as none
+  if (!s || s === "none" || s === "null" || s === "undefined") return "none";
+
+  return s; // fallback
+}
+
+function placementLabel(v) {
+  const p = normalizePlacement(v);
+  if (p === "top") return "Top Stories";
+  if (p === "latest") return "Latest News";
+  if (p === "trending") return "Trending News";
+  return "";
+}
+
+function placementBadgeStyle(v) {
+  const p = normalizePlacement(v);
+ if (p === "top")
+  return {
+    background: "#ff7a00",     // bright orange
+    color: "#000000",          // black text
+    borderColor: "#000000",    // black border
+    fontWeight: 800,           // bold
+    boxShadow: "3px 3px 0 #000" // solid black shadow (hard)
+  };
+
+  if (p === "latest")
+    return {
+    background: "#fbff00ff",     // bright orange
+    color: "#000000",          // black text
+    borderColor: "#000000",    // black border
+    fontWeight: 800,           // bold
+    boxShadow: "3px 3px 0 #000" // solid black shadow (hard)
+  };
+  if (p === "trending")
+   return {
+    background: "#88ff00ff",     // bright orange
+    color: "#000000",          // black text
+    borderColor: "#000000",    // black border
+    fontWeight: 800,           // bold
+    boxShadow: "3px 3px 0 #000" // solid black shadow (hard)
+  };
+  return null;
+}
+
+
 
 /* -------- styles (no Tailwind) -------- */
 const inp = {
