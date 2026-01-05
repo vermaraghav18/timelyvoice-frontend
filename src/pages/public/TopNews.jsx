@@ -1,65 +1,15 @@
 // frontend/src/pages/public/TopNews.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { cachedGet } from "../../lib/publicApi.js";
-import { upsertTag, removeManagedHeadTags } from "../../lib/seoHead.js";
 import { ensureRenderableImage } from "../../lib/images.js";
-import { pushAd } from "../../lib/adsense.js";
 
 import SiteNav from "../../components/SiteNav.jsx";
 import SiteFooter from "../../components/SiteFooter.jsx";
-import BrandMark from "../../components/BrandMark.jsx"; // ✅ NEW
 import "./TopNews.css";
 
 const FALLBACK_HERO_IMAGE = "/tv-default-hero.jpg";
-
-/* ---------- AdSense (TopNews in-feed) ---------- */
-const ADS_CLIENT = "ca-pub-8472487092329023";
-const ADS_SLOT_INFEED_DESKTOP = "8428632191";
-const ADS_SLOT_INFEED_MOBILE = "6748719010";
-
-/* ---------- Promo Rail ---------- */
-const PROMO_RAIL_IMG = "/banners/advertise-with-us-rail-120x700.png";
-const PROMO_RAIL_TO_EMAIL =
-  "https://mail.google.com/mail/?view=cm&fs=1&to=knotshorts1@gmail.com&su=Advertise%20With%20Us";
-
-const PROMO_INLINE_IMG = "/banners/advertise-with-us-inline.png";
-const PROMO_INLINE_TO_EMAIL = PROMO_RAIL_TO_EMAIL;
-
-const RAIL_WIDTH = 160;
-const RAIL_HEIGHT = 635;
-const RAIL_TOP_OFFSET = 0;
-const RIGHT_RAIL_INSET = 10;
-
-/* ---------- Category colors ---------- */
-const CAT_COLORS = {
-  World: "linear-gradient(135deg,#3B82F6,#0073ff)",
-  Politics: "linear-gradient(135deg,#F59E0B,#FBBF24)",
-  Business: "linear-gradient(135deg,#10B981,#34D399)",
-  Entertainment: "linear-gradient(135deg,#A855F7,#7700ff)",
-  Sports: "linear-gradient(135deg,#EF4444,#F87171)",
-  Health: "linear-gradient(135deg,#06B6D4,#22D3EE)",
-  Technology: "linear-gradient(135deg,#6366F1,#818CF8)",
-  Science: "linear-gradient(135deg,#14B8A6,#2DD4BF)",
-  India: "linear-gradient(135deg,#F97316,#FB923C)",
-  Opinion: "linear-gradient(135deg,#7C3AED,#2563EB)",
-  General: "linear-gradient(135deg,#000e5f,#000661)",
-};
-
-const CAT_SOLID = {
-  World: "#0073ff",
-  Politics: "#F59E0B",
-  Business: "#10B981",
-  Entertainment: "#A855F7",
-  Sports: "#EF4444",
-  Health: "#06B6D4",
-  Technology: "#6366F1",
-  Science: "#14B8A6",
-  India: "#F97316",
-  Opinion: "#7C3AED",
-  General: "#ff1919",
-};
 
 /* ---------- helpers ---------- */
 function getCategoryName(a) {
@@ -148,27 +98,14 @@ export default function TopNews() {
               {items.map((a) => {
                 const href = articleHref(a.slug);
                 const cat = getCategoryName(a);
-
-                const color =
-                  CAT_COLORS[cat] ||
-                  "linear-gradient(135deg,#4B5563 0%, #111827 100%)";
-                const solid = CAT_SOLID[cat] || "#ffffff";
-
                 const ts = bestTs(a);
+                const summary = a.summary || a.description || "";
 
                 return (
                   <li className="tn-bcard" key={a._id || a.slug}>
-                    <Link to={href} className="tn-bcard-media">
-                      <span
-                        className="tn-bcard-ribbon"
-                        style={{ background: color }}
-                      />
-                      <span
-                        className="tn-bcard-badge"
-                        style={{ background: color }}
-                      >
-                        {cat}
-                      </span>
+                    {/* ✅ IMAGE ON TOP */}
+                    <Link to={href} className="tn-bcard-media" aria-label={a.title}>
+                      <span className="tn-bcard-badge">{cat}</span>
 
                       <img
                         src={ensureRenderableImage(a) || FALLBACK_HERO_IMAGE}
@@ -180,38 +117,29 @@ export default function TopNews() {
                           e.currentTarget.src = FALLBACK_HERO_IMAGE;
                         }}
                       />
-
-                      <span className="tn-bcard-overlay" />
-
-                      <div
-                        className="tn-bcard-headline"
-                        style={{ "--tn-firstline": solid }}
-                      >
-                        {a.title}
-                      </div>
                     </Link>
 
-                    {(a.summary || a.description) && (
-                      <Link
-                        to={href}
-                        className="tn-bcard-summary"
-                        style={{ "--tn-quote": solid }}
-                      >
-                        <span className="tn-bcard-summary-text">
-                          {a.summary || a.description}
-                        </span>
-                        <span className="tn-bcard-readmore">...Read More</span>
+                    {/* ✅ TITLE BELOW IMAGE (ALL WHITE) */}
+                    <Link
+                      to={href}
+                      className="tn-bcard-title"
+                      aria-label={`Read: ${a.title}`}
+                    >
+                      {a.title}
+                    </Link>
+
+                    {/* ✅ FULL SUMMARY BELOW TITLE (NO QUOTES, NO READ MORE, NO CLAMP) */}
+                    {summary && (
+                      <Link to={href} className="tn-bcard-summary" aria-label="Open article">
+                        {summary}
                       </Link>
                     )}
 
                     <div className="tn-bcard-footer">
                       <span className="tn-bcard-time">{timeAgo(ts) || "—"}</span>
 
-                      {/* ✅ NEW: mini logo + domain together */}
-                    <span className="tn-bcard-siteWrap">
-  <BrandMark size="sm" text="timelyvoice.com" />
-</span>
-
+                      {/* ✅ Plain text instead of BrandMark */}
+                      <span className="tn-bcard-site">timelyvoice.com</span>
                     </div>
                   </li>
                 );

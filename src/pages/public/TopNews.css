@@ -89,7 +89,7 @@
 }
 
 /* =============================== */
-/*  Breaking Bulletin Card         */
+/*  Updated Top News Card          */
 /* =============================== */
 
 .tn-bcard{
@@ -109,12 +109,15 @@
   flex-direction: column;
 }
 
-/* Media */
+/* =============================== */
+/* ✅ IMAGE — REDUCED HEIGHT       */
+/* =============================== */
+
 .tn-bcard-media{
   position: relative;
-  height: 220px;
+  height: 180px;   /* ⬅️ reduced from 220px */
   overflow: hidden;
-  box-shadow: inset 0 -3px 0 #dc2626;
+  display: block;
 }
 
 .tn-bcard-img{
@@ -123,17 +126,7 @@
   object-fit: cover;
 }
 
-/* Ribbon */
-.tn-bcard-ribbon{
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 8px;
-  height: 100%;
-  z-index: 4;
-}
-
-/* Badge */
+/* Badge on image */
 .tn-bcard-badge{
   position: absolute;
   top: 10px;
@@ -145,99 +138,57 @@
   letter-spacing: 0.14em;
   color: #fff;
   text-transform: uppercase;
-  border: 1px solid rgba(0,0,0,0.55);
+
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(0,0,0,0.65);
   box-shadow: 2px 2px 0 rgba(0,0,0,0.85);
-}
-
-/* Overlay */
-.tn-bcard-overlay{
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(0,17,48,0.88) 15%,
-    rgba(0,13,29,0.45) 35%,
-    rgba(0,4,17,0) 60%
-  );
+  backdrop-filter: blur(4px);
 }
 
 /* =============================== */
-/* ✅ HEADLINE — FIXED RESPONSIVE  */
+/* Title                           */
 /* =============================== */
 
-.tn-bcard-headline{
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 16px;
-  z-index: 7;
-
+.tn-bcard-title{
+  display: block;
+  padding: 12px 14px 10px;
+  background: linear-gradient(180deg,#07162c,#050d1d);
+  color: #fff;
   font-weight: 800;
   letter-spacing: -0.01em;
+  font-size: clamp(20px, 1.9vw, 26px);
 
-  /* ✅ FIXED */
-  font-size: clamp(18px, 1.6vw, 22px);
   line-height: 1.28;
+  text-decoration: none;
 
-  color: #fff;
-  text-shadow: 0 4px 14px rgba(0,0,0,0.62);
-
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.tn-bcard-headline::first-line{
-  color: var(--tn-firstline, #fff);
+  border-top: 1px solid rgba(255,255,255,0.10);
 }
 
 /* =============================== */
-/* SUMMARY                         */
+/* Full Summary                    */
 /* =============================== */
 
 .tn-bcard-summary{
-  padding: 14px 40px 12px;
+  display: block;
+  padding: 12px 14px 14px;
   background: linear-gradient(180deg,#08172e,#050d1d);
   color: rgba(255,255,255,0.95);
   font-size: 13.5px;
   line-height: 1.7;
-  position: relative;
+  text-decoration: none;
+
+  white-space: normal;
+  overflow: visible;
 }
 
-/* Quotes */
-.tn-bcard-summary::before,
-.tn-bcard-summary::after{
-  position: absolute;
-  font-family: Georgia, serif;
-  font-size: 56px;
-  font-weight: 900;
-  color: var(--tn-quote, #fff);
-  opacity: 0.95;
-}
+/* =============================== */
+/* Footer                          */
+/* =============================== */
 
-.tn-bcard-summary::before{ content:"“"; left:12px; top:6px; }
-.tn-bcard-summary::after{ content:"”"; right:12px; bottom:6px; }
-
-.tn-bcard-summary-text{
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.tn-bcard-readmore{
-  margin-left: 6px;
-  font-weight: 800;
-  color: #fff;
-  text-decoration: underline;
-}
-
-/* Footer */
 .tn-bcard-footer{
   display: flex;
   justify-content: space-between;
-  align-items: center; /* ✅ makes logo sit perfectly centered */
+  align-items: center;
   padding: 10px 14px 12px;
   font-size: 12px;
 }
@@ -246,29 +197,23 @@
   color: #39ff14;
 }
 
-/* ✅ NEW: right side wrapper for logo + domain */
-.tn-bcard-siteWrap{
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
+.tn-bcard-site{
+  font-size: 12px;
+  font-weight: 700;
+  color: #9ca3af;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
 }
-
-
 
 /* =============================== */
 /* Mobile                          */
 /* =============================== */
 @media (max-width: 720px){
-  .tn-bcard-media{ height: 280px; }
-
-  .tn-bcard-headline{
-    font-size: 17px; /* ✅ mobile tuned */
-    bottom: 14px;
+  .tn-bcard-media{
+    height: 200px;  /* ⬅️ reduced from 280px */
   }
 
-  .tn-bcard-summary::before,
-  .tn-bcard-summary::after{
-    font-size: 50px;
+  .tn-bcard-title{
+    font-size: 17px;
   }
 }
