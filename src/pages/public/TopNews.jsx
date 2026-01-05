@@ -26,9 +26,7 @@ function articleHref(slug) {
 function parseTs(v) {
   if (!v) return 0;
 
-  // backend might send number (seconds or ms)
   if (typeof v === "number") {
-    // seconds -> ms
     if (v < 1e12) return v * 1000;
     return v;
   }
@@ -36,20 +34,17 @@ function parseTs(v) {
   const s = String(v).trim();
   if (!s) return 0;
 
-  // handle "YYYY-MM-DD HH:mm:ss" by converting to ISO-ish
   const normalized = s.includes("T") ? s : s.replace(" ", "T");
   const t = Date.parse(normalized);
-
   return Number.isFinite(t) ? t : 0;
 }
 
-/* ✅ Guard invalid/future times */
 function timeAgo(ts) {
   const t = typeof ts === "number" ? ts : parseTs(ts);
-  if (!t || !Number.isFinite(t)) return ""; // prevent 1970 huge numbers
+  if (!t || !Number.isFinite(t)) return "";
 
   const diff = Date.now() - t;
-  if (diff < 0) return "just now"; // if server clock ahead
+  if (diff < 0) return "just now";
 
   const s = Math.floor(diff / 1000);
   const m = Math.floor(s / 60);
@@ -62,7 +57,6 @@ function timeAgo(ts) {
   return "just now";
 }
 
-/* ✅ Pick the best available timestamp for the card */
 function bestTs(a) {
   return (
     parseTs(a?.publishedAt) ||
@@ -71,6 +65,27 @@ function bestTs(a) {
     parseTs(a?.createdAt) ||
     0
   );
+}
+
+/* ✅ category -> badge color class */
+function badgeClass(cat) {
+  const c = String(cat || "").trim().toLowerCase();
+
+  // handle common variants
+  if (c === "world") return "tn-badge-world";
+  if (c === "india") return "tn-badge-india";
+  if (c === "general") return "tn-badge-general";
+  if (c === "finance" || c === "business") return "tn-badge-finance";
+  if (c === "entertainment") return "tn-badge-entertainment";
+  if (c === "health") return "tn-badge-health";
+  if (c === "punjab") return "tn-badge-punjab";
+
+  // new delhi variants
+  if (c === "new delhi" || c === "newdelhi" || c === "delhi")
+    return "tn-badge-newdelhi";
+
+  // fallback
+  return "tn-badge-default";
 }
 
 export default function TopNews() {
@@ -103,9 +118,9 @@ export default function TopNews() {
 
                 return (
                   <li className="tn-bcard" key={a._id || a.slug}>
-                    {/* ✅ IMAGE ON TOP */}
+                    {/* ✅ IMAGE ON TOP (contain, consistent sizing, no crop) */}
                     <Link to={href} className="tn-bcard-media" aria-label={a.title}>
-                      <span className="tn-bcard-badge">{cat}</span>
+                      <span className={`tn-bcard-badge ${badgeClass(cat)}`}>{cat}</span>
 
                       <img
                         src={ensureRenderableImage(a) || FALLBACK_HERO_IMAGE}
@@ -119,27 +134,24 @@ export default function TopNews() {
                       />
                     </Link>
 
-                    {/* ✅ TITLE BELOW IMAGE (ALL WHITE) */}
-                    <Link
-                      to={href}
-                      className="tn-bcard-title"
-                      aria-label={`Read: ${a.title}`}
-                    >
+                    {/* ✅ BIG editorial serif title */}
+                    <Link to={href} className="tn-bcard-title" aria-label={`Read: ${a.title}`}>
                       {a.title}
                     </Link>
 
-                    {/* ✅ FULL SUMMARY BELOW TITLE (NO QUOTES, NO READ MORE, NO CLAMP) */}
+                    {/* ✅ MOVED HERE: timelyvoice.com below title */}
+                    <div className="tn-bcard-source">timelyvoice.com</div>
+
+                    {/* Summary */}
                     {summary && (
                       <Link to={href} className="tn-bcard-summary" aria-label="Open article">
                         {summary}
                       </Link>
                     )}
 
+                    {/* Footer: time ONLY */}
                     <div className="tn-bcard-footer">
                       <span className="tn-bcard-time">{timeAgo(ts) || "—"}</span>
-
-                      {/* ✅ Plain text instead of BrandMark */}
-                      <span className="tn-bcard-site">timelyvoice.com</span>
                     </div>
                   </li>
                 );
