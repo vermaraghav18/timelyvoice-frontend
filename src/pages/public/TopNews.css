@@ -237,6 +237,7 @@
 .tn-bcard-footer{
   display: flex;
   justify-content: space-between;
+  align-items: center; /* ✅ makes logo sit perfectly centered */
   padding: 10px 14px 12px;
   font-size: 12px;
 }
@@ -245,9 +246,15 @@
   color: #39ff14;
 }
 
-.tn-bcard-site{
-  color: rgba(255,255,255,0.7);
+/* ✅ NEW: right side wrapper for logo + domain */
+.tn-bcard-siteWrap{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
+
+
 
 /* =============================== */
 /* Mobile                          */

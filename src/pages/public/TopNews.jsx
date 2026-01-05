@@ -9,6 +9,7 @@ import { pushAd } from "../../lib/adsense.js";
 
 import SiteNav from "../../components/SiteNav.jsx";
 import SiteFooter from "../../components/SiteFooter.jsx";
+import BrandMark from "../../components/BrandMark.jsx"; // ✅ NEW
 import "./TopNews.css";
 
 const FALLBACK_HERO_IMAGE = "/tv-default-hero.jpg";
@@ -149,7 +150,8 @@ export default function TopNews() {
                 const cat = getCategoryName(a);
 
                 const color =
-                  CAT_COLORS[cat] || "linear-gradient(135deg,#4B5563 0%, #111827 100%)";
+                  CAT_COLORS[cat] ||
+                  "linear-gradient(135deg,#4B5563 0%, #111827 100%)";
                 const solid = CAT_SOLID[cat] || "#ffffff";
 
                 const ts = bestTs(a);
@@ -157,8 +159,14 @@ export default function TopNews() {
                 return (
                   <li className="tn-bcard" key={a._id || a.slug}>
                     <Link to={href} className="tn-bcard-media">
-                      <span className="tn-bcard-ribbon" style={{ background: color }} />
-                      <span className="tn-bcard-badge" style={{ background: color }}>
+                      <span
+                        className="tn-bcard-ribbon"
+                        style={{ background: color }}
+                      />
+                      <span
+                        className="tn-bcard-badge"
+                        style={{ background: color }}
+                      >
                         {cat}
                       </span>
 
@@ -175,13 +183,20 @@ export default function TopNews() {
 
                       <span className="tn-bcard-overlay" />
 
-                      <div className="tn-bcard-headline" style={{ "--tn-firstline": solid }}>
+                      <div
+                        className="tn-bcard-headline"
+                        style={{ "--tn-firstline": solid }}
+                      >
                         {a.title}
                       </div>
                     </Link>
 
                     {(a.summary || a.description) && (
-                      <Link to={href} className="tn-bcard-summary" style={{ "--tn-quote": solid }}>
+                      <Link
+                        to={href}
+                        className="tn-bcard-summary"
+                        style={{ "--tn-quote": solid }}
+                      >
                         <span className="tn-bcard-summary-text">
                           {a.summary || a.description}
                         </span>
@@ -191,7 +206,12 @@ export default function TopNews() {
 
                     <div className="tn-bcard-footer">
                       <span className="tn-bcard-time">{timeAgo(ts) || "—"}</span>
-                      <span className="tn-bcard-site">timelyvoice.com</span>
+
+                      {/* ✅ NEW: mini logo + domain together */}
+                    <span className="tn-bcard-siteWrap">
+  <BrandMark size="sm" text="timelyvoice.com" />
+</span>
+
                     </div>
                   </li>
                 );
