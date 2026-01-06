@@ -501,8 +501,9 @@ function CategoryTopStoriesBlock({ items = [], label = "India", slug = "india" }
           @media (max-width: 520px){
             .__tv-top4-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
 
-            /* tune card density so 2×2 looks clean */
-            .__tv-top4-imglink { height: 110px !important; }
+            /* ✅ CHANGE: increase image size on mobile */
+            .__tv-top4-imglink { height: 150px !important; }
+
             .__tv-top4-body { padding: 8px !important; }
             .__tv-top4-title { font-size: 12.5px !important; line-height: 1.2 !important; margin-bottom: 5px !important; }
             .__tv-top4-time { font-size: 10.5px !important; }
@@ -869,14 +870,31 @@ function CategoryLatestNewsBlock({ items = [], label = "India", slug = "india" }
             .__tv-featured-body { padding: 10px 12px !important; }
           }
 
-          @media (max-width: 520px){
-            .__tv-right-row { grid-template-columns: 1fr !important; }
-            .__tv-right-thumb {
-              width: 100% !important;
-              height: 180px !important;
-              justifySelf: stretch !important;
-            }
-          }
+         @media (max-width: 520px){
+  /* Keep first 2 featured cards unchanged */
+
+  /* ✅ Right-side 4 cards: title left, image right */
+  .__tv-right-row{
+    grid-template-columns: 1fr 88px !important;
+    align-items: center !important;
+    padding: 10px !important;
+    gap: 10px !important;
+  }
+
+  .__tv-right-title{
+    font-size: 13.5px !important;
+    line-height: 1.25 !important;
+    -webkit-line-clamp: 3 !important;
+  }
+
+  .__tv-right-thumb{
+    width: 88px !important;
+    height: 64px !important;
+    justifySelf: end !important;
+    border: 1px solid rgba(0,0,0,0.65) !important;
+  }
+}
+
         `}</style>
       </div>
     </section>
@@ -914,15 +932,9 @@ function CategoryTrendingBlock({ items = [], label = "India", slug = "india" }) 
         to={articleHref(item.slug)}
         style={{
           display: "grid",
-
-          /* 🔧 FIX: tighter rank column */
           gridTemplateColumns: "36px 1fr 70px",
-
           gap: 10,
-
-          /* 🔧 FIX: reduce side padding */
           padding: "10px 10px",
-
           textDecoration: "none",
           color: "inherit",
           alignItems: "center",
@@ -936,34 +948,18 @@ function CategoryTrendingBlock({ items = [], label = "India", slug = "india" }) 
           })`,
         }}
       >
-        {/* 🔢 Rank number — tightly packed */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <span
-            style={{
-              color: "#ffffff",
-              fontWeight: 900,
-              fontSize: 18, // slightly smaller
-              letterSpacing: "0",
-              lineHeight: 1,
-            }}
-          >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ color: "#ffffff", fontWeight: 900, fontSize: 18, letterSpacing: "0", lineHeight: 1 }}>
             {String(rank).padStart(2, "0")}
           </span>
         </div>
 
-        {/* 📰 Title — now gets MORE WIDTH */}
         <div style={{ minWidth: 0 }}>
           <div
             style={{
               color: "rgba(255,255,255,0.97)",
               fontWeight: 700,
-              fontSize: 14, // slight bump for readability
+              fontSize: 14,
               lineHeight: 1.3,
               display: "-webkit-box",
               WebkitLineClamp: 2,
@@ -976,19 +972,11 @@ function CategoryTrendingBlock({ items = [], label = "India", slug = "india" }) 
             {item.title || "Untitled"}
           </div>
 
-          <div
-            style={{
-              color: UI.muted,
-              fontSize: 12,
-              lineHeight: 1.2,
-              whiteSpace: "nowrap",
-            }}
-          >
+          <div style={{ color: UI.muted, fontSize: 12, lineHeight: 1.2, whiteSpace: "nowrap" }}>
             {timeAgo(ts)}
           </div>
         </div>
 
-        {/* 🖼 Thumbnail — unchanged */}
         <div
           style={{
             width: 70,
@@ -1003,12 +991,7 @@ function CategoryTrendingBlock({ items = [], label = "India", slug = "india" }) 
           <img
             src={img}
             alt={item.imageAlt || item.title || "The Timely Voice"}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-            }}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
             loading="lazy"
             decoding="async"
             onError={(e) => {
@@ -1048,70 +1031,23 @@ function CategoryTrendingBlock({ items = [], label = "India", slug = "india" }) 
             flexWrap: "wrap",
           }}
         >
-          <div
-            style={{
-              fontSize: 14,
-              letterSpacing: "0.12em",
-              color: "rgba(255,255,255,0.80)",
-              textTransform: "uppercase",
-            }}
-          >
+          <div style={{ fontSize: 14, letterSpacing: "0.12em", color: "rgba(255,255,255,0.80)", textTransform: "uppercase" }}>
             TRENDING NEWS
           </div>
 
-          <Link
-            to={categoryLink}
-            style={{
-              fontSize: 13,
-              color: UI.linkCyan,
-              textDecoration: "none",
-              letterSpacing: "0.02em",
-              whiteSpace: "nowrap",
-            }}
-          >
+          <Link to={categoryLink} style={{ fontSize: 13, color: UI.linkCyan, textDecoration: "none", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
             View All {labelUpper} &nbsp;›
           </Link>
         </div>
 
-        <div
-          className="__tv-trending-lists"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 14,
-            alignItems: "start",
-            minWidth: 0,
-          }}
-        >
-          <div
-            className="__tv-trending-list"
-            style={{
-              border: UI.panelBorder,
-              background: UI.cardBg,
-              boxShadow: "6px 6px 0 rgba(0,0,0,0.75)",
-              overflow: "hidden",
-              minWidth: 0,
-              borderRadius: 0,
-              height: LIST_H,
-            }}
-          >
+        <div className="__tv-trending-lists" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, alignItems: "start", minWidth: 0 }}>
+          <div className="__tv-trending-list" style={{ border: UI.panelBorder, background: UI.cardBg, boxShadow: "6px 6px 0 rgba(0,0,0,0.75)", overflow: "hidden", minWidth: 0, borderRadius: 0, height: LIST_H }}>
             {leftCol.map((a, i) => (
               <RankRow key={a._id || a.id || a.slug || i} item={a} rank={i + 1} isFirst={i === 0} />
             ))}
           </div>
 
-          <div
-            className="__tv-trending-list"
-            style={{
-              border: UI.panelBorder,
-              background: UI.cardBg,
-              boxShadow: "6px 6px 0 rgba(0,0,0,0.75)",
-              overflow: "hidden",
-              minWidth: 0,
-              borderRadius: 0,
-              height: LIST_H,
-            }}
-          >
+          <div className="__tv-trending-list" style={{ border: UI.panelBorder, background: UI.cardBg, boxShadow: "6px 6px 0 rgba(0,0,0,0.75)", overflow: "hidden", minWidth: 0, borderRadius: 0, height: LIST_H }}>
             {rightCol.map((a, i) => (
               <RankRow key={a._id || a.id || a.slug || i} item={a} rank={i + 5} isFirst={i === 0} />
             ))}
@@ -1170,25 +1106,16 @@ function CategorySection({ label, slug }) {
         status: "published",
       };
 
-      // ✅ HOTFIX: backend honors `category` reliably; `categorySlug` is unreliable
-      // 1) Try category (label) first, e.g. "India"
       let data = await cachedGet("/articles", { params: { ...baseParams, category: label } }, 30_000);
-
       let items = normalizeItems(data).filter((a) => isCategoryArticle(a, slug, label));
 
-      // 2) Fallback to category (slug), e.g. "india"
       if (items.length === 0) {
         data = await cachedGet("/articles", { params: { ...baseParams, category: slug } }, 30_000);
         items = normalizeItems(data).filter((a) => isCategoryArticle(a, slug, label));
       }
 
-      // 3) Last fallback to categorySlug (slug) — keep for compatibility
       if (items.length === 0) {
-        data = await cachedGet(
-          "/articles",
-          { params: { ...baseParams, categorySlug: slug } },
-          30_000
-        );
+        data = await cachedGet("/articles", { params: { ...baseParams, categorySlug: slug } }, 30_000);
         items = normalizeItems(data).filter((a) => isCategoryArticle(a, slug, label));
       }
 
@@ -1215,9 +1142,9 @@ function CategorySection({ label, slug }) {
 
         const uniq = dedupeByIdAcross(topSorted, latestSorted, trendingSorted);
 
-        const topFinal = uniq.top.slice(0, 5); // hero + 4
-        const latestFinal = uniq.latest.slice(0, 6); // 2 featured + 4 list
-        const trendingFinal = uniq.trending.slice(0, 9); // rail + 8 ranked
+        const topFinal = uniq.top.slice(0, 5);
+        const latestFinal = uniq.latest.slice(0, 6);
+        const trendingFinal = uniq.trending.slice(0, 9);
 
         if (!cancel) {
           setTopItems(topFinal);
@@ -1266,9 +1193,7 @@ function CategorySection({ label, slug }) {
     <>
       <CategoryTopStoriesBlock items={topStoriesSlice} label={label} slug={slug} />
       {latestSlice.length > 0 && <CategoryLatestNewsBlock items={latestSlice} label={label} slug={slug} />}
-      {trendingSlice.length > 0 && (
-        <CategoryTrendingBlock items={trendingSlice} label={label} slug={slug} />
-      )}
+      {trendingSlice.length > 0 && <CategoryTrendingBlock items={trendingSlice} label={label} slug={slug} />}
     </>
   );
 }
@@ -1322,8 +1247,6 @@ export default function PublicHome() {
         style={{
           minHeight: "60vh",
           padding: "10px 0 26px",
-
-          /* ✅ CHANGE: Main public home page background -> NAVY */
           background: NAVY_PAGE_BG,
         }}
       >
