@@ -538,7 +538,8 @@ useEffect(() => {
       const a = res.data;
 
       // Turn array of geoAreas -> comma text for editor
-      const geoAreasText = Array.isArray(a.geoAreas) ? a.geoAreas.join(", ") : "";
+      const geoAreasText = Array.isArray(a.geo?.areas) ? a.geo.areas.join(", ") : "";
+
 
       setEditingId(id);
       setForm({
@@ -553,7 +554,8 @@ useEffect(() => {
   normalizeSlug(a.category?.name) ||
   normalizeSlug(a.category) ||
   "general",
-                homepagePlacement: a.homepagePlacement || "none",
+                homepagePlacement: normalizePlacement(a.homepagePlacement || "none"),
+
 
         status: a.status || "published",
         publishAt: a.publishedAt ? toLocalInputValue(a.publishedAt) : "",
@@ -629,7 +631,8 @@ useEffect(() => {
           body: form.body,
          categorySlug: normalizeSlug(form.category) || "general",
 category: categoryNameFromSlug(categories, form.category),
-                    homepagePlacement: form.homepagePlacement || "none",
+                    homepagePlacement: normalizePlacement(form.homepagePlacement || "none"),
+
 
           status: form.status === "published" ? "published" : "draft",
           publishedAt: form.publishAt
@@ -725,8 +728,9 @@ category: categoryNameFromSlug(categories, form.category),
         author: form.author?.trim() || "Staff",
         body: form.body,
         categorySlug: normalizeSlug(form.category) || "general",
-category: categoryNameFromSlug(categories, form.category),
-                    homepagePlacement: form.homepagePlacement || "none",
+        category: categoryNameFromSlug(categories, form.category),
+        homepagePlacement: normalizePlacement(form.homepagePlacement || "none"),
+
 
         status: form.status === "published" ? "published" : "draft",
         publishedAt: form.publishAt
@@ -1938,9 +1942,11 @@ category: categoryNameFromSlug(categories, form.category),
                   slug: d.slug ?? f.slug,
                   summary: d.summary ?? f.summary,
                   author: d.author ?? f.author,
-                  category: d.category ?? f.category,
+                 category: normalizeSlug(d.category ?? f.category),
+
                   status: d.status ?? f.status,
-                  homepagePlacement: d.homepagePlacement ?? f.homepagePlacement,
+                  homepagePlacement: normalizePlacement(d.homepagePlacement ?? f.homepagePlacement),
+
                   publishAt: d.publishAt ?? f.publishAt,
                   imageUrl: d.imageUrl ?? f.imageUrl,
                   imagePublicId: d.imagePublicId ?? f.imagePublicId,
@@ -2038,9 +2044,10 @@ category: categoryNameFromSlug(categories, form.category),
                   Homepage Placement
                   <select
                     value={form.homepagePlacement || "none"}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, homepagePlacement: e.target.value }))
-                    }
+                   onChange={(e) =>
+  setForm((f) => ({ ...f, homepagePlacement: normalizePlacement(e.target.value) }))
+}
+
                     style={inp}
                   >
                     <option value="none">None</option>

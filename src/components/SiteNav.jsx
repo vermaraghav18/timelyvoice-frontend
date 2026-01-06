@@ -88,6 +88,10 @@ export default function SiteNav() {
   const moreRef = useRef(null);
   const measurerRef = useRef(null);
 
+  // ✅ NEW: measure header height so fixed header doesn't overlap content
+  const headerRef = useRef(null);
+  const [headerH, setHeaderH] = useState(0);
+
   // ✅ date string does not need refetch logic; just update on route change
   useEffect(() => {
     setDateStr(
@@ -235,6 +239,32 @@ export default function SiteNav() {
       if (ro) ro.disconnect();
     };
   }, [regions, isMobile]);
+
+  // ✅ NEW: measure fixed header height
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const el = headerRef.current;
+    if (!el) return;
+
+    const measure = () => {
+      const h = el.getBoundingClientRect?.().height || 0;
+      setHeaderH(h);
+    };
+
+    measure();
+
+    let ro;
+    if ("ResizeObserver" in window) {
+      ro = new ResizeObserver(() => measure());
+      ro.observe(el);
+    }
+
+    window.addEventListener("resize", measure);
+    return () => {
+      window.removeEventListener("resize", measure);
+      if (ro) ro.disconnect();
+    };
+  }, [isMobile, condensed, mobileMenuOpen, loc.pathname, loc.search]);
 
   // --- Mobile full-screen sheet (regions stays hidden when HIDE_REGION_NAV) ---
   const MobileSheet = () => (
@@ -426,8 +456,22 @@ export default function SiteNav() {
       : { width: "100%" };
 
   return (
-    <header style={{ position: "sticky", top: 0, zIndex: 50 }}>
-      <style>{`
+    <>
+      {/* ✅ Spacer so content never slides under the fixed header */}
+      <div aria-hidden="true" style={{ height: headerH }} />
+
+      {/* ✅ FIX: fixed header (sticky can vanish depending on scroll containers) */}
+      <header
+        ref={headerRef}
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 999999, // ✅ must be above promo rails + everything
+        }}
+      >
+        <style>{`
         .tv-scrollfade {
           -webkit-overflow-scrolling: touch;
           scrollbar-width: none;
@@ -446,230 +490,225 @@ export default function SiteNav() {
         }
       `}</style>
 
-      {/* ✅ this wrapper creates the gutters on desktop wide screens */}
-      <div style={railWrapperStyle}>
-        <div className="tv-nav-shell">
-          <div style={topBarStyle}>
-            {!isMobile ? (
-              <div style={topGridStyle}>
-                {/* LEFT AREA */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    flexWrap: "wrap",
-                    justifyContent: "flex-start",
-                  }}
-                />
+        {/* ✅ this wrapper creates the gutters on desktop wide screens */}
+        <div style={railWrapperStyle}>
+          <div className="tv-nav-shell">
+            <div style={topBarStyle}>
+              {!isMobile ? (
+                <div style={topGridStyle}>
+                  {/* LEFT AREA */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      flexWrap: "wrap",
+                      justifyContent: "flex-start",
+                    }}
+                  />
 
-                {/* Logo */}
-                {/* Logo */}
-<div style={{ textAlign: "center", minWidth: 0 }}>
-  <div
-    style={{
-      position: "relative",
-      display: "inline-block",
-      transform: "translateX(-135px)", // ✅ shift left (change -40px to what you want)
-    }}
-  >
-
-                    <Link
-                      to="/"
-                      aria-label="The Timely Voice — Home"
-                      style={{
-                        ...logoStyle,
-                        ...logoBadgeCommon,
-                        position: "relative",
-                        zIndex: 2,
-                      }}
-                    >
-                      The Timely Voice
-                    </Link>
-
-                    {/* ✅ UPDATED: smaller Google News badge */}
+                  {/* Logo */}
+                  <div style={{ textAlign: "center", minWidth: 0 }}>
                     <div
                       style={{
-                        position: "absolute",
-                        right: "-38px",
-                        top: "70%",
-                        transform: "translateY(-50%) rotate(3deg)",
-                        background: "#ffffff",
-                        borderRadius: "8px",
-                        border: "2px solid #000",
-                        boxShadow: "5px 6px 0 #000",
-                        padding: "3px",
-                        zIndex: 3,
+                        position: "relative",
+                        display: "inline-block",
+                        transform: "translateX(-135px)", // ✅ shift left (kept as-is)
                       }}
                     >
-                      <img
-                        src="/images/google-news.png"
-                        alt="Google News"
+                      <Link
+                        to="/"
+                        aria-label="The Timely Voice — Home"
                         style={{
-                          display: "block",
-                          width: "34px",
-                          height: "auto",
-                          pointerEvents: "none",
-                          userSelect: "none",
+                          ...logoStyle,
+                          ...logoBadgeCommon,
+                          position: "relative",
+                          zIndex: 2,
                         }}
-                      />
+                      >
+                        The Timely Voice
+                      </Link>
+
+                      {/* ✅ UPDATED: smaller Google News badge */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          right: "-38px",
+                          top: "70%",
+                          transform: "translateY(-50%) rotate(3deg)",
+                          background: "#ffffff",
+                          borderRadius: "8px",
+                          border: "2px solid #000",
+                          boxShadow: "5px 6px 0 #000",
+                          padding: "3px",
+                          zIndex: 3,
+                        }}
+                      >
+                        <img
+                          src="/images/google-news.png"
+                          alt="Google News"
+                          style={{
+                            display: "block",
+                            width: "34px",
+                            height: "auto",
+                            pointerEvents: "none",
+                            userSelect: "none",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* RIGHT AREA – Languages (inactive for now) */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "flex-start",
+                      gap: 8,
+                      marginLeft: "-94px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {/* Vertical separator */}
+                    <span
+                      style={{
+                        width: "1px",
+                        height: "18px",
+                        background: "rgba(255,255,255,0.5)",
+                        display: "inline-block",
+                      }}
+                    />
+
+                    {/* Languages */}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        fontSize: 12,
+                        fontWeight: 500,
+                        letterSpacing: "0.04em",
+                        textTransform: "uppercase",
+                        color: "rgba(255,255,255,0.75)",
+                        cursor: "default",
+                        userSelect: "none",
+                      }}
+                    >
+                      <span>English</span>
+                      <span>Hindi</span>
+                      <span>Punjabi</span>
                     </div>
                   </div>
                 </div>
+              ) : (
+                <div style={topGridStyle}>
+                  <button
+                    type="button"
+                    aria-label="Open menu"
+                    onClick={() => setMobileMenuOpen(true)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 36,
+                      height: 36,
+                      borderRadius: 8,
+                      background: "rgba(255,255,255,0.12)",
+                      color: "#fff",
+                      border: "1px solid rgba(255,255,255,0.18)",
+                    }}
+                  >
+                    ☰
+                  </button>
 
-                {/* RIGHT AREA */}
-               {/* RIGHT AREA – Languages (inactive for now) */}
-              {/* RIGHT AREA – Languages (inactive for now) */}
+                  <div style={{ textAlign: "center", minWidth: 0 }}>
+                    <div style={{ position: "relative", display: "inline-block" }}>
+                      <Link
+                        to="/"
+                        aria-label="The Timely Voice — Home"
+                        style={{
+                          ...logoStyle,
+                          ...logoBadgeCommon,
+                          position: "relative",
+                          zIndex: 2,
+                        }}
+                      >
+                        The Timely Voice
+                      </Link>
+
+                      {/* ✅ UPDATED: smaller Google News badge (mobile) */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          right: "-32px",
+                          top: "70%",
+                          transform: "translateY(-50%) rotate(3deg)",
+                          background: "#ffffff",
+                          borderRadius: "8px",
+                          border: "2px solid #000",
+                          boxShadow: "5px 6px 0 #000",
+                          padding: "3px",
+                          zIndex: 3,
+                        }}
+                      >
+                        <img
+                          src="/images/google-news.png"
+                          alt="Google News"
+                          style={{
+                            display: "block",
+                            width: "28px",
+                            height: "auto",
+                            pointerEvents: "none",
+                            userSelect: "none",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      justifyContent: "flex-end",
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* ✅ IMPORTANT: do NOT override PrimaryNav containerStyle (it prevents gutters) */}
+            <PrimaryNav />
+
+            {/* regions row — hidden */}
+            {!HIDE_REGION_NAV ? (
               <div
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-start", // 👈 pull closer to logo
-                  gap: 8,                        // 👈 tighter spacing
-                  marginLeft: "-94px",           // 👈 IMPORTANT: brings block closer
-                  whiteSpace: "nowrap",
+                  width: "100%",
+                  background: " #001431ff ",
+                  color: "#fff",
+                  fontSize: 14,
+                  userSelect: "none",
+                  borderBottom: "1px solid rgba(0,0,0,0.06)",
                 }}
               >
-                {/* Vertical separator */}
-                <span
-                  style={{
-                    width: "1px",
-                    height: "18px",              // 👈 shorter line
-                    background: "rgba(255,255,255,0.5)", // 👈 lighter line
-                    display: "inline-block",
-                  }}
-                />
-
-                {/* Languages */}
                 <div
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,                     // 👈 closer words
-                    fontSize: 12,                // 👈 slightly smaller
-                    fontWeight: 500,             // 👈 MUCH less bold
-                    letterSpacing: "0.04em",     // 👈 reduced spacing
-                    textTransform: "uppercase",
-                    color: "rgba(255,255,255,0.75)", // 👈 softer
-                    cursor: "default",
-                    userSelect: "none",
-                  }}
-                >
-                  <span>English</span>
-                  <span>Hindi</span>
-                  <span>Punjabi</span>
-                </div>
-              </div>
-
-
-              </div>
-            ) : (
-              <div style={topGridStyle}>
-                <button
-                  type="button"
-                  aria-label="Open menu"
-                  onClick={() => setMobileMenuOpen(true)}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    background: "rgba(255,255,255,0.12)",
-                    color: "#fff",
-                    border: "1px solid rgba(255,255,255,0.18)",
-                  }}
-                >
-                  ☰
-                </button>
-
-                <div style={{ textAlign: "center", minWidth: 0 }}>
-                  <div style={{ position: "relative", display: "inline-block" }}>
-                    <Link
-                      to="/"
-                      aria-label="The Timely Voice — Home"
-                      style={{
-                        ...logoStyle,
-                        ...logoBadgeCommon,
-                        position: "relative",
-                        zIndex: 2,
-                      }}
-                    >
-                      The Timely Voice
-                    </Link>
-
-                    {/* ✅ UPDATED: smaller Google News badge (mobile) */}
-                    <div
-                      style={{
-                        position: "absolute",
-                        right: "-32px",
-                        top: "70%",
-                        transform: "translateY(-50%) rotate(3deg)",
-                        background: "#ffffff",
-                        borderRadius: "8px",
-                        border: "2px solid #000",
-                        boxShadow: "5px 6px 0 #000",
-                        padding: "3px",
-                        zIndex: 3,
-                      }}
-                    >
-                      <img
-                        src="/images/google-news.png"
-                        alt="Google News"
-                        style={{
-                          display: "block",
-                          width: "28px",
-                          height: "auto",
-                          pointerEvents: "none",
-                          userSelect: "none",
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    justifyContent: "flex-end",
+                    ...container,
+                    padding: isMobile ? "8px 8px" : "0 12px",
                   }}
                 />
               </div>
-            )}
+            ) : null}
+
+            <BreakingNewsBar items={breaking} />
+
+            {isMobile && mobileMenuOpen && <MobileSheet />}
           </div>
-
-          {/* ✅ IMPORTANT: do NOT override PrimaryNav containerStyle (it prevents gutters) */}
-          <PrimaryNav />
-
-          {/* regions row — hidden */}
-          {!HIDE_REGION_NAV ? (
-            <div
-              style={{
-                width: "100%",
-                background: " #001431ff ",
-                color: "#fff",
-                fontSize: 14,
-                userSelect: "none",
-                borderBottom: "1px solid rgba(0,0,0,0.06)",
-              }}
-            >
-              <div
-                style={{
-                  ...container,
-                  padding: isMobile ? "8px 8px" : "0 12px",
-                }}
-              />
-            </div>
-          ) : null}
-
-          <BreakingNewsBar items={breaking} />
-
-          {isMobile && mobileMenuOpen && <MobileSheet />}
         </div>
-      </div>
-    </header>
+      </header>
+    </>
   );
 }
