@@ -1,5 +1,12 @@
 /* frontend/src/pages/public/TopNews.css */
 
+/* ✅ Keep SiteNav fixed/sticky on scroll (TopNews page only) */
+.tn-nav-sticky{
+  position: sticky;
+  top: 0;
+  z-index: 9999;
+}
+
 /* ---------- Page layout (TopNews) ---------- */
 .tn-shell{
   position: relative;
@@ -159,7 +166,7 @@
 
 /* General = Red */
 .tn-badge-general{
-  background: rgba(255, 45, 85, 0.92);
+  background: rgba(255, 0, 47, 0.92);
 }
 
 /* Finance = Green */
@@ -211,7 +218,12 @@
   text-decoration: none;
 }
 
-/* ✅ NEW: timelyvoice.com under title */
+/* ✅ ONLY CHANGE: first line of title in red */
+.tn-bcard-title::first-line{
+  color: #ff002f;
+}
+
+/* ✅ timelyvoice.com under title */
 .tn-bcard-source{
   padding: 0 18px 10px;
   font-size: 12.5px;

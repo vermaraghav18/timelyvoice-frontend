@@ -1,4 +1,3 @@
-// frontend/src/pages/public/TopNews.jsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -22,35 +21,24 @@ function articleHref(slug) {
   return slug.startsWith("/article/") ? slug : `/article/${slug}`;
 }
 
-/* ✅ Robust timestamp parser (prevents 1970/20458d bug) */
+/* ✅ Robust timestamp parser */
 function parseTs(v) {
   if (!v) return 0;
-
-  if (typeof v === "number") {
-    if (v < 1e12) return v * 1000;
-    return v;
-  }
-
+  if (typeof v === "number") return v < 1e12 ? v * 1000 : v;
   const s = String(v).trim();
   if (!s) return 0;
-
-  const normalized = s.includes("T") ? s : s.replace(" ", "T");
-  const t = Date.parse(normalized);
+  const t = Date.parse(s.includes("T") ? s : s.replace(" ", "T"));
   return Number.isFinite(t) ? t : 0;
 }
 
 function timeAgo(ts) {
   const t = typeof ts === "number" ? ts : parseTs(ts);
-  if (!t || !Number.isFinite(t)) return "";
-
+  if (!t) return "";
   const diff = Date.now() - t;
   if (diff < 0) return "just now";
-
-  const s = Math.floor(diff / 1000);
-  const m = Math.floor(s / 60);
+  const m = Math.floor(diff / 60000);
   const h = Math.floor(m / 60);
   const d = Math.floor(h / 24);
-
   if (d >= 1) return `${d}d ago`;
   if (h >= 1) return `${h}h ago`;
   if (m >= 1) return `${m}m ago`;
@@ -67,11 +55,9 @@ function bestTs(a) {
   );
 }
 
-/* ✅ category -> badge color class */
+/* ---------- badge colors ---------- */
 function badgeClass(cat) {
-  const c = String(cat || "").trim().toLowerCase();
-
-  // handle common variants
+  const c = String(cat || "").toLowerCase();
   if (c === "world") return "tn-badge-world";
   if (c === "india") return "tn-badge-india";
   if (c === "general") return "tn-badge-general";
@@ -79,12 +65,8 @@ function badgeClass(cat) {
   if (c === "entertainment") return "tn-badge-entertainment";
   if (c === "health") return "tn-badge-health";
   if (c === "punjab") return "tn-badge-punjab";
-
-  // new delhi variants
-  if (c === "new delhi" || c === "newdelhi" || c === "delhi")
+  if (["new delhi", "newdelhi", "delhi"].includes(c))
     return "tn-badge-newdelhi";
-
-  // fallback
   return "tn-badge-default";
 }
 
@@ -94,7 +76,9 @@ export default function TopNews() {
 
   useEffect(() => {
     (async () => {
-      const data = await cachedGet("/top-news", { params: { page: 1, limit: 50 } });
+      const data = await cachedGet("/top-news", {
+        params: { page: 1, limit: 50 },
+      });
       setItems(data?.items || []);
       setLoading(false);
     })();
@@ -102,7 +86,9 @@ export default function TopNews() {
 
   return (
     <>
-      <SiteNav />
+      <div className="tn-nav-sticky">
+        <SiteNav />
+      </div>
 
       <div className="tn-shell">
         <div className="tn-stage">
@@ -118,9 +104,10 @@ export default function TopNews() {
 
                 return (
                   <li className="tn-bcard" key={a._id || a.slug}>
-                    {/* ✅ IMAGE ON TOP (contain, consistent sizing, no crop) */}
-                    <Link to={href} className="tn-bcard-media" aria-label={a.title}>
-                      <span className={`tn-bcard-badge ${badgeClass(cat)}`}>{cat}</span>
+                    <Link to={href} className="tn-bcard-media">
+                      <span className={`tn-bcard-badge ${badgeClass(cat)}`}>
+                        {cat}
+                      </span>
 
                       <img
                         src={ensureRenderableImage(a) || FALLBACK_HERO_IMAGE}
@@ -134,24 +121,22 @@ export default function TopNews() {
                       />
                     </Link>
 
-                    {/* ✅ BIG editorial serif title */}
-                    <Link to={href} className="tn-bcard-title" aria-label={`Read: ${a.title}`}>
+                    <Link to={href} className="tn-bcard-title">
                       {a.title}
                     </Link>
 
-                    {/* ✅ MOVED HERE: timelyvoice.com below title */}
                     <div className="tn-bcard-source">timelyvoice.com</div>
 
-                    {/* Summary */}
                     {summary && (
-                      <Link to={href} className="tn-bcard-summary" aria-label="Open article">
+                      <Link to={href} className="tn-bcard-summary">
                         {summary}
                       </Link>
                     )}
 
-                    {/* Footer: time ONLY */}
                     <div className="tn-bcard-footer">
-                      <span className="tn-bcard-time">{timeAgo(ts) || "—"}</span>
+                      <span className="tn-bcard-time">
+                        {timeAgo(ts) || "—"}
+                      </span>
                     </div>
                   </li>
                 );
