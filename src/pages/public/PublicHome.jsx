@@ -386,6 +386,7 @@ function CategoryTopStoriesBlock({ items = [], label = "India", slug = "india" }
             return (
               <article
                 key={a._id || a.id || a.slug}
+                className="__tv-top4-card"
                 style={{
                   border: UI.panelBorder,
 
@@ -400,6 +401,7 @@ function CategoryTopStoriesBlock({ items = [], label = "India", slug = "india" }
               >
                 <Link
                   to={articleHref(a.slug)}
+                  className="__tv-top4-imglink"
                   style={{
                     position: "relative",
                     display: "block",
@@ -413,6 +415,7 @@ function CategoryTopStoriesBlock({ items = [], label = "India", slug = "india" }
                     alt={a.imageAlt || a.title || "The Timely Voice"}
                     loading="lazy"
                     decoding="async"
+                    className="__tv-top4-img"
                     style={{
                       width: "100%",
                       height: "100%",
@@ -442,9 +445,10 @@ function CategoryTopStoriesBlock({ items = [], label = "India", slug = "india" }
                   </span>
                 </Link>
 
-                <div style={{ padding: 10 }}>
+                <div className="__tv-top4-body" style={{ padding: 10 }}>
                   <Link
                     to={articleHref(a.slug)}
+                    className="__tv-top4-title"
                     style={{
                       color: "rgba(255,255,255,0.95)",
                       textDecoration: "none",
@@ -458,7 +462,9 @@ function CategoryTopStoriesBlock({ items = [], label = "India", slug = "india" }
                     {a.title || "Untitled"}
                   </Link>
 
-                  <div style={{ color: UI.muted, fontSize: 11.5 }}>{timeAgo(ts)}</div>
+                  <div className="__tv-top4-time" style={{ color: UI.muted, fontSize: 11.5 }}>
+                    {timeAgo(ts)}
+                  </div>
                 </div>
               </article>
             );
@@ -486,11 +492,20 @@ function CategoryTopStoriesBlock({ items = [], label = "India", slug = "india" }
             }
           }
 
+          /* ✅ tablet + mobile: 2 columns */
           @media (max-width: 980px){
             .__tv-top4-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
           }
+
+          /* ✅ FIX: keep 2×2 on small mobile (do NOT collapse to 1 column) */
           @media (max-width: 520px){
-            .__tv-top4-grid { grid-template-columns: 1fr !important; }
+            .__tv-top4-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
+
+            /* tune card density so 2×2 looks clean */
+            .__tv-top4-imglink { height: 110px !important; }
+            .__tv-top4-body { padding: 8px !important; }
+            .__tv-top4-title { font-size: 12.5px !important; line-height: 1.2 !important; margin-bottom: 5px !important; }
+            .__tv-top4-time { font-size: 10.5px !important; }
           }
         `}</style>
       </div>
@@ -854,17 +869,12 @@ function CategoryLatestNewsBlock({ items = [], label = "India", slug = "india" }
             .__tv-featured-body { padding: 10px 12px !important; }
           }
 
-          /* ✅ FIX: keep RIGHT 4 cards in laptop-style layout even on mobile */
           @media (max-width: 520px){
-            .__tv-right-row { 
-              grid-template-columns: 1fr 96px !important;
-              gap: 10px !important;
-              padding: 10px 10px !important;
-            }
+            .__tv-right-row { grid-template-columns: 1fr !important; }
             .__tv-right-thumb {
-              width: 96px !important;
-              height: 64px !important;
-              justifySelf: end !important;
+              width: 100% !important;
+              height: 180px !important;
+              justifySelf: stretch !important;
             }
           }
         `}</style>
@@ -927,12 +937,18 @@ function CategoryTrendingBlock({ items = [], label = "India", slug = "india" }) 
         }}
       >
         {/* 🔢 Rank number — tightly packed */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <span
             style={{
               color: "#ffffff",
               fontWeight: 900,
-              fontSize: 18,
+              fontSize: 18, // slightly smaller
               letterSpacing: "0",
               lineHeight: 1,
             }}
@@ -947,7 +963,7 @@ function CategoryTrendingBlock({ items = [], label = "India", slug = "india" }) 
             style={{
               color: "rgba(255,255,255,0.97)",
               fontWeight: 700,
-              fontSize: 14,
+              fontSize: 14, // slight bump for readability
               lineHeight: 1.3,
               display: "-webkit-box",
               WebkitLineClamp: 2,
@@ -987,7 +1003,12 @@ function CategoryTrendingBlock({ items = [], label = "India", slug = "india" }) 
           <img
             src={img}
             alt={item.imageAlt || item.title || "The Timely Voice"}
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+            }}
             loading="lazy"
             decoding="async"
             onError={(e) => {
@@ -1121,7 +1142,7 @@ function CategorySection({ label, slug }) {
     const sortByBestTs = (arr) =>
       arr
         .map((a, idx) => ({ ...a, __ts: getBestTimestamp(a), __i: idx }))
-        .sort((a, b) => (b.__ts === a.__ts ? a.__i - b.__i : b.__ts - a.__ts));
+        .sort((a, b) => (b.__ts === a.__i ? a.__i - b.__i : b.__ts - a.__ts));
 
     const dedupeByIdAcross = (topArr, latestArr, trendingArr) => {
       const used = new Set();
