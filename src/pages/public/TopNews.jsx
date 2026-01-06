@@ -1,3 +1,4 @@
+// frontend/src/pages/public/TopNews.jsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -70,6 +71,16 @@ function badgeClass(cat) {
   return "tn-badge-default";
 }
 
+/* ✅ Social logos shown next to timelyvoice.com */
+const SOURCE_LOGOS = [
+  { key: "whatsapp", src: "/social/whatsapp.png", alt: "WhatsApp" },
+  { key: "x", src: "/social/x.png", alt: "X" },
+  { key: "facebook", src: "/social/facebook.png", alt: "Facebook" },
+  { key: "instagram", src: "/social/instagram.avif", alt: "Instagram" },
+  { key: "youtube", src: "/social/youtube.png", alt: "YouTube" },
+  { key: "threads", src: "/social/threads.png", alt: "Threads" },
+];
+
 export default function TopNews() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -125,7 +136,40 @@ export default function TopNews() {
                       {a.title}
                     </Link>
 
-                    <div className="tn-bcard-source">timelyvoice.com</div>
+                    {/* ✅ source + website icon + social logos */}
+                    <div className="tn-bcard-source">
+                      <img
+                        src="/social/website.png"
+                        alt="Website"
+                        className="tn-bcard-website-logo"
+                        loading="lazy"
+                        decoding="async"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+
+                      <span className="tn-bcard-source-text">timelyvoice.com</span>
+
+                      <span
+                        className="tn-bcard-source-logos"
+                        aria-label="Timely Voice social platforms"
+                      >
+                        {SOURCE_LOGOS.map((l) => (
+                          <img
+                            key={l.key}
+                            src={l.src}
+                            alt={l.alt}
+                            className="tn-bcard-source-logo"
+                            loading="lazy"
+                            decoding="async"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                        ))}
+                      </span>
+                    </div>
 
                     {summary && (
                       <Link to={href} className="tn-bcard-summary">
@@ -134,9 +178,7 @@ export default function TopNews() {
                     )}
 
                     <div className="tn-bcard-footer">
-                      <span className="tn-bcard-time">
-                        {timeAgo(ts) || "—"}
-                      </span>
+                      <span className="tn-bcard-time">{timeAgo(ts) || "—"}</span>
                     </div>
                   </li>
                 );

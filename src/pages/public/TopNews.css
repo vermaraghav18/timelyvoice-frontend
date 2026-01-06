@@ -100,7 +100,7 @@
 /* =============================== */
 
 .tn-bcard{
-  background: #06081a; /* deep editorial navy like reference */
+  background: #06081a;
   border: 1px solid rgba(255,255,255,0.10);
   box-shadow:
     0 0 0 1px rgba(0,0,0,0.35),
@@ -111,129 +111,128 @@
 }
 
 /* =============================== */
-/* Image container (CONSISTENT)    */
+/* Image container                 */
 /* =============================== */
 
 .tn-bcard-media{
   position: relative;
-  height: 320px;            /* reference-style larger image block */
-  background: #ffffff;      /* white canvas behind contained images */
+  height: 320px;
+  background: #ffffff;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* ✅ FIT entire image (no crop) */
 .tn-bcard-img{
   width: 100%;
   height: 100%;
-  object-fit: contain;      /* key requirement: show full image */
+  object-fit: contain;
   object-position: center;
 }
 
-/* Category badge base */
+/* Category badge */
 .tn-bcard-badge{
   position: absolute;
   top: 14px;
   left: 14px;
   z-index: 5;
   padding: 10px 14px;
-
   font-size: 22px;
   font-weight: 900;
   color: #fff;
-
   border: 1px solid rgba(0,0,0,0.35);
   box-shadow: 0 8px 20px rgba(0,0,0,0.35);
-  text-transform: none;
-  letter-spacing: 0;
 }
 
-/* =============================== */
-/* ✅ Badge colors per category     */
-/* =============================== */
-
-/* World = Blue */
-.tn-badge-world{
-  background: rgba(0, 122, 255, 0.90);
-}
-
-/* India = Saffron/Orange */
-.tn-badge-india{
-  background: rgba(255, 140, 0, 0.92);
-}
-
-/* General = Red */
-.tn-badge-general{
-  background: rgba(255, 0, 47, 0.92);
-}
-
-/* Finance = Green */
-.tn-badge-finance{
-  background: rgba(34, 197, 94, 0.92);
-}
-
-/* Entertainment = Pink */
-.tn-badge-entertainment{
-  background: rgba(255, 105, 180, 0.92);
-}
-
-/* Health = Teal */
-.tn-badge-health{
-  background: rgba(0, 200, 180, 0.92);
-}
-
-/* Punjab = Yellow */
+/* Badge colors */
+.tn-badge-world{ background: rgba(0,122,255,0.90); }
+.tn-badge-india{ background: rgba(255,140,0,0.92); }
+.tn-badge-general{ background: rgba(255,0,47,0.92); }
+.tn-badge-finance{ background: rgba(34,197,94,0.92); }
+.tn-badge-entertainment{ background: rgba(255,105,180,0.92); }
+.tn-badge-health{ background: rgba(0,200,180,0.92); }
 .tn-badge-punjab{
-  background: rgba(255, 214, 0, 0.92);
-  color: #111; /* yellow needs dark text for readability */
+  background: rgba(255,214,0,0.92);
+  color:#111;
 }
-
-/* New Delhi = Bright Purple */
-.tn-badge-newdelhi{
-  background: rgba(168, 85, 247, 0.92);
-}
-
-/* Fallback */
-.tn-badge-default{
-  background: rgba(120,120,120,0.78);
-}
+.tn-badge-newdelhi{ background: rgba(168,85,247,0.92); }
+.tn-badge-default{ background: rgba(120,120,120,0.78); }
 
 /* =============================== */
-/* Title (editorial serif)         */
+/* Title                           */
 /* =============================== */
 
 .tn-bcard-title{
   display: block;
   padding: 22px 18px 6px;
-
-  font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+  font-family: "Playfair Display", Georgia, serif;
   font-weight: 800;
   font-size: clamp(34px, 3.2vw, 46px);
   line-height: 1.18;
   letter-spacing: -0.02em;
-
   color: #fff;
   text-decoration: none;
 }
 
-/* ✅ ONLY CHANGE: first line of title in red */
 .tn-bcard-title::first-line{
   color: #ff002f;
 }
 
-/* ✅ timelyvoice.com under title */
+/* =============================== */
+/* SOURCE + WEBSITE + LOGOS        */
+/* =============================== */
+
 .tn-bcard-source{
-  padding: 0 18px 10px;
-  font-size: 12.5px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  color: rgba(255,255,255,0.65);
+  padding: 8px 18px 14px;
+  margin-top: 6px;
+
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+
+  color: rgba(255,255,255,0.8);
   text-transform: lowercase;
+
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
-/* Summary (subtle / readable) */
+/* ✅ NEW: website icon before timelyvoice.com */
+.tn-bcard-website-logo{
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  opacity: 0.98;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.45));
+  margin-right: 2px;
+}
+
+.tn-bcard-source-text{
+  display: inline-block;
+}
+
+.tn-bcard-source-logos{
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* ✅ BIGGER ICONS (ALL) */
+.tn-bcard-source-logo{
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  opacity: 0.98;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.45));
+}
+
+/* =============================== */
+/* Summary                         */
+/* =============================== */
+
 .tn-bcard-summary{
   display: block;
   padding: 10px 18px 18px;
@@ -243,25 +242,25 @@
   text-decoration: none;
 }
 
-/* Footer (TIME ONLY NOW) */
+/* Footer */
 .tn-bcard-footer{
   display: flex;
-  justify-content: flex-start;
   align-items: center;
   padding: 12px 18px 16px;
   font-size: 12px;
   border-top: 1px solid rgba(255,255,255,0.08);
 }
 
-.tn-bcard-time{ color: rgba(255,255,255,0.70); }
+.tn-bcard-time{
+  color: rgba(255,255,255,0.70);
+}
 
 /* =============================== */
 /* Mobile                          */
 /* =============================== */
+
 @media (max-width: 720px){
-  .tn-bcard-media{
-    height: 280px;
-  }
+  .tn-bcard-media{ height: 280px; }
 
   .tn-bcard-badge{
     font-size: 18px;
@@ -274,7 +273,20 @@
   }
 
   .tn-bcard-source{
-    padding: 0 14px 8px;
+    padding: 6px 14px 10px;
+    margin-top: 4px;
+    font-size: 14.5px;
+    gap: 12px;
+  }
+
+  .tn-bcard-website-logo{
+    width: 26px;
+    height: 26px;
+  }
+
+  .tn-bcard-source-logo{
+    width: 24px;
+    height: 24px;
   }
 
   .tn-bcard-summary{
@@ -283,5 +295,36 @@
 
   .tn-bcard-footer{
     padding: 10px 14px 14px;
+  }
+}
+
+/* =============================== */
+/* 🔧 Extra boost for "small" ones */
+/* =============================== */
+
+/* WhatsApp (1st) */
+.tn-bcard-source-logos img:nth-child(1){
+  width: 32px;
+  height: 32px;
+}
+
+/* Facebook (3rd) */
+.tn-bcard-source-logos img:nth-child(3){
+  width: 31px;
+  height: 31px;
+}
+
+/* Threads (6th) */
+.tn-bcard-source-logos img:nth-child(6){
+  width: 32px;
+  height: 32px;
+}
+
+@media (max-width: 720px){
+  .tn-bcard-source-logos img:nth-child(1),
+  .tn-bcard-source-logos img:nth-child(3),
+  .tn-bcard-source-logos img:nth-child(6){
+    width: 26px;
+    height: 26px;
   }
 }
