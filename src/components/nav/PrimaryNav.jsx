@@ -20,7 +20,7 @@ const LINKS = [
 ];
 
 /** ✅ Desktop gutters: adjust these two to control left/right gaps */
-const NAV_MAX_WIDTH = 1120;
+const NAV_MAX_WIDTH = 9999;
 const DESKTOP_GUTTER_PX = 18;
 
 const WRAP_STYLE = {
@@ -88,8 +88,8 @@ const LI_STYLE = {
 const LINK_BASE = {
   color: "#ffffff",
   textDecoration: "none",
-  fontWeight: 700,
-  fontSize: 14,
+  fontWeight: 450,
+  fontSize: 12.2,
   letterSpacing: "0.04em",
   padding: "0 12px",
   lineHeight: "44px",

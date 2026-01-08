@@ -97,9 +97,8 @@ export default function TopNews() {
 
   return (
     <>
-      <div className="tn-nav-sticky">
-        <SiteNav />
-      </div>
+     <SiteNav />
+
 
       <div className="tn-shell">
         <div className="tn-stage">

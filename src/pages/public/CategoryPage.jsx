@@ -489,11 +489,7 @@ function HubHeadlineList({ items = [] }) {
           );
         })}
       </ul>
-      <div className="hubPagerMock" aria-hidden>
-        <span className="hubPagerBtn">‹</span>
-        <span className="hubPagerBtn">2</span>
-        <span className="hubPagerBtn">›</span>
-      </div>
+      {/* ✅ Removed pager mock */}
     </section>
   );
 }
@@ -527,6 +523,8 @@ function HubMiniCard({ a }) {
     </article>
   );
 }
+
+
 
 function HubGridCard({ a }) {
   if (!a) return null;
@@ -884,29 +882,18 @@ export default function CategoryPage() {
   }, []);
 
   /* ---------- HUB sectioning logic ----------
-     ✅ REMOVED TABS (Latest/Trending/Explainers)
-     We always use the latest-sorted list.
+     ✅ Always use the latest-sorted list.
   ------------------------------------------ */
-  const now = Date.now();
-  const last48hTs = now - 48 * 60 * 60 * 1000;
-
-  // Keeping these pools (not used now) is harmless, but we'll remove them to keep file clean.
-  // const trendingPool = useMemo(() => { ... }, []);
-  // const explainersPool = useMemo(() => { ... }, []);
-
   const drivingList = articles;
 
+  // ✅ NEW layout indices: 6 center items + no duplicates between grid & feed
   const hero = drivingList?.[0] || null;
-  const headlineList = drivingList.slice(1, 5);
-  const featured = drivingList?.[5] || null;
-  const moreTop = drivingList.slice(6, 10);
-
-  // ✅ FULL-WIDTH Latest News (5 items) — placed UNDER the whole top grid
-  const latestGrid = drivingList.slice(10, 15);
-
-  const feedStartIndex = 14;
-  const feedItems =
-    drivingList.length > feedStartIndex ? drivingList.slice(feedStartIndex) : [];
+  const headlineList = drivingList.slice(1, 7); // ✅ 6 items
+  const featured = drivingList?.[7] || null;
+  const moreTop = drivingList.slice(8, 12); // pool for horizontal row + right column extras
+  const latestGrid = drivingList.slice(12, 17); // ✅ 5 cards under row
+  const feedStartIndex = 17; // ✅ no overlap with latestGrid
+  const feedItems = drivingList.length > feedStartIndex ? drivingList.slice(feedStartIndex) : [];
 
   const renderInsetAfter = (idx) => {
     const blocks = insetBlocks.filter((b) => b.__after === idx);
@@ -996,7 +983,7 @@ export default function CategoryPage() {
                   </div>
                 ) : (
                   <>
-                    {/* ✅ TOP GRID (Hero + Headlines + Right column) */}
+                    {/* ✅ TOP GRID (Hero + 6 Headlines + Right column) */}
                     <section className="hubTopGrid">
                       <div className="hubTopLeft">
                         <HubHero a={hero} labelSlug={normalizedSlug} />
@@ -1006,25 +993,47 @@ export default function CategoryPage() {
                         <HubHeadlineList items={headlineList} />
                       </div>
 
-                      <aside className="hubTopRight" aria-label="more top stories">
+                      {/* ✅ Right column: featured + 3 more cards below */}
+                      <aside className="hubTopRight" aria-label="featured stories">
                         {featured ? (
-                          <div className="hubFeatured">
-                            <div className="hubFeaturedMedia">
-                              <HubMiniCard a={featured} />
+                          <div className="hubRightStack">
+                            <div className="hubFeatured">
+                              <div className="hubFeaturedMedia">
+                                <HubMiniCard a={featured} />
+                              </div>
                             </div>
+
+                            {moreTop
+                              .filter((x) =>
+                                featured?.slug ? x?.slug !== featured.slug : true
+                              )
+                              .slice(0, 1)
+                              .map((a, i) => (
+                                <div key={a._id || a.id || a.slug || i}>
+                                  <HubMiniCard a={a} />
+                                </div>
+                              ))}
                           </div>
                         ) : null}
-
-                        <div className="hubRightSectionTitle">More Top Stories</div>
-                        <div className="hubMoreTopGrid">
-                          {moreTop.map((a, i) => (
-                            <HubMiniCard key={a._id || a.id || a.slug || i} a={a} />
-                          ))}
-                        </div>
                       </aside>
                     </section>
 
-                    {/* ✅ MOVED: FULL-WIDTH Latest News (5 cards) */}
+                    {/* ✅ NEW: More Top Stories (HORIZONTAL ROW) — placed ABOVE Latest News cards */}
+                    {moreTop.length > 0 && (
+                      <section style={{ marginTop: 14 }}>
+                        <div className="hubRightSectionTitle">More Top Stories</div>
+
+                        <div className="hubMoreTopRow">
+                          {moreTop.map((a, i) => (
+                            <div key={a._id || a.id || a.slug || i} className="hubMoreTopItem">
+                              <HubMiniCard a={a} />
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* ✅ Existing: FULL-WIDTH Latest News (5 cards) */}
                     {latestGrid.length > 0 && (
                       <section className="hubHeroLatest hubHeroLatestFull">
                         <h3 className="hubHeroLatestTitle">Latest News</h3>
@@ -1036,8 +1045,9 @@ export default function CategoryPage() {
                       </section>
                     )}
 
+                    {/* ✅ Feed (renamed to avoid duplicate title confusion) */}
                     <section className="hubSection">
-                      <h2 className="hubSectionTitle">Latest News</h2>
+                      <h2 className="hubSectionTitle">More News</h2>
 
                       <div className="hubFeed">
                         {feedItems.map((a, idx) => {

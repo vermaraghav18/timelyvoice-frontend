@@ -13,9 +13,8 @@ const PROMO_RAIL_IMG = "/banners/advertise-with-us-rail-120x700.png";
 const PROMO_RAIL_TO_EMAIL =
   "https://mail.google.com/mail/?view=cm&fs=1&to=knotshorts1@gmail.com&su=Advertise%20With%20Us";
 
-const RAIL_WIDTH = 160;
-const RAIL_HEIGHT = 635;
-const RAIL_TOP_OFFSET = 0;
+import { RAIL_WIDTH, RAIL_HEIGHT, RAIL_TOP_OFFSET } from "../../lib/rails.js";
+
 const RIGHT_RAIL_INSET = 10;
 
 /* ---------- Canvas width ---------- */

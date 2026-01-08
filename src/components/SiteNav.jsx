@@ -12,11 +12,10 @@ import { api, cachedGet } from "../lib/publicApi.js";
 const HIDE_REGION_NAV = true;
 
 /* ✅ RAIL GUTTER SETTINGS (must match CategoryPage rails) */
-const RAIL_WIDTH = 120;
-const RAIL_GAP = 14;
-const RAIL_GUTTER = RAIL_WIDTH + RAIL_GAP;
-const NAV_EXTRA_GUTTER = 15; // ✅ make header/nav shorter (increase if needed)
-const RAILS_MIN_WIDTH = 1280;
+import { RAIL_GUTTER, RAILS_MIN_WIDTH } from "../lib/rails.js";
+
+// ✅ FIX: remove extra gap so navbar can stretch wider
+const NAV_EXTRA_GUTTER = 0;
 
 function useIsMobile(breakpoint = 768) {
   const [isMobile, setIsMobile] = useState(
@@ -385,13 +384,11 @@ export default function SiteNav() {
     transition: "padding 180ms ease, transform 180ms ease",
   };
 
-  // ✅ Desktop top grid (now includes wide-rail gutters)
+  // ✅ FIX: remove RAIL_GUTTER padding from top header grid (prevents double-gutter squeeze)
   const topGridStyle = !isMobile
     ? {
         width: "100%",
-        padding: condensed
-          ? `6px ${isWideForRails ? RAIL_GUTTER : 12}px 4px`
-          : `12px ${isWideForRails ? RAIL_GUTTER : 12}px 8px`,
+        padding: condensed ? "6px 12px 4px" : "12px 12px 8px",
         display: "grid",
         gridTemplateColumns: "1fr auto 1fr",
         alignItems: "center",
@@ -403,7 +400,7 @@ export default function SiteNav() {
         width: "100%",
         padding: "8px 10px 10px",
         display: "grid",
-        gridTemplateColumns: "auto 1fr auto",
+        gridTemplateColumns: "14fr 1fr auto",
         alignItems: "center",
         columnGap: 8,
         boxSizing: "border-box",
@@ -445,15 +442,18 @@ export default function SiteNav() {
   };
 
   // ✅ wrapper creates empty left/right space for vertical banners at top
-  const railWrapperStyle =
-    !isMobile && isWideForRails
-      ? {
-          width: "100%",
-          paddingLeft: RAIL_GUTTER + NAV_EXTRA_GUTTER,
-          paddingRight: RAIL_GUTTER + NAV_EXTRA_GUTTER,
-          boxSizing: "border-box",
-        }
-      : { width: "100%" };
+  const NAV_SHIFT_LEFT = 18; // ✅ change this number (40, 60, 80...) to move more left
+
+const railWrapperStyle =
+  !isMobile && isWideForRails
+    ? {
+        width: "100%",
+        paddingLeft: Math.max(0, RAIL_GUTTER + NAV_EXTRA_GUTTER - NAV_SHIFT_LEFT),
+        paddingRight: RAIL_GUTTER + NAV_EXTRA_GUTTER,
+        boxSizing: "border-box",
+      }
+    : { width: "100%" };
+
 
   return (
     <>
@@ -603,24 +603,7 @@ export default function SiteNav() {
                 </div>
               ) : (
                 <div style={topGridStyle}>
-                  <button
-                    type="button"
-                    aria-label="Open menu"
-                    onClick={() => setMobileMenuOpen(true)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 36,
-                      height: 36,
-                      borderRadius: 8,
-                      background: "rgba(255,255,255,0.12)",
-                      color: "#fff",
-                      border: "1px solid rgba(255,255,255,0.18)",
-                    }}
-                  >
-                    ☰
-                  </button>
+                 
 
                   <div style={{ textAlign: "center", minWidth: 0 }}>
                     <div style={{ position: "relative", display: "inline-block" }}>
@@ -679,8 +662,20 @@ export default function SiteNav() {
               )}
             </div>
 
-            {/* ✅ IMPORTANT: do NOT override PrimaryNav containerStyle (it prevents gutters) */}
-            <PrimaryNav />
+            {/* ✅ FIX: widen PrimaryNav (remove maxWidth squeeze) when rails layout is active */}
+            <PrimaryNav
+              containerStyle={
+                !isMobile && isWideForRails
+                  ? {
+                      maxWidth: "none",
+                      margin: 0,
+                      paddingLeft: 12,
+                      paddingRight: 12,
+                      boxSizing: "border-box",
+                    }
+                  : undefined
+              }
+            />
 
             {/* regions row — hidden */}
             {!HIDE_REGION_NAV ? (
