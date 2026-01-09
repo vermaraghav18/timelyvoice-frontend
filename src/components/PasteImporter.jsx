@@ -21,6 +21,17 @@ function parseAny(text) {
   return yaml.load(raw);
 }
 
+// ✅ NEW: normalize category/categorySlug into the slug format the form expects
+// "New Delhi" -> "new-delhi"
+function toCategorySlug(v) {
+  const s = String(v || "").trim().toLowerCase();
+  if (!s) return "";
+  return s
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 // Normalize pasted data into the shape your ArticlesPage form expects.
 // { title, slug, summary, author, category, status, publishAt,
 //   imageUrl, imagePublicId, imageAlt, metaTitle, metaDesc, ogImage,
@@ -76,7 +87,12 @@ function normalize(obj) {
     slug: d.slug || "",
     summary: d.summary || d.excerpt || "",
     author: d.author || "",
-    category: d.category || "General",
+
+    // ✅ FIX: form expects category as a slug value (e.g. "india", "new-delhi")
+    // Prefer categorySlug if provided; else derive from category name.
+    // Fallback to "general" (slug) to match your dropdown values.
+    category: toCategorySlug(d.categorySlug || d.category) || "general",
+
     status: (d.status || "published").toLowerCase(),
 
     // IMPORTANT: may be undefined. ArticlesPage.onApply uses:
