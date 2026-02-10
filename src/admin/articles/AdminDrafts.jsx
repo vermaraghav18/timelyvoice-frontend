@@ -48,19 +48,16 @@ const th = {
   padding: "10px 12px",
   fontWeight: 700,
   fontSize: 12,
-  letterSpacing: 0.3,
-  textTransform: "uppercase",
+  letterSpacing: 0.2,
   background: UI.navyMid,
-  color: UI.text,
   borderBottom: `1px solid ${UI.border}`,
 };
 
 const td = {
-  padding: "12px",
+  padding: "10px 12px",
   borderBottom: `1px solid ${UI.border}`,
   verticalAlign: "top",
-  fontSize: 14,
-  color: UI.text,
+  fontSize: 13,
 };
 
 const pill = (bg, color = "#fff") => ({
@@ -77,28 +74,68 @@ const pill = (bg, color = "#fff") => ({
   whiteSpace: "nowrap",
 });
 
+// ✅ Image label for Admin (Auto / Manual / Default / None)
+function getImageLabel(row) {
+  const dbg = row?.autoImageDebug || row?._autoImageDebug || null;
+  const mode = dbg?.mode ? String(dbg.mode) : "";
+
+  // Default image used
+  if (mode === "fallback-default") {
+    return {
+      text: "Default",
+      bg: "rgba(255,255,255,0.16)",
+      tip: dbg?.reason || "Default image used",
+    };
+  }
+
+  // Auto-picked image
+  if (row?.autoImagePicked === true || mode === "cloudinary-picked" || mode === "auto") {
+    return {
+      text: "Auto",
+      bg: UI.teal,
+      tip: dbg?.reason || "Auto-picked image",
+    };
+  }
+
+  // Manual image (explicit)
+  if (mode.startsWith("manual")) {
+    return {
+      text: "Manual",
+      bg: UI.navySoft,
+      tip: dbg?.reason || "Manual image",
+    };
+  }
+
+  // If some image exists but no explicit debug
+  if (row?.imageUrl || row?.imagePublicId) {
+    return {
+      text: "Manual",
+      bg: UI.navySoft,
+      tip: "Image already present",
+    };
+  }
+
+  return { text: "None", bg: "rgba(255,255,255,0.10)", tip: "No image set" };
+}
+
 const btn = {
-  background: UI.navyMid,
-  color: UI.text,
+  background: UI.navySoft,
+  color: "#fff",
   border: `1px solid ${UI.border}`,
+  padding: "8px 10px",
   borderRadius: 10,
-  padding: "8px 12px",
-  fontWeight: 600,
-  fontSize: 13,
+  fontWeight: 700,
+  fontSize: 12,
   cursor: "pointer",
 };
 
-const btnGhost = {
-  ...btn,
-  background: "transparent",
-};
-
 const input = {
-  background: UI.cardBg,
-  border: `1px solid ${UI.border}`,
-  color: UI.text,
-  borderRadius: 10,
+  width: "100%",
   padding: "10px 12px",
+  borderRadius: 10,
+  border: `1px solid ${UI.border}`,
+  background: UI.grayBg,
+  color: UI.text,
   outline: "none",
 };
 
@@ -109,22 +146,11 @@ const ellipsis = {
 };
 
 export default function AdminDrafts() {
-  // Drafts
-  const [drafts, setDrafts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  // Edit/preview
-  const [preview, setPreview] = useState(null);
-  const [editId, setEditId] = useState(null);
-  const [edit, setEdit] = useState({
-    title: "",
-    summary: "",
-    category: "General",
-    imageUrl: "",
-  });
-
-  // Feeds (auto mode)
+  // Feeds mode (auto)
   const [feeds, setFeeds] = useState([]);
   const [newUrl, setNewUrl] = useState("");
   const [newName, setNewName] = useState("");
@@ -135,610 +161,494 @@ export default function AdminDrafts() {
 
   // Incoming items (auto-fetched)
   const [items, setItems] = useState([]);
-  const [itemsLoading, setItemsLoading] = useState(true);
-  const pollRef = useRef(null);
+  const [drafts, setDrafts] = useState([]);
 
-  // misc
-  const [busy, setBusy] = useState(false);
-  const [rowBusy, setRowBusy] = useState({});
-  const setRowLock = (id, on = true) => setRowBusy((p) => ({ ...p, [id]: on }));
+  // manual editor (existing)
+  const [preview, setPreview] = useState(null);
+  const [editId, setEditId] = useState(null);
+  const [edit, setEdit] = useState({
+    title: "",
+    summary: "",
+    category: "General",
+    imageUrl: "",
+  });
 
-  const [toast, setToast] = useState("");
-  const show = (m) => {
-    setToast(String(m));
-    setTimeout(() => setToast(""), 2500);
-  };
+  const toastRef = useRef(null);
 
-  /* Loaders */
-  async function loadDrafts() {
-    setLoading(true);
-    setErr("");
+  function toast(msg) {
+    if (!toastRef.current) return alert(msg);
+    toastRef.current.textContent = msg;
+    toastRef.current.style.opacity = 1;
+    setTimeout(() => {
+      if (toastRef.current) toastRef.current.style.opacity = 0;
+    }, 1800);
+  }
+
+  async function loadAll() {
     try {
-      const r = await api.get("/api/admin/articles/drafts");
-      setDrafts(Array.isArray(r.data) ? r.data : []);
+      setLoading(true);
+      setErr("");
+
+      const [feedsRes, itemsRes, draftsRes] = await Promise.all([
+        api("GET", "/api/admin/feeds", null),
+        api("GET", "/api/admin/feeds/items?status=pending&limit=50", null),
+        api("GET", "/api/articles?status=draft&limit=50", null),
+      ]);
+
+      setFeeds(Array.isArray(feedsRes) ? feedsRes : feedsRes?.items || []);
+      setItems(Array.isArray(itemsRes) ? itemsRes : itemsRes?.items || []);
+      setDrafts(draftsRes?.items || []);
     } catch (e) {
-      setErr("Failed to load drafts");
+      setErr(String(e?.message || "Failed to load"));
     } finally {
       setLoading(false);
     }
   }
 
-  async function loadFeeds() {
-    try {
-      const r = await api.get("/api/automation/feeds");
-      setFeeds(Array.isArray(r.data) ? r.data : []);
-    } catch {
-      /* ignore */
-    }
-  }
-
-  async function loadItems() {
-    setItemsLoading(true);
-    try {
-      const r = await api.get("/api/automation/items", {
-        params: { status: "fetched,extr,gen", limit: clampLimit(200) },
-      });
-      setItems(Array.isArray(r.data) ? r.data : []);
-    } catch {
-      /* ignore */
-    } finally {
-      setItemsLoading(false);
-    }
-  }
-
   useEffect(() => {
-    loadDrafts();
-    loadFeeds();
-    loadItems();
-    pollRef.current = setInterval(loadItems, 45000);
-    return () => clearInterval(pollRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadAll();
   }, []);
 
-  /* Feed actions */
-  async function addFeed(e) {
-    e?.preventDefault?.();
-    if (!newUrl.trim()) return;
-    setBusy(true);
-    try {
-      // 4A: normalize URL (strip hash + utm*, remove trailing slash)
-      let normUrl = newUrl.trim();
-      try {
-        const u = new URL(normUrl);
-        u.hash = "";
-        ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"].forEach((p) =>
-          u.searchParams.delete(p)
-        );
-        normUrl = u.toString().replace(/\/+$/, "");
-      } catch {
-        // keep as typed
-      }
+  // 4E quick search for feeds
+  const filteredFeeds = (feeds || []).filter((f) => {
+    const q = String(feedQuery || "").trim().toLowerCase();
+    if (!q) return true;
+    const hay = `${f?.name || ""} ${f?.url || ""} ${f?.category || ""}`.toLowerCase();
+    return hay.includes(q);
+  });
 
-      const body = {
-        name:
-          newName?.trim() ||
-          (() => {
-            try {
-              return new URL(normUrl).hostname;
-            } catch {
-              return newUrl.trim();
-            }
-          })(),
-        url: normUrl,
-        defaultCategory: newCat || "General",
-      };
-
-      await api.post("/api/automation/feeds", body);
-      setNewUrl("");
-      setNewName("");
-      await loadFeeds();
-      show("Feed added");
-    } catch (e2) {
-      const msg = e2?.response?.data?.error || e2?.message || "";
-      if (/duplicate|exists|E11000/i.test(msg)) {
-        show("This feed already exists.");
-        await loadFeeds();
-      } else {
-        show("Add feed failed");
-      }
-    } finally {
-      setBusy(false);
-    }
+  // 4A normalize URL
+  function normalizeUrl(u) {
+    const s = String(u || "").trim();
+    if (!s) return "";
+    if (!/^https?:\/\//i.test(s)) return `https://${s}`;
+    return s;
   }
 
-  async function enableFeed(id) {
-    setRowLock(id, true);
+  async function addFeed() {
+    const url = normalizeUrl(newUrl);
+    if (!url) return toast("URL required");
+
     try {
-      await api.patch(`/api/automation/feeds/${id}`, { enabled: true });
-      await api.post(`/api/automation/feeds/${id}/fetch`);
-      await loadFeeds();
-      await loadItems();
-    } catch {
-      show("Failed to enable");
+      setBusy(true);
+      setErr("");
+
+      const payload = {
+        url,
+        name: String(newName || "").trim(),
+        category: String(newCat || "General").trim(),
+      };
+
+      const res = await api("POST", "/api/admin/feeds", payload, null);
+
+      // 4B duplicate toast
+      if (res?.error && String(res.error).toLowerCase().includes("duplicate")) {
+        toast("Feed already exists");
+        return;
+      }
+
+      toast("Feed added");
+      setNewUrl("");
+      setNewName("");
+      setNewCat("General");
+      await loadAll();
+    } catch (e) {
+      setErr(String(e?.message || "Failed to add feed"));
     } finally {
-      setRowLock(id, false);
+      setBusy(false);
     }
   }
 
   async function removeFeed(id) {
-    if (!confirm("Remove this feed and any duplicates with the same URL?")) return;
-    setRowLock(id, true);
-
-    setFeeds((prev) => prev.filter((f) => f._id !== id));
-
     try {
-      const r = await api.delete(`/api/automation/feeds/${id}`, { params: { allByUrl: 1 } });
-      const deleted = r?.data?.deleted ?? 1;
-      const url = r?.data?.url || "";
-      show(`Removed ${deleted} feed(s) for ${url}`);
-      await loadFeeds();
-    } catch {
-      show("Failed to remove");
-      await loadFeeds();
-    } finally {
-      setRowLock(id, false);
-    }
-  }
-
-  /* Item actions */
-  async function runOne(itemId) {
-    setBusy(true);
-    try {
-      await api.post(`/api/automation/items/${itemId}/run`);
-      show("Processed! It will appear in Drafts shortly.");
-      await loadItems();
-      await loadDrafts();
-    } catch {
-      show("Run failed");
+      setBusy(true);
+      setErr("");
+      const res = await api("DELETE", `/api/admin/feeds/${id}`, null, null);
+      toast(`Removed (${res?.deletedCount || 0})`);
+      await loadAll();
+    } catch (e) {
+      setErr(String(e?.message || "Failed to remove feed"));
     } finally {
       setBusy(false);
     }
   }
 
-  /* Draft actions */
-  async function openPreview(id) {
+  async function runOne(itemId) {
     try {
-      const r = await api.get(`/api/admin/articles/${id}`);
-      setPreview(r.data);
-    } catch {
-      show("Preview failed");
+      setBusy(true);
+      setErr("");
+      await api("POST", `/api/admin/feeds/items/${itemId}/run`, null, null);
+      toast("Run started");
+      await loadAll();
+    } catch (e) {
+      setErr(String(e?.message || "Failed to run"));
+    } finally {
+      setBusy(false);
     }
   }
-  const closePreview = () => setPreview(null);
 
-  function startEdit(row) {
-    setEditId(row._id);
+  async function openPreview(draft) {
+    setPreview(draft);
+    setEditId(draft?._id);
     setEdit({
-      title: row.title || "",
-      summary: row.summary || "",
-      category: row.category || "General",
-      imageUrl: row.imageUrl || "",
+      title: draft?.title || "",
+      summary: draft?.summary || "",
+      category: draft?.category || "General",
+      imageUrl: draft?.imageUrl || "",
     });
   }
-  const cancelEdit = () => setEditId(null);
 
   async function saveEdit() {
     if (!editId) return;
-    setBusy(true);
     try {
-      await api.patch(`/api/admin/articles/${editId}`, {
+      setBusy(true);
+      setErr("");
+
+      const payload = {
         title: edit.title,
         summary: edit.summary,
         category: edit.category,
-        image: edit.imageUrl,
-      });
-      await loadDrafts();
+        imageUrl: edit.imageUrl,
+      };
+
+      await api("PATCH", `/api/articles/${editId}`, payload, null);
+      toast("Saved");
+      setPreview(null);
       setEditId(null);
-      show("Saved");
-    } catch {
-      show("Save failed");
+      await loadAll();
+    } catch (e) {
+      setErr(String(e?.message || "Failed to save"));
     } finally {
       setBusy(false);
     }
   }
-
-  async function publish(id) {
-    setBusy(true);
-    try {
-      await api.patch(`/api/admin/articles/${id}`, { status: "published" });
-      await loadDrafts();
-      show("Published");
-    } catch {
-      show("Publish failed");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const filteredFeeds = feeds.filter(
-    (f) =>
-      (f.name || "").toLowerCase().includes(feedQuery.toLowerCase()) ||
-      (f.url || "").toLowerCase().includes(feedQuery.toLowerCase())
-  );
 
   return (
-    <div style={{ ...styles.page, background: UI.navy, color: UI.text }}>
+    <div style={{ ...styles.page, background: UI.grayBg }}>
       <div
+        ref={toastRef}
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginTop: 0,
-          marginBottom: 8,
-        }}
-      >
-        <h1 style={{ margin: 0, color: UI.text }}>AI Drafts Review</h1>
-        {toast ? <div style={{ ...pill(UI.teal), background: UI.teal }}>{toast}</div> : null}
-      </div>
-      <p style={{ color: UI.muted, marginTop: 4 }}>
-        Approve, edit or publish AI-generated drafts. Latest first.
-      </p>
-
-      {/* FEED MANAGER */}
-      <div
-        style={{
-          marginTop: 16,
-          padding: 16,
-          border: `1px solid ${UI.border}`,
+          position: "fixed",
+          top: 16,
+          right: 16,
+          padding: "10px 14px",
           borderRadius: 12,
-          background: UI.cardBg,
+          background: "rgba(0,0,0,0.65)",
+          color: "#fff",
+          fontWeight: 700,
+          fontSize: 13,
+          opacity: 0,
+          transition: "opacity 200ms ease",
+          zIndex: 999,
+          pointerEvents: "none",
         }}
-      >
-        <h3 style={{ margin: 0, marginBottom: 12, color: UI.text }}>Feed Manager</h3>
+      />
 
-        <form
-          onSubmit={addFeed}
-          style={{
-            display: "grid",
-            gridTemplateColumns: "minmax(280px, 1fr) 220px 160px auto",
-            gap: 8,
-            alignItems: "center",
-          }}
-        >
-          <input
-            style={{ ...input, minWidth: 260 }}
-            placeholder="https://example.com/rss.xml"
-            value={newUrl}
-            onChange={(e) => setNewUrl(e.target.value)}
-          />
-          <input
-            style={input}
-            placeholder="Optional name (Source)"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-          />
-          <select style={input} value={newCat} onChange={(e) => setNewCat(e.target.value)}>
-            {CATEGORIES.filter((c) => c !== "All").map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <button
-            type="submit"
-            style={{ ...btn, background: UI.teal, borderColor: "transparent" }}
-            disabled={busy || !newUrl}
-          >
-            Add Feed
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <h2 style={{ margin: 0, color: UI.text }}>Auto Drafts</h2>
+          <button type="button" style={btn} disabled={busy} onClick={loadAll}>
+            Refresh
           </button>
-        </form>
-
-        <div style={{ marginTop: 10 }}>
-          <input
-            style={{ ...input, width: "100%" }}
-            placeholder="Search feeds…"
-            value={feedQuery}
-            onChange={(e) => setFeedQuery(e.target.value)}
-          />
         </div>
 
-        <div style={{ marginTop: 12, ...tableWrap }}>
-          <div style={{ maxHeight: 360, overflow: "auto" }}>
-            <table style={table}>
-              <thead>
-                <tr>
-                  <th style={{ ...th, width: 220 }}>Source</th>
-                  <th style={{ ...th, minWidth: 520 }}>URL</th>
-                  <th style={{ ...th, width: 140 }}>Category</th>
-                  <th style={{ ...th, width: 220 }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredFeeds.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" style={{ ...td, color: UI.muted }}>
-                      No feeds match your search.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredFeeds.map((f) => (
-                    <tr key={f._id}>
-                      <td style={td}>
-                        <div style={{ fontWeight: 700 }}>{f.name || f.site || "-"}</div>
-                        <div style={{ fontSize: 12, color: UI.sub }}>ID: {f._id}</div>
-                      </td>
-                      <td style={td}>
-                        <div title={f.url} style={{ ...ellipsis }}>
-                          {f.url}
-                        </div>
-                      </td>
-                      <td style={td}>
-                        <span style={pill(UI.navySoft)}>{f.defaultCategory || f.category || "General"}</span>
-                      </td>
-                      <td style={td}>
-                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          {!f.enabled ? (
-                            <button
-                              type="button"
-                              style={{ ...btn, background: UI.teal, borderColor: "transparent" }}
-                              disabled={!!rowBusy[f._id]}
-                              onClick={() => enableFeed(f._id)}
-                            >
-                              Add
-                            </button>
-                          ) : (
-                            <span style={pill(UI.navySoft)}>Added (Auto)</span>
-                          )}
-                          <button
-                            type="button"
-                            style={btnGhost}
-                            disabled={!!rowBusy[f._id]}
-                            onClick={() => removeFeed(f._id)}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        {/* FEEDS */}
+        <div style={{ marginTop: 16, padding: 16, border: `1px solid ${UI.border}`, borderRadius: 12, background: UI.cardBg }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <h3 style={{ margin: 0, color: UI.text }}>Feeds</h3>
+            {err ? <span style={pill("#b91c1c")}>{err}</span> : null}
           </div>
-        </div>
-      </div>
 
-      {/* INCOMING ITEMS */}
-      <div
-        style={{
-          marginTop: 16,
-          padding: 16,
-          border: `1px solid ${UI.border}`,
-          borderRadius: 12,
-          background: UI.cardBg,
-        }}
-      >
-        <h3 style={{ margin: 0, marginBottom: 12, color: UI.text }}>Incoming Articles (auto)</h3>
-
-        <div style={{ ...tableWrap }}>
-          <div style={{ maxHeight: 420, overflow: "auto" }}>
-            <table style={table}>
-              <thead>
-                <tr>
-                  <th style={{ ...th, minWidth: 420 }}>Title</th>
-                  <th style={{ ...th, width: 220 }}>Source</th>
-                  <th style={{ ...th, width: 200 }}>Published</th>
-                  <th style={{ ...th, width: 120 }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {itemsLoading ? (
-                  <tr>
-                    <td colSpan="4" style={{ ...td, color: UI.muted }}>
-                      Loading…
-                    </td>
-                  </tr>
-                ) : items.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" style={{ ...td, color: UI.muted }}>
-                      No items yet.
-                    </td>
-                  </tr>
-                ) : (
-                  items.map((it) => (
-                    <tr key={it._id}>
-                      <td style={td}>
-                        <div style={{ fontWeight: 700, ...ellipsis }} title={it.rawTitle || "(no title)"}>
-                          {it.rawTitle || "(no title)"}
-                        </div>
-                        <div style={{ fontSize: 12, color: UI.sub, ...ellipsis }} title={it.link}>
-                          {it.link}
-                        </div>
-                      </td>
-                      <td style={td}>
-                        <span style={pill(UI.navySoft)}>{it.sourceName || it.source || "—"}</span>
-                      </td>
-                      <td style={td}>
-                        <span style={{ color: UI.sub }}>
-                          {it.publishedAt ? new Date(it.publishedAt).toLocaleString() : "—"}
-                        </span>
-                      </td>
-                      <td style={td}>
-                        <button
-                          type="button"
-                          style={{ ...btn, background: UI.teal, borderColor: "transparent" }}
-                          disabled={busy}
-                          onClick={() => runOne(it._id)}
-                        >
-                          Run
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* DRAFTS TABLE */}
-      <div
-        style={{
-          marginTop: 16,
-          padding: 16,
-          border: `1px solid ${UI.border}`,
-          borderRadius: 12,
-          background: UI.cardBg,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <h3 style={{ margin: 0, color: UI.text }}>Drafts</h3>
-          {err ? <span style={pill("#b91c1c")}>{err}</span> : null}
-        </div>
-
-        <div style={{ ...tableWrap, marginTop: 12 }}>
-          <div style={{ maxHeight: 420, overflow: "auto" }}>
-            <table style={table}>
-              <thead>
-                <tr>
-                  <th style={{ ...th, minWidth: 420 }}>Title</th>
-                  <th style={{ ...th, width: 160 }}>Category</th>
-                  <th style={{ ...th, width: 200 }}>Created</th>
-                  <th style={{ ...th, width: 220 }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan="4" style={{ ...td, color: UI.muted }}>
-                      Loading…
-                    </td>
-                  </tr>
-                ) : drafts.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" style={{ ...td, color: UI.muted }}>
-                      No drafts found.
-                    </td>
-                  </tr>
-                ) : (
-                  drafts.map((row) => (
-                    <tr key={row._id}>
-                      <td style={td}>
-                        <div style={{ fontWeight: 700 }}>{row.title || "(untitled)"}</div>
-                        <div style={{ fontSize: 12, color: UI.sub }}>{row.slug}</div>
-                        <div style={{ fontSize: 12, color: UI.muted, marginTop: 4, maxHeight: 38, overflow: "hidden" }}>
-                          {row.summary || ""}
-                        </div>
-                      </td>
-                      <td style={td}>
-                        <span style={pill(UI.navySoft)}>{row.category || "General"}</span>
-                      </td>
-                      <td style={td}>
-                        <span style={{ color: UI.sub }}>
-                          {row.createdAt ? new Date(row.createdAt).toLocaleString() : "—"}
-                        </span>
-                      </td>
-                      <td style={td}>
-                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          <button type="button" style={btnGhost} onClick={() => openPreview(row._id)}>
-                            Preview
-                          </button>
-                          <button type="button" style={btnGhost} onClick={() => startEdit(row)}>
-                            ✏️ Edit
-                          </button>
-                          <button
-                            type="button"
-                            style={{ ...btn, background: UI.teal, borderColor: "transparent" }}
-                            onClick={() => publish(row._id)}
-                          >
-                            🚀 Publish
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* PREVIEW */}
-      {preview && (
-        <div
-          style={{
-            marginTop: 16,
-            padding: 16,
-            border: `1px solid ${UI.border}`,
-            borderRadius: 12,
-            background: UI.cardBg,
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h3 style={{ margin: 0, color: UI.text }}>Preview</h3>
-            <button type="button" style={btnGhost} onClick={closePreview}>
-              ✖
-            </button>
-          </div>
-          <h2 style={{ marginTop: 8, color: UI.text }}>{preview.title}</h2>
-          <p style={{ color: UI.sub }}>
-            <span style={pill(UI.navySoft)}>{preview.category}</span>
-            <span style={{ marginLeft: 8 }}>
-              {preview.createdAt ? new Date(preview.createdAt).toLocaleString() : ""}
-            </span>
-          </p>
-          <p style={{ color: UI.text }}>{preview.summary}</p>
-          <div style={{ whiteSpace: "pre-wrap", color: UI.text }}>{preview.body}</div>
-        </div>
-      )}
-
-      {/* EDIT */}
-      {editId && (
-        <div
-          style={{
-            marginTop: 16,
-            padding: 16,
-            border: `1px solid ${UI.border}`,
-            borderRadius: 12,
-            background: UI.cardBg,
-          }}
-        >
-          <h3 style={{ margin: 0, marginBottom: 12, color: UI.text }}>Edit Draft</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: 8, alignItems: "center" }}>
-            <label>Title</label>
-            <input style={input} value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} />
-            <label>Category</label>
-            <select
-              style={input}
-              value={edit.category}
-              onChange={(e) => setEdit({ ...edit, category: e.target.value })}
-            >
-              {CATEGORIES.filter((c) => c !== "All").map((c) => (
+          <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 10, alignItems: "center" }}>
+            <input style={input} placeholder="Feed URL" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} />
+            <input style={input} placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+            <select style={input} value={newCat} onChange={(e) => setNewCat(e.target.value)}>
+              {(CATEGORIES || ["General"]).map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>
               ))}
             </select>
-            <label>Summary</label>
-            <textarea
-              style={{ ...input, minHeight: 96 }}
-              value={edit.summary}
-              onChange={(e) => setEdit({ ...edit, summary: e.target.value })}
-            />
-            <label>Image URL</label>
-            <input
-              style={input}
-              value={edit.imageUrl}
-              onChange={(e) => setEdit({ ...edit, imageUrl: e.target.value })}
-            />
+            <button type="button" style={{ ...btn, background: UI.teal, borderColor: "transparent" }} disabled={busy} onClick={addFeed}>
+              Add
+            </button>
           </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <button type="button" style={btnGhost} onClick={cancelEdit}>
-              Cancel
-            </button>
-            <button
-              type="button"
-              style={{ ...btn, background: UI.teal, borderColor: "transparent" }}
-              onClick={saveEdit}
-              disabled={busy}
-            >
-              Save
-            </button>
+
+          {/* quick search */}
+          <div style={{ marginTop: 12 }}>
+            <input style={input} placeholder="Search feeds (name/url/category)" value={feedQuery} onChange={(e) => setFeedQuery(e.target.value)} />
+          </div>
+
+          <div style={{ ...tableWrap, marginTop: 12 }}>
+            <div style={{ maxHeight: 280, overflow: "auto" }}>
+              <table style={table}>
+                <thead>
+                  <tr>
+                    <th style={{ ...th, minWidth: 380 }}>Name / URL</th>
+                    <th style={{ ...th, width: 160 }}>Category</th>
+                    <th style={{ ...th, width: 220 }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFeeds.length === 0 ? (
+                    <tr>
+                      <td colSpan="3" style={{ ...td, color: UI.muted }}>
+                        No feeds.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredFeeds.map((f) => (
+                      <tr key={f._id}>
+                        <td style={td}>
+                          <div style={{ fontWeight: 700, ...ellipsis }} title={f.name || "(no name)"}>
+                            {f.name || "(no name)"}
+                          </div>
+                          <div style={{ fontSize: 12, color: UI.sub, ...ellipsis }} title={f.url}>
+                            {f.url}
+                          </div>
+                        </td>
+                        <td style={td}>
+                          <span style={pill(UI.navySoft)}>{f.category || "General"}</span>
+                        </td>
+                        <td style={td}>
+                          <button type="button" style={btn} disabled={busy} onClick={() => removeFeed(f._id)}>
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      )}
+
+        {/* INCOMING ITEMS */}
+        <div style={{ marginTop: 16, padding: 16, border: `1px solid ${UI.border}`, borderRadius: 12, background: UI.cardBg }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <h3 style={{ margin: 0, color: UI.text }}>Incoming items</h3>
+            {err ? <span style={pill("#b91c1c")}>{err}</span> : null}
+          </div>
+
+          <div style={{ ...tableWrap, marginTop: 12 }}>
+            <div style={{ maxHeight: 280, overflow: "auto" }}>
+              <table style={table}>
+                <thead>
+                  <tr>
+                    <th style={{ ...th, minWidth: 420 }}>Title</th>
+                    <th style={{ ...th, width: 160 }}>Source</th>
+                    <th style={{ ...th, width: 220 }}>Published</th>
+                    <th style={{ ...th, width: 120 }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan="4" style={{ ...td, color: UI.muted }}>
+                        Loading…
+                      </td>
+                    </tr>
+                  ) : items.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" style={{ ...td, color: UI.muted }}>
+                        No items yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    items.map((it) => (
+                      <tr key={it._id}>
+                        <td style={td}>
+                          <div style={{ fontWeight: 700, ...ellipsis }} title={it.rawTitle || "(no title)"}>
+                            {it.rawTitle || "(no title)"}
+                          </div>
+                          <div style={{ fontSize: 12, color: UI.sub, ...ellipsis }} title={it.link}>
+                            {it.link}
+                          </div>
+                        </td>
+                        <td style={td}>
+                          <span style={pill(UI.navySoft)}>{it.sourceName || it.source || "—"}</span>
+                        </td>
+                        <td style={td}>
+                          <span style={{ color: UI.sub }}>
+                            {it.publishedAt ? new Date(it.publishedAt).toLocaleString() : "—"}
+                          </span>
+                        </td>
+                        <td style={td}>
+                          <button
+                            type="button"
+                            style={{ ...btn, background: UI.teal, borderColor: "transparent" }}
+                            disabled={busy}
+                            onClick={() => runOne(it._id)}
+                          >
+                            Run
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* DRAFTS TABLE */}
+        <div style={{ marginTop: 16, padding: 16, border: `1px solid ${UI.border}`, borderRadius: 12, background: UI.cardBg }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <h3 style={{ margin: 0, color: UI.text }}>Drafts</h3>
+            {err ? <span style={pill("#b91c1c")}>{err}</span> : null}
+          </div>
+
+          <div style={{ ...tableWrap, marginTop: 12 }}>
+            <div style={{ maxHeight: 420, overflow: "auto" }}>
+              <table style={table}>
+                <thead>
+                  <tr>
+                    <th style={{ ...th, minWidth: 420 }}>Title</th>
+                    <th style={{ ...th, width: 160 }}>Category</th>
+                    <th style={{ ...th, width: 200 }}>Created</th>
+                    <th style={{ ...th, width: 220 }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan="4" style={{ ...td, color: UI.muted }}>
+                        Loading…
+                      </td>
+                    </tr>
+                  ) : drafts.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" style={{ ...td, color: UI.muted }}>
+                        No drafts found.
+                      </td>
+                    </tr>
+                  ) : (
+                    drafts.map((row) => (
+                      <tr key={row._id}>
+                        <td style={td}>
+                          <div style={{ fontWeight: 700 }}>{row.title || "(untitled)"}</div>
+                          <div style={{ fontSize: 12, color: UI.sub }}>{row.slug}</div>
+
+                          {/* ✅ NEW: Image label pill */}
+                          {(() => {
+                            const lbl = getImageLabel(row);
+                            const reason = row?.autoImageDebug?.reason || row?._autoImageDebug?.reason || "";
+                            return (
+                              <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <span style={pill(lbl.bg)} title={lbl.tip}>
+                                  Image: {lbl.text}
+                                </span>
+                                {reason ? (
+                                  <span style={{ fontSize: 12, color: UI.muted }}>
+                                    {String(reason)}
+                                  </span>
+                                ) : null}
+                              </div>
+                            );
+                          })()}
+
+                          <div style={{ fontSize: 12, color: UI.muted, marginTop: 4, maxHeight: 38, overflow: "hidden" }}>
+                            {row.summary || ""}
+                          </div>
+                        </td>
+                        <td style={td}>
+                          <span style={pill(UI.navySoft)}>{row.category || "General"}</span>
+                        </td>
+                        <td style={td}>
+                          <span style={{ color: UI.sub }}>
+                            {row.createdAt ? new Date(row.createdAt).toLocaleString() : "—"}
+                          </span>
+                        </td>
+                        <td style={td}>
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            <button type="button" style={btn} disabled={busy} onClick={() => openPreview(row)}>
+                              Edit
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* EDIT MODAL (existing) */}
+        {preview ? (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.55)",
+              display: "grid",
+              placeItems: "center",
+              zIndex: 999,
+              padding: 12,
+            }}
+            onClick={() => (busy ? null : setPreview(null))}
+          >
+            <div
+              style={{
+                width: "min(920px, 100%)",
+                background: UI.cardBg,
+                border: `1px solid ${UI.border}`,
+                borderRadius: 14,
+                padding: 16,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                <h3 style={{ margin: 0, color: UI.text }}>Edit draft</h3>
+                <button type="button" style={btn} disabled={busy} onClick={() => setPreview(null)}>
+                  Close
+                </button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                <div>
+                  <div style={{ color: UI.sub, fontSize: 12, marginBottom: 6 }}>Title</div>
+                  <input style={input} value={edit.title} onChange={(e) => setEdit((p) => ({ ...p, title: e.target.value }))} />
+                </div>
+
+                <div>
+                  <div style={{ color: UI.sub, fontSize: 12, marginBottom: 6 }}>Category</div>
+                  <select style={input} value={edit.category} onChange={(e) => setEdit((p) => ({ ...p, category: e.target.value }))}>
+                    {(CATEGORIES || ["General"]).map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <div style={{ color: UI.sub, fontSize: 12, marginBottom: 6 }}>Summary</div>
+                  <textarea
+                    style={{ ...input, minHeight: 90, resize: "vertical" }}
+                    value={edit.summary}
+                    onChange={(e) => setEdit((p) => ({ ...p, summary: e.target.value }))}
+                  />
+                </div>
+
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <div style={{ color: UI.sub, fontSize: 12, marginBottom: 6 }}>Image URL</div>
+                  <input style={input} value={edit.imageUrl} onChange={(e) => setEdit((p) => ({ ...p, imageUrl: e.target.value }))} />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 14 }}>
+                <button type="button" style={btn} disabled={busy} onClick={saveEdit}>
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

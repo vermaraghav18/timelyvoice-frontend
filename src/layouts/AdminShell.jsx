@@ -56,9 +56,13 @@ export default function AdminShell({ children }) {
           </button>
         </div>
 
-        <nav style={{ padding: 8, overflowY: "auto", flex: 1 }}>
+                <nav style={{ padding: 8, overflowY: "auto", flex: 1 }}>
           <NavItem to="/admin/articles" label="Articles" icon={DocumentIcon} />
           <NavItem to="/admin/media" label="Media" icon={ImageIcon} />
+
+          {/* ✅ NEW: Image Library */}
+          <NavItem to="/admin/image-library" label="Image Library" icon={ImageIcon} />
+
           <NavItem to="/admin/categories" label="Categories" icon={FolderIcon} />
           <NavItem to="/admin/tags" label="Tags" icon={TagIcon} />
           <NavItem to="/admin/settings" label="Settings" icon={SettingsIcon} />
@@ -80,6 +84,7 @@ export default function AdminShell({ children }) {
             icon={DocumentIcon}
           />
         </nav>
+
       </aside>
 
       <div

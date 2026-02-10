@@ -1,5 +1,7 @@
 // src/pages/admin/ArticlesPage.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import { api } from "../../lib/publicApi";
 import PasteImporter from "../../components/PasteImporter.jsx";
 import { useToast } from "../../providers/ToastProvider.jsx";
@@ -130,6 +132,8 @@ function toLocalInputValue(date = new Date()) {
 
 export default function ArticlesPage() {
   const toast = useToast();
+  const navigate = useNavigate();
+
 
   const [data, setData] = useState({ items: [], total: 0, page: 1, limit: 20 });
   const [loading, setLoading] = useState(false);
@@ -1010,7 +1014,7 @@ category: categoryNameFromSlug(categories, form.category),
         </button>
       </div>
 
-      <div
+            <div
         style={{
           display: "flex",
           gap: 8,
@@ -1027,6 +1031,7 @@ category: categoryNameFromSlug(categories, form.category),
         >
           Publish
         </button>
+
         <button
           onClick={() => bulkAction("unpublish")}
           style={{
@@ -1037,10 +1042,20 @@ category: categoryNameFromSlug(categories, form.category),
         >
           Unpublish
         </button>
+
         <button onClick={() => bulkAction("delete")} style={btnDanger}>
           Delete
         </button>
+
+        {/* ✅ Quick access */}
+        <button
+          onClick={() => navigate("/admin/image-library")}
+          style={btnGhost}
+        >
+          Image Library
+        </button>
       </div>
+
 
       {/* Filters */}
       <div

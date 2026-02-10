@@ -155,7 +155,9 @@ const HistoryPage = lazy(() => import("./pages/history/HistoryPage.jsx"));
 const AdminShell = lazy(() => import("./layouts/AdminShell.jsx"));
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard.jsx"));
 const AdminMedia = lazy(() => import("./pages/admin/MediaLibrary.jsx"));
+const AdminImageLibrary = lazy(() => import("./pages/admin/ImageLibrary.jsx"));
 const ArticlesPage = lazy(() => import("./pages/admin/ArticlesPage.jsx"));
+
 const CategoriesPage = lazy(() => import("./pages/admin/CategoriesPage.jsx"));
 const TagsPage = lazy(() => import("./pages/admin/TagsPage.jsx"));
 const SettingsPage = lazy(() => import("./pages/admin/SettingsPage.jsx"));
@@ -333,7 +335,7 @@ export default function App() {
               </AdminShell>
             }
           />
-          <Route
+                    <Route
             path="/admin/media"
             element={
               <AdminShell>
@@ -341,6 +343,17 @@ export default function App() {
               </AdminShell>
             }
           />
+
+          {/* ✅ NEW: Image Library */}
+          <Route
+            path="/admin/image-library"
+            element={
+              <AdminShell>
+                <AdminImageLibrary />
+              </AdminShell>
+            }
+          />
+
           <Route
             path="/admin/categories"
             element={
@@ -349,6 +362,7 @@ export default function App() {
               </AdminShell>
             }
           />
+
           <Route
             path="/admin/tags"
             element={

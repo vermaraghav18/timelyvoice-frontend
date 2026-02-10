@@ -4,9 +4,35 @@ import axios from "axios";
 // Use relative base by default; Vite proxy forwards /api in dev
 const API_BASE = import.meta.env.VITE_API_BASE ?? "/api";
 
+// If a token exists (admin logged in), attach it automatically.
+function readToken() {
+  try {
+    return (
+      localStorage.getItem("adminToken") ||
+      localStorage.getItem("token") ||
+      ""
+    );
+  } catch {
+    return "";
+  }
+}
+
 export const api = axios.create({
   baseURL: API_BASE,
   timeout: 15000,
+});
+
+// Attach token for /api/admin/* requests (safe no-op for public calls)
+api.interceptors.request.use((config) => {
+  const token = readToken();
+  const url = String(config?.url || "");
+  const isAdminRoute = url.startsWith("/api/admin") || url.startsWith("/admin") || url.includes("/admin/");
+
+  if (token && isAdminRoute && !config.headers?.Authorization) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 // -------------------------

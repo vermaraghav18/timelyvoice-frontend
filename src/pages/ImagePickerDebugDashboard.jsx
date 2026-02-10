@@ -27,7 +27,9 @@ export default function ImagePickerDebugDashboard() {
     try {
       setLoading(true);
       setError("");
-      const res = await axios.post(`/api/admin/debug/image-picker`, {
+
+      // ✅ FIX: correct backend endpoint
+      const res = await axios.post(`/api/debug/image-picker`, {
         meta: {
           title: article.title,
           summary: article.summary,
@@ -36,6 +38,7 @@ export default function ImagePickerDebugDashboard() {
           tags: article.tags,
         },
       });
+
       setDebug(res.data);
       setLoading(false);
     } catch (err) {
@@ -79,11 +82,7 @@ export default function ImagePickerDebugDashboard() {
           <h2>Picker Result</h2>
 
           <div className="chosen-section">
-            <img
-              src={debug.url}
-              alt="chosen"
-              className="chosen-img"
-            />
+            <img src={debug.url} alt="chosen" className="chosen-img" />
             <div>
               <p>
                 <b>Public ID:</b> {debug.publicId}
@@ -96,9 +95,7 @@ export default function ImagePickerDebugDashboard() {
           </div>
 
           <h3>📌 Debug Details</h3>
-          <pre className="json-block">
-            {JSON.stringify(debug, null, 2)}
-          </pre>
+          <pre className="json-block">{JSON.stringify(debug, null, 2)}</pre>
         </div>
       )}
     </div>

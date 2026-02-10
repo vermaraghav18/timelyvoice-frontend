@@ -3,6 +3,123 @@ import { apiJSON, authHeader } from "../lib/api";
 import MediaPickerModal from "./MediaPickerModal";
 import GoogleSnippetPreview from "../components/GoogleSnippetPreview"; // adjust if your path differs
 
+// ✅ Human-friendly UI component to display "why this image was chosen"
+function AutoPickWhyBox({ title, why }) {
+  const [showDetails, setShowDetails] = useState(false);
+
+  if (!why) return null;
+
+  // Support multiple shapes that may exist (preview vs saved vs older data)
+  const mode = why?.mode || "unknown";
+  const picked =
+    why?.picked ||
+    why?.publicId ||
+    why?.chosen?.publicId ||
+    why?.chosen?.url ||
+    why?.url ||
+    null;
+
+  const score = typeof why?.score === "number" ? why.score : null;
+
+  const matchedTokens =
+    Array.isArray(why?.matchedTokens) && why.matchedTokens.length
+      ? why.matchedTokens
+      : null;
+
+  const matchedPhrases =
+    Array.isArray(why?.matchedPhrases) && why.matchedPhrases.length
+      ? why.matchedPhrases
+      : null;
+
+  // Try to show a timestamp if present
+  const pickedAt =
+    why?.pickedAt ||
+    why?.picked_at ||
+    why?.picked_time ||
+    why?.pickedAtIso ||
+    null;
+
+  // Build ONE simple sentence for humans
+  let simpleReason = "";
+
+  if (mode === "cloudinary-picked") {
+    if (matchedPhrases?.length) {
+      simpleReason = `Picked because it matched: ${matchedPhrases.join(", ")}.`;
+    } else if (matchedTokens?.length) {
+      simpleReason = `Picked because it matched: ${matchedTokens.join(", ")}.`;
+    } else {
+      simpleReason = "Picked from Cloudinary because it looked like the best match.";
+    }
+  } else if (mode === "fallback-default") {
+    simpleReason = why?.reason
+      ? `Used the default image because: ${why.reason}`
+      : "Used the default image because no suitable match was found.";
+  } else if (String(mode).startsWith("manual")) {
+    simpleReason = "This image was chosen manually by the admin.";
+  } else if (
+    mode === "kept-existing" ||
+    mode === "kept-existing-url" ||
+    mode === "kept-existing-public-id"
+  ) {
+    simpleReason = "The system kept the image that was already present.";
+  } else {
+    simpleReason = why?.reason ? String(why.reason) : "No reason available.";
+  }
+
+  return (
+    <div className="mt-3 border rounded-xl p-3 bg-gray-50">
+      <div className="flex items-center justify-between">
+        <div className="font-semibold text-sm">{title}</div>
+
+        <div className="flex items-center gap-3">
+          {pickedAt ? (
+            <div className="text-xs text-gray-500">
+              {new Date(pickedAt).toLocaleString()}
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            className="text-xs underline text-gray-600"
+            onClick={() => setShowDetails((v) => !v)}
+          >
+            {showDetails ? "Hide details" : "Show details"}
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-2 text-sm text-gray-800 space-y-1">
+        <div>
+          <b>Why:</b> {simpleReason}
+        </div>
+
+        {picked ? (
+          <div className="break-all">
+            <b>Picked:</b> {String(picked)}
+          </div>
+        ) : null}
+
+        {score !== null ? (
+          <div>
+            <b>Score:</b> {String(score)}
+          </div>
+        ) : null}
+      </div>
+
+      {showDetails ? (
+        <div className="mt-2">
+          <div className="text-xs font-semibold text-gray-600 mb-1">
+            Full details
+          </div>
+          <pre className="text-xs bg-white border rounded-lg p-2 overflow-x-auto">
+            {JSON.stringify(why, null, 2)}
+          </pre>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 // Auto hero image planner: asks backend which hero it would pick for the current draft.
 function usePlanImage(article, headers) {
   const [autoPick, setAutoPick] = useState(null);
@@ -84,22 +201,57 @@ export default function ArticleEditor({ article, setArticle, token }) {
   const heroUrl = article?.imageUrl || autoPick?.url || null;
   const heroMode = article?.imagePublicId ? "Manual" : autoPick?.publicId ? "Auto" : "None";
 
-  // Convenience: apply the auto-picked hero as the cover with one click
+  // ✅ apply auto-picked hero AND send "why" to backend via PATCH
   async function useAutoPickAsCover() {
     if (!autoPick?.url || !autoPick?.publicId) return;
-    await setCoverFromMedia({ url: autoPick.url, publicId: autoPick.publicId });
+
+    const whyPayload = autoPick?.why
+      ? {
+          ...autoPick.why,
+          publicId: autoPick.publicId,
+          url: autoPick.url,
+          pickedAt: new Date().toISOString(),
+        }
+      : null;
+
+    // Update UI immediately
+    setArticle((prev) => ({
+      ...prev,
+      autoImageDebug: whyPayload || prev?.autoImageDebug,
+    }));
+
+    // Send why to backend
+    await setCoverFromMedia(
+      { url: autoPick.url, publicId: autoPick.publicId },
+      { autoImageDebug: whyPayload }
+    );
   }
 
-  // Choose/replace cover image
-  async function setCoverFromMedia(m) {
+  // ✅ allow extra patch fields (like autoImageDebug)
+  async function setCoverFromMedia(m, extraPatch = {}) {
     const payload = {
       imageUrl: m.url || "",
       imagePublicId: m.publicId || "",
+      ...extraPatch,
     };
+
     // If your media service returns a server-generated OG variant, use it
     if (m.ogUrl) payload.ogImage = m.ogUrl;
+
     // Removing cover also clears OG if no dedicated OG set
     if (!m.url && !m.publicId) payload.ogImage = "";
+
+    // If user manually chooses/removes cover and no debug is provided, keep state consistent
+    const isManualAction = Boolean(m.url || m.publicId);
+
+    if (isManualAction && payload.autoImageDebug === undefined) {
+      payload.autoImageDebug = { mode: "manual", pickedAt: new Date().toISOString() };
+    }
+
+    if (!isManualAction) {
+      // Removing cover: clear debug
+      payload.autoImageDebug = null;
+    }
 
     const updated = await apiJSON("PATCH", `/api/articles/${article.id}`, payload, H);
     setArticle(updated);
@@ -123,10 +275,13 @@ export default function ArticleEditor({ article, setArticle, token }) {
         return;
       }
 
-      await setCoverFromMedia({
-        url: res.url,
-        publicId: res.publicId,
-      });
+      await setCoverFromMedia(
+        {
+          url: res.url,
+          publicId: res.publicId,
+        },
+        { autoImageDebug: { mode: "manual", pickedAt: new Date().toISOString() } }
+      );
 
       setImportUrl("");
     } catch (e) {
@@ -234,6 +389,19 @@ export default function ArticleEditor({ article, setArticle, token }) {
           <div className="text-sm text-gray-500">No cover selected</div>
         )}
 
+        {/* ✅ show WHY (preview + saved) */}
+        {!article.imageUrl && autoPick?.why ? (
+          <AutoPickWhyBox title="Why the auto-picker chose this (preview)" why={autoPick.why} />
+        ) : null}
+
+        {(article?.autoImageDebug || article?._autoImageDebug) ? (
+        <AutoPickWhyBox
+          title="Why the auto-picker chose this (saved)"
+          why={article?.autoImageDebug || article?._autoImageDebug}
+        />
+      ) : null}
+
+
         <div className="flex flex-wrap gap-2">
           <button
             className="border rounded px-3 py-1"
@@ -285,8 +453,8 @@ export default function ArticleEditor({ article, setArticle, token }) {
             </button>
           </div>
           <p className="text-xs text-gray-500">
-            You can paste a Google Drive share link (for example
-            {" "}“https://drive.google.com/file/d/.../view”) or a normal Cloudinary URL.
+            You can paste a Google Drive share link (for example{" "}
+            “https://drive.google.com/file/d/.../view”) or a normal Cloudinary URL.
             The system will upload it to Cloudinary and set it as the cover image.
           </p>
         </div>
@@ -413,19 +581,13 @@ export default function ArticleEditor({ article, setArticle, token }) {
 
           <div className="mt-2">
             {ogImage ? (
-              <img
-                src={ogImage}
-                alt=""
-                className="max-h-28 rounded border"
-              />
+              <img src={ogImage} alt="" className="max-h-28 rounded border" />
             ) : article?.imageUrl ? (
               <div className="text-xs text-gray-500">
                 No OG override set — social will fall back to your cover image.
               </div>
             ) : (
-              <div className="text-xs text-gray-500">
-                No OG override set.
-              </div>
+              <div className="text-xs text-gray-500">No OG override set.</div>
             )}
           </div>
 
