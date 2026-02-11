@@ -919,6 +919,57 @@ export default function ArticlesPage() {
       });
     }
   }
+  // ⬇⬇ NEW: re-run ImageLibrary auto-pick for this article (clears image then repicks)
+  async function handleRepickImage(id) {
+    try {
+      setImgState(id, { saving: "saving" });
+
+      const res = await api.post(`/admin/articles/${id}/repick-image`);
+      const data = res?.data || {};
+      const a = data.article || null;
+
+      if (!a) {
+        throw new Error("repick returned no article");
+      }
+
+      const nextImage = (a.imageUrl || "").trim() || DEFAULT_IMAGE_URL;
+      const nextOg = (a.ogImage || "").trim() || nextImage;
+      const nextThumb = (a.thumbImage || "").trim() || nextImage;
+
+      updateItemsLocal((row) =>
+        row._id === id
+          ? {
+              ...row,
+              imageUrl: nextImage,
+              ogImage: nextOg,
+              thumbImage: nextThumb,
+              imagePublicId: a.imagePublicId || row.imagePublicId,
+              autoImageDebug: a.autoImageDebug || row.autoImageDebug,
+              updatedAt: new Date().toISOString(),
+            }
+          : row
+      );
+
+      setImgState(id, { value: nextImage, saving: "saved" });
+      setTimeout(() => setImgState(id, { saving: "idle" }), 900);
+
+      toast.push({
+        type: "success",
+        title: "Auto image re-picked",
+        message: "Picked the best ImageLibrary match for this article.",
+      });
+    } catch (e) {
+      console.error("repick image failed", e?.response?.data || e);
+      setImgState(id, { saving: "error" });
+      toast.push({
+        type: "error",
+        title: "Re-pick failed",
+        message: String(e?.response?.data?.error || e.message || e),
+      });
+    }
+  }
+
+
 
   // ⬇⬇ NEW: generate an AI hero image for this article
   async function handleGenerateAiImage(id) {
@@ -1614,6 +1665,15 @@ export default function ArticlesPage() {
 
                           <button
                             type="button"
+                            onClick={() => handleRepickImage(a._id)}
+                            style={{ ...btnSmallGhost, padding: "4px 8px", fontSize: 12 }}
+                            title="Clear current image and re-pick the best ImageLibrary match"
+                          >
+                            re-pick
+                          </button>
+
+                          <button
+                            type="button"
                             onClick={() => handleGenerateAiImage(a._id)}
                             style={{ ...btnSmallPrimary, padding: "4px 8px", fontSize: 12 }}
                             title="Generate an AI hero image for this article"
@@ -1632,6 +1692,14 @@ export default function ArticlesPage() {
                             style={btnSmallGhost}
                           >
                             default image
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRepickImage(a._id)}
+                            style={btnSmallGhost}
+                          >
+                            re-pick
                           </button>
                           <button
                             type="button"
