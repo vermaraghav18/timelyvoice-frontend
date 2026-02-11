@@ -36,44 +36,48 @@ function categoryNameFromSlug(categories, slug) {
   return categories.find((c) => normalizeSlug(c?.slug) === s)?.name || "General";
 }
 
-
-// ——— Cloudinary helpers: strip transforms, version and tracking query ———
 function normalizeCloudinaryUrl(raw = "") {
   try {
-    if (!raw) return "";
-    const u = new URL(raw);
-    if (!/\.cloudinary\.com$/.test(u.hostname)) return raw; // not cloudinary
+    const input = String(raw || "").trim();
+    if (!input) return "";
 
-    // Only handle classic delivery URLs: /image/upload/(...optional...)/<id>[.ext]
+    const u = new URL(input);
+    if (!/\.cloudinary\.com$/.test(u.hostname)) return input; // not cloudinary
+
     const parts = u.pathname.split("/").filter(Boolean);
     const iUpload = parts.findIndex((p) => p === "upload");
-    if (iUpload === -1) return raw;
+    if (iUpload === -1) return input;
 
-    // Everything after "upload":
-    // [maybe transforms], [maybe version], [public_id parts...]
-    const after = parts.slice(iUpload + 1);
+    // Everything after "upload": [transforms...], [maybe version], [public_id parts...]
+    let after = parts.slice(iUpload + 1);
 
-    // Remove a single "v1234567890" if present
-    const noVersion = after.filter((seg) => !/^v\d+$/.test(seg));
+    // remove version segments anywhere like v123456
+    after = after.filter((seg) => !/^v\d+$/.test(seg));
 
-    // If first remaining looks like a transform bundle, drop it
-    const looksLikeTransform = (s) =>
-      /(^[cfgqarstwhopdblm],)|(^c_|^w_|^h_|^g_|^q_|^f_)/.test(s) || s.includes(",");
-    const trimmed =
-      noVersion.length && looksLikeTransform(noVersion[0])
-        ? noVersion.slice(1)
-        : noVersion;
+    // detect transform segments (Cloudinary transformations)
+    const looksLikeTransform = (s) => {
+      if (!s) return false;
+      // Most transforms contain commas OR start with known transform keys
+      if (s.includes(",")) return true;
+      return /^(c_|w_|h_|g_|q_|f_|fl_|e_|a_|r_|b_|bo_|dpr_|ar_|t_|l_|u_|x_|y_|z_|o_)/.test(
+        s
+      );
+    };
 
-    // Rebuild path: /image/upload/<public_id...>
-    const cleanPath = ["", ...parts.slice(0, iUpload + 1), ...trimmed].join("/");
+    // ✅ drop ALL leading transform segments, not just one
+    while (after.length && looksLikeTransform(after[0])) {
+      after = after.slice(1);
+    }
 
-    // Drop query (?_a=… etc)
-    u.search = "";
+    // rebuild clean path
+    const cleanPath = ["", ...parts.slice(0, iUpload + 1), ...after].join("/");
+
+    u.search = ""; // drop ?_a=... etc
     u.pathname = cleanPath;
 
     return u.toString();
   } catch {
-    return raw;
+    return String(raw || "").trim();
   }
 }
 
@@ -100,8 +104,8 @@ function withCacheBust(url = "", seed = Date.now()) {
 function getDriveFileId(url = "") {
   const s = String(url || "").trim();
   if (!s) return "";
-  const byPath = s.match(/\/file\/d\/([^/]+)/);     // /file/d/<ID>/view
-  const byParam = s.match(/[?&]id=([^&]+)/);       // ?id=<ID>
+  const byPath = s.match(/\/file\/d\/([^/]+)/); // /file/d/<ID>/view
+  const byParam = s.match(/[?&]id=([^&]+)/); // ?id=<ID>
   return (byPath && byPath[1]) || (byParam && byParam[1]) || "";
 }
 
@@ -119,8 +123,6 @@ function toPlayableVideoSrc(url = "") {
   return raw;
 }
 
-
-
 // ——— Helper: convert Date → value for <input type="datetime-local"> in LOCAL time ———
 function toLocalInputValue(date = new Date()) {
   if (!date) return "";
@@ -133,7 +135,6 @@ function toLocalInputValue(date = new Date()) {
 export default function ArticlesPage() {
   const toast = useToast();
   const navigate = useNavigate();
-
 
   const [data, setData] = useState({ items: [], total: 0, page: 1, limit: 20 });
   const [loading, setLoading] = useState(false);
@@ -175,7 +176,6 @@ export default function ArticlesPage() {
     category: "general",
     homepagePlacement: "none",
 
-
     status: "draft",
     publishAt: "",
     imageUrl: "",
@@ -194,6 +194,9 @@ export default function ArticlesPage() {
     geoAreasText: "",
     year: "",
     era: "BC",
+
+    sourceImageUrl: "",
+    sourceImageFrom: "",
   });
 
   // Figure out if the selected category is "History"
@@ -208,7 +211,6 @@ export default function ArticlesPage() {
   );
 
   const isHistorySelected = normalizeSlug(form.category) === "history";
-
 
   const [tagsInput, setTagsInput] = useState("");
 
@@ -254,31 +256,27 @@ export default function ArticlesPage() {
   }, [q]);
 
   // Load categories (for filter + editor select)
-useEffect(() => {
-  (async () => {
-    try {
-      const res = await api.get("/categories", { params: { limit: 1000 } });
-      const payload = res.data || {};
-      const raw = Array.isArray(payload)
-        ? payload
-        : payload.items || payload.data || [];
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get("/categories", { params: { limit: 1000 } });
+        const payload = res.data || {};
+        const raw = Array.isArray(payload) ? payload : payload.items || payload.data || [];
 
-      const filtered = raw
-        .filter((c) => ALLOWED_CATEGORY_SLUGS.includes(normalizeSlug(c?.slug)))
-        .sort((a, b) => {
-          const ai = CATEGORY_ORDER.get(normalizeSlug(a?.slug)) ?? 999;
-          const bi = CATEGORY_ORDER.get(normalizeSlug(b?.slug)) ?? 999;
-          return ai - bi;
-        });
+        const filtered = raw
+          .filter((c) => ALLOWED_CATEGORY_SLUGS.includes(normalizeSlug(c?.slug)))
+          .sort((a, b) => {
+            const ai = CATEGORY_ORDER.get(normalizeSlug(a?.slug)) ?? 999;
+            const bi = CATEGORY_ORDER.get(normalizeSlug(b?.slug)) ?? 999;
+            return ai - bi;
+          });
 
-      setCategories(filtered);
-    } catch {
-      /* non-fatal */
-    }
-  })();
-}, []);
-
-
+        setCategories(filtered);
+      } catch {
+        /* non-fatal */
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -295,7 +293,6 @@ useEffect(() => {
   }
 
   // ---------- NEW: category resolver ----------
-  
 
   // Fetch articles
   const fetchArticles = async () => {
@@ -469,16 +466,12 @@ useEffect(() => {
       return;
     }
     const newStatus = action === "publish" ? "published" : "draft";
-    updateItemsLocal((a) =>
-      selectedIds.has(a._id) ? { ...a, status: newStatus } : a
-    );
+    updateItemsLocal((a) => (selectedIds.has(a._id) ? { ...a, status: newStatus } : a));
     const results = await Promise.allSettled(
       ids.map((id) =>
         api.patch(`/admin/articles/${id}`, {
           status: newStatus,
-          ...(newStatus === "published"
-            ? { publishedAt: new Date().toISOString() }
-            : {}),
+          ...(newStatus === "published" ? { publishedAt: new Date().toISOString() } : {}),
         })
       )
     );
@@ -516,7 +509,7 @@ useEffect(() => {
       publishAt: toLocalInputValue(),
       imageUrl: "",
       imagePublicId: "",
-       videoUrl: "", // NEW
+      videoUrl: "", // NEW
       imageAlt: "",
       metaTitle: "",
       metaDesc: "",
@@ -526,7 +519,13 @@ useEffect(() => {
       geoAreasText: "",
       year: "",
       era: "BC",
+
+      // ✅ NEW: publisher source fields (read-only)
+      sourceImageUrl: "",
+      sourceImageFrom: "",
+      sourceUrl: "",
     });
+
     setTagsInput("");
     setTestCountry("");
     setTestRegion("");
@@ -544,7 +543,6 @@ useEffect(() => {
       // Turn array of geoAreas -> comma text for editor
       const geoAreasText = Array.isArray(a.geo?.areas) ? a.geo.areas.join(", ") : "";
 
-
       setEditingId(id);
       setForm({
         title: a.title || "",
@@ -553,19 +551,18 @@ useEffect(() => {
         author: a.author || "",
         body: a.body || "",
         category:
-  normalizeSlug(a.categorySlug) ||
-  normalizeSlug(a.category?.slug) ||
-  normalizeSlug(a.category?.name) ||
-  normalizeSlug(a.category) ||
-  "general",
-                homepagePlacement: normalizePlacement(a.homepagePlacement || "none"),
-
+          normalizeSlug(a.categorySlug) ||
+          normalizeSlug(a.category?.slug) ||
+          normalizeSlug(a.category?.name) ||
+          normalizeSlug(a.category) ||
+          "general",
+        homepagePlacement: normalizePlacement(a.homepagePlacement || "none"),
 
         status: a.status || "published",
         publishAt: a.publishedAt ? toLocalInputValue(a.publishedAt) : "",
         imageUrl: a.imageUrl || "",
         imagePublicId: a.imagePublicId || "",
-         videoUrl: a.videoUrl || "", // NEW
+        videoUrl: a.videoUrl || "", // NEW
         imageAlt: a.imageAlt || "",
         metaTitle: a.metaTitle || "",
         metaDesc: a.metaDesc || "",
@@ -575,7 +572,13 @@ useEffect(() => {
         geoAreasText,
         year: a.year ?? "",
         era: a.era || "BC",
+
+        // ✅ NEW: publisher source fields (read-only)
+        sourceImageUrl: a.sourceImageUrl || "",
+        sourceImageFrom: a.sourceImageFrom || "",
+        sourceUrl: a.sourceUrl || "",
       });
+
       setTagsInput((Array.isArray(a.tags) ? a.tags : []).join(", "));
       setTestCountry("");
       setTestRegion("");
@@ -627,32 +630,30 @@ useEffect(() => {
     autosaveTimerRef.current = setTimeout(async () => {
       try {
         setAutoSaving(true);
-                const payload = {
+        const payload = {
           title: form.title?.trim(),
           slug: form.slug?.trim() || undefined,
           summary: form.summary?.trim(),
           author: form.author?.trim(),
           body: form.body,
-         categorySlug: normalizeSlug(form.category) || "general",
-category: categoryNameFromSlug(categories, form.category),
-                    homepagePlacement: normalizePlacement(form.homepagePlacement || "none"),
-
+          categorySlug: normalizeSlug(form.category) || "general",
+          category: categoryNameFromSlug(categories, form.category),
+          homepagePlacement: normalizePlacement(form.homepagePlacement || "none"),
 
           status: form.status === "published" ? "published" : "draft",
-          publishedAt: form.publishAt
-            ? new Date(form.publishAt).toISOString()
-            : undefined,
+          publishedAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
           imageUrl: normalizeCloudinaryUrl(form.imageUrl) || undefined,
           imagePublicId: form.imagePublicId || undefined,
           videoUrl: form.videoUrl || undefined, // NEW
           imageAlt: form.imageAlt || undefined,
 
-          metaTitle: form.metaTitle
-            ? String(form.metaTitle).slice(0, META_TITLE_MAX)
-            : undefined,
-          metaDesc: form.metaDesc
-            ? String(form.metaDesc).slice(0, META_DESC_MAX)
-            : undefined,
+          // ✅ ADD THESE
+          sourceImageUrl: form.sourceImageUrl || undefined,
+          sourceImageFrom: form.sourceImageFrom || undefined,
+          sourceUrl: form.sourceUrl || undefined,
+
+          metaTitle: form.metaTitle ? String(form.metaTitle).slice(0, META_TITLE_MAX) : undefined,
+          metaDesc: form.metaDesc ? String(form.metaDesc).slice(0, META_DESC_MAX) : undefined,
           ogImage: normalizeCloudinaryUrl(form.ogImage) || undefined,
           tags: parseTags(tagsInput),
           geo: {
@@ -664,13 +665,8 @@ category: categoryNameFromSlug(categories, form.category),
         };
 
         // Enforce soft limits on meta fields before saving
-        if (payload.metaTitle)
-          payload.metaTitle = String(payload.metaTitle).slice(
-            0,
-            META_TITLE_MAX
-          );
-        if (payload.metaDesc)
-          payload.metaDesc = String(payload.metaDesc).slice(0, META_DESC_MAX);
+        if (payload.metaTitle) payload.metaTitle = String(payload.metaTitle).slice(0, META_TITLE_MAX);
+        if (payload.metaDesc) payload.metaDesc = String(payload.metaDesc).slice(0, META_DESC_MAX);
         await api.patch(`/admin/articles/${editingId}`, payload);
         setAutoSavedAt(new Date());
       } catch (e) {
@@ -679,8 +675,7 @@ category: categoryNameFromSlug(categories, form.category),
         setAutoSaving(false);
       }
     }, 1200);
-    return () =>
-      autosaveTimerRef.current && clearTimeout(autosaveTimerRef.current);
+    return () => autosaveTimerRef.current && clearTimeout(autosaveTimerRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, tagsInput, showForm, editingId]);
 
@@ -696,10 +691,7 @@ category: categoryNameFromSlug(categories, form.category),
       // If user pasted a Google Drive URL, import it via backend
       if (imageUrl && imageUrl.includes("drive.google.com")) {
         try {
-          const res = await api.post(
-            "/admin/articles/import-image-from-url",
-            { url: imageUrl }
-          );
+          const res = await api.post("/admin/articles/import-image-from-url", { url: imageUrl });
           const data = res && res.data ? res.data : res;
           if (data && data.url && data.publicId) {
             imageUrl = data.url; // Cloudinary URL
@@ -718,7 +710,7 @@ category: categoryNameFromSlug(categories, form.category),
       }
 
       // build a clean payload the backend expects
-           const payload = {
+      const payload = {
         title: form.title?.trim(),
         slug:
           form.slug?.trim() ||
@@ -735,22 +727,20 @@ category: categoryNameFromSlug(categories, form.category),
         category: categoryNameFromSlug(categories, form.category),
         homepagePlacement: normalizePlacement(form.homepagePlacement || "none"),
 
-
         status: form.status === "published" ? "published" : "draft",
-        publishedAt: form.publishAt
-          ? new Date(form.publishAt).toISOString()
-          : undefined,
+        publishedAt: form.publishAt ? new Date(form.publishAt).toISOString() : undefined,
         imageUrl, // now Cloudinary if it was Drive
         imagePublicId, // now Cloudinary if it was Drive
         videoUrl: form.videoUrl || undefined, // NEW
         imageAlt: form.imageAlt || undefined,
 
-        metaTitle: form.metaTitle
-          ? String(form.metaTitle).slice(0, META_TITLE_MAX)
-          : undefined,
-        metaDesc: form.metaDesc
-          ? String(form.metaDesc).slice(0, META_DESC_MAX)
-          : undefined,
+        // ✅ ADD THESE
+        sourceImageUrl: form.sourceImageUrl || undefined,
+        sourceImageFrom: form.sourceImageFrom || undefined,
+        sourceUrl: form.sourceUrl || undefined,
+
+        metaTitle: form.metaTitle ? String(form.metaTitle).slice(0, META_TITLE_MAX) : undefined,
+        metaDesc: form.metaDesc ? String(form.metaDesc).slice(0, META_DESC_MAX) : undefined,
         ogImage, // will use Cloudinary URL if we just imported
         tags: parseTags(tagsInput),
         geo: {
@@ -762,13 +752,8 @@ category: categoryNameFromSlug(categories, form.category),
       };
 
       // Soft limits: also enforce on manual Save
-      if (payload.metaTitle)
-        payload.metaTitle = String(payload.metaTitle).slice(
-          0,
-          META_TITLE_MAX
-        );
-      if (payload.metaDesc)
-        payload.metaDesc = String(payload.metaDesc).slice(0, META_DESC_MAX);
+      if (payload.metaTitle) payload.metaTitle = String(payload.metaTitle).slice(0, META_TITLE_MAX);
+      if (payload.metaDesc) payload.metaDesc = String(payload.metaDesc).slice(0, META_DESC_MAX);
 
       if (editingId) {
         await api.patch(`/admin/articles/${editingId}`, payload);
@@ -861,17 +846,14 @@ category: categoryNameFromSlug(categories, form.category),
         const cleaned = normalizeCloudinaryUrl(value || "");
         const syncOg = !!(imgEdits[id]?.syncOg ?? true);
 
-        const payload = syncOg
-          ? { imageUrl: cleaned, ogImage: cleaned }
-          : { imageUrl: cleaned };
+        const payload = syncOg ? { imageUrl: cleaned, ogImage: cleaned } : { imageUrl: cleaned };
 
         const res = await api.patch(`/admin/articles/${id}`, payload);
         const updated = res?.data || {};
 
         // Server value (if it returns one) wins; otherwise our cleaned input
         const nextImage = updated.imageUrl ?? cleaned ?? "";
-        const nextOg =
-          updated.ogImage ?? (syncOg ? nextImage : updated.ogImage || "");
+        const nextOg = updated.ogImage ?? (syncOg ? nextImage : updated.ogImage || "");
 
         updateItemsLocal((a) =>
           a._id === id
@@ -1001,12 +983,11 @@ category: categoryNameFromSlug(categories, form.category),
       >
         <h1 style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>
           Articles
-          {previewEnabled &&
-            /^[A-Z]{2}$/.test((previewCountry || "").toUpperCase()) && (
-              <span style={{ marginLeft: 10, ...badge, ...badgeYellow }}>
-                Previewing as: {(previewCountry || "").toUpperCase()}
-              </span>
-            )}
+          {previewEnabled && /^[A-Z]{2}$/.test((previewCountry || "").toUpperCase()) && (
+            <span style={{ marginLeft: 10, ...badge, ...badgeYellow }}>
+              Previewing as: {(previewCountry || "").toUpperCase()}
+            </span>
+          )}
         </h1>
         {/* Create button */}
         <button onClick={openCreate} style={btnPrimary}>
@@ -1014,7 +995,7 @@ category: categoryNameFromSlug(categories, form.category),
         </button>
       </div>
 
-            <div
+      <div
         style={{
           display: "flex",
           gap: 8,
@@ -1048,14 +1029,10 @@ category: categoryNameFromSlug(categories, form.category),
         </button>
 
         {/* ✅ Quick access */}
-        <button
-          onClick={() => navigate("/admin/image-library")}
-          style={btnGhost}
-        >
+        <button onClick={() => navigate("/admin/image-library")} style={btnGhost}>
           Image Library
         </button>
       </div>
-
 
       {/* Filters */}
       <div
@@ -1090,11 +1067,10 @@ category: categoryNameFromSlug(categories, form.category),
         >
           <option value="">All categories</option>
           {categories.map((c) => (
-  <option key={c.slug} value={normalizeSlug(c.slug)}>
-    {c.name}
-  </option>
-))}
-
+            <option key={c.slug} value={normalizeSlug(c.slug)}>
+              {c.name}
+            </option>
+          ))}
         </select>
 
         <input
@@ -1196,10 +1172,7 @@ category: categoryNameFromSlug(categories, form.category),
                 <input
                   type="checkbox"
                   onChange={toggleSelectAll}
-                  checked={
-                    data.items.length > 0 &&
-                    data.items.every((a) => selectedIds.has(a._id))
-                  }
+                  checked={data.items.length > 0 && data.items.every((a) => selectedIds.has(a._id))}
                 />
               </th>
               <th style={th}>Title</th>
@@ -1228,16 +1201,16 @@ category: categoryNameFromSlug(categories, form.category),
             )}
             {!loading &&
               data.items.map((a) => {
-                                const imgState =
+                const imgState =
                   imgEdits[a._id] || {
                     value: a.imageUrl || "",
                     saving: "idle",
                     syncOg: true,
                   };
 
-                  /* ✅ ADD THESE 2 LINES RIGHT HERE */
-  const placement = placementLabel(a.homepagePlacement);
-  const placementStyle = placementBadgeStyle(a.homepagePlacement);
+                /* ✅ ADD THESE 2 LINES RIGHT HERE */
+                const placement = placementLabel(a.homepagePlacement);
+                const placementStyle = placementBadgeStyle(a.homepagePlacement);
 
                 const dotColor =
                   imgState.saving === "saving"
@@ -1248,13 +1221,9 @@ category: categoryNameFromSlug(categories, form.category),
                     ? "#ef4444"
                     : "#d1d5db";
 
-                               const hasVideo = !!a.videoUrl;
+                const hasVideo = !!a.videoUrl;
 
-
-
-
-
-                  // NEW: RSS origin info
+                // NEW: RSS origin info
                 const sourceUrl = a.sourceUrl || "";
                 let sourceLabel = "";
                 if (sourceUrl) {
@@ -1265,13 +1234,9 @@ category: categoryNameFromSlug(categories, form.category),
                     sourceLabel = sourceUrl;
                   }
                 }
-                  
-                // NEW: body word count for display
-                const bodyWordCount = (a.body || "")
-                  .split(/\s+/)
-                  .filter(Boolean).length;
 
-                
+                // NEW: body word count for display
+                const bodyWordCount = (a.body || "").split(/\s+/).filter(Boolean).length;
 
                 // status badge style
                 const statusBadge =
@@ -1282,11 +1247,7 @@ category: categoryNameFromSlug(categories, form.category),
                     : badgeGray;
 
                 return (
-                  <tr
-                    key={a._id}
-                    className="article-row-card"
-                    style={{ borderTop: "1px solid #f0f0f0" }}
-                  >
+                  <tr key={a._id} className="article-row-card" style={{ borderTop: "1px solid #f0f0f0" }}>
                     <td style={td}>
                       <input
                         type="checkbox"
@@ -1303,342 +1264,364 @@ category: categoryNameFromSlug(categories, form.category),
                           </span>
                         )}
                         <div
-  className="article-title-row"
-  style={{
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 8,
-    flexWrap: "wrap",
-  }}
->
-  <div
-    style={{
-      fontWeight: 600,
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      flexWrap: "wrap",
-      maxWidth: "100%",
-    }}
-  >
-    <span
-      className="article-title-text"
-      style={{ wordBreak: "break-word" }}
-    >
-      {a.title}
-    </span>
+                          className="article-title-row"
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "flex-start",
+                            gap: 8,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontWeight: 600,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              flexWrap: "wrap",
+                              maxWidth: "100%",
+                            }}
+                          >
+                            <span className="article-title-text" style={{ wordBreak: "break-word" }}>
+                              {a.title}
+                            </span>
 
-    {bodyWordCount > 0 && (
-      <span
-        style={{
-          fontSize: 11,
-          color: "#6b7280",
-          whiteSpace: "nowrap",
-        }}
-        title={`Approx. ${bodyWordCount} words in body`}
-      >
-        · {bodyWordCount} words
-      </span>
-    )}
-  </div>
- <div
-  style={{
-    display: "flex",
-    gap: 6,
-    alignItems: "center",
-    flexWrap: "wrap",
-  }}
->
-  <span className="status-inline" style={{ ...badge, ...statusBadge }}>
-    {a.status}
-  </span>
+                            {bodyWordCount > 0 && (
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  color: "#6b7280",
+                                  whiteSpace: "nowrap",
+                                }}
+                                title={`Approx. ${bodyWordCount} words in body`}
+                              >
+                                · {bodyWordCount} words
+                              </span>
+                            )}
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: 6,
+                              alignItems: "center",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <span className="status-inline" style={{ ...badge, ...statusBadge }}>
+                              {a.status}
+                            </span>
 
-  {placement ? (
-    <span
-      className="placement-inline"
-      style={{ ...badge, ...(placementStyle || {}) }}
-      title={`Homepage placement: ${placement}`}
-    >
-      {placement}
-    </span>
-  ) : null}
-</div>
-
-</div>
-
+                            {placement ? (
+                              <span
+                                className="placement-inline"
+                                style={{ ...badge, ...(placementStyle || {}) }}
+                                title={`Homepage placement: ${placement}`}
+                              >
+                                {placement}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
                       </div>
 
                       {sourceLabel && (
-  <div
-    className="article-source-url"
-    style={{ color: "#4b5563", fontSize: 11, marginTop: 4 }}
-  >
-    Source:{" "}
-    {sourceUrl ? (
-      <a
-        href={sourceUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ color: "#2563eb", textDecoration: "none" }}
-      >
-        {sourceLabel}
-      </a>
-    ) : (
-      sourceLabel
-    )}
-  </div>
-)}
+                        <div
+                          className="article-source-url"
+                          style={{ color: "#4b5563", fontSize: 11, marginTop: 4 }}
+                        >
+                          Source:{" "}
+                          {sourceUrl ? (
+                            <a
+                              href={sourceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: "#2563eb", textDecoration: "none" }}
+                            >
+                              {sourceLabel}
+                            </a>
+                          ) : (
+                            sourceLabel
+                          )}
+                        </div>
+                      )}
 
-{/* slug (just under title on mobile) */}
-<div
-  className="article-slug"
-  style={{ color: "#666", fontSize: 12, marginTop: 6 }}
->
-  {a.slug}
-</div>
+                      {/* slug (just under title on mobile) */}
+                      <div className="article-slug" style={{ color: "#666", fontSize: 12, marginTop: 6 }}>
+                        {a.slug}
+                      </div>
 
-{/* image alt (visible under slug) – uses top-level OR seo.imageAlt */}
-{(a.imageAlt || a.seo?.imageAlt) && (
-  <div
-    className="article-image-alt"
-    style={{ color: "#dc2626", fontSize: 11, marginTop: 2 }}
-  >
-    {a.imageAlt || a.seo?.imageAlt}
-  </div>
-)}
+                      {/* image alt (visible under slug) – uses top-level OR seo.imageAlt */}
+                      {(a.imageAlt || a.seo?.imageAlt) && (
+                        <div className="article-image-alt" style={{ color: "#dc2626", fontSize: 11, marginTop: 2 }}>
+                          {a.imageAlt || a.seo?.imageAlt}
+                        </div>
+                      )}
 
-{/* tags preview */}
-{Array.isArray(a.tags) && a.tags.length > 0 && (
-  <div
-    style={{
-      marginTop: 6,
-      display: "flex",
-      gap: 6,
-      flexWrap: "wrap",
-    }}
-  >
-    {a.tags.map((t, idx) => (
-      <span
-        key={`${t}-${idx}`}
-        title={`tag: ${t}`}
-        style={{
-          padding: "1px 6px",
-          fontSize: 11,
-          borderRadius: 999,
-          background: "#f1f5f9",
-          border: "1px solid #e2e8f0",
-          color: "#475569",
-        }}
-      >
-        #{t}
-      </span>
-    ))}
-  </div>
-)}
+                      {/* tags preview */}
+                      {Array.isArray(a.tags) && a.tags.length > 0 && (
+                        <div
+                          style={{
+                            marginTop: 6,
+                            display: "flex",
+                            gap: 6,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          {a.tags.map((t, idx) => (
+                            <span
+                              key={`${t}-${idx}`}
+                              title={`tag: ${t}`}
+                              style={{
+                                padding: "1px 6px",
+                                fontSize: 11,
+                                borderRadius: 999,
+                                background: "#f1f5f9",
+                                border: "1px solid #e2e8f0",
+                                color: "#475569",
+                              }}
+                            >
+                              #{t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
 
+                      {/* Mobile-only preview just under slug+tags */}
+                      <div className="thumb-mobile-only" style={{ marginTop: 10 }}>
+                        {(() => {
+                          // ✅ FIX #1: STOP normalizing for display
+                          const baseImage = (imgState?.value || a.imageUrl || a.thumbImage || "").trim();
 
-                  {/* Mobile-only preview just under slug+tags */}
-{/* Mobile-only preview just under slug+tags */}
-<div className="thumb-mobile-only" style={{ marginTop: 10 }}>
-  {(() => {
-    const baseImage = normalizeCloudinaryUrl(
-      imgState?.value || a.imageUrl || a.thumbImage || ""
-    );
+                          const thumbSrc = withCacheBust(
+                            baseImage || DEFAULT_IMAGE_URL,
+                            a.updatedAt || Date.now()
+                          );
 
-    const thumbSrc = withCacheBust(baseImage || DEFAULT_IMAGE_URL, a.updatedAt || Date.now());
+                          const hasVideo = !!a.videoUrl;
+                          const sourceImageUrl = a.sourceImageUrl || "";
 
-    // Video
-    const hasVideo = !!a.videoUrl;
+                          return (
+                            <div style={{ display: "grid", gap: 10 }}>
+                              {/* ✅ Hero preview (your current preview) */}
+                              <div
+                                style={{
+                                  width: "100%",
+                                  maxWidth: 320,
+                                  position: "relative",
+                                  borderRadius: 10,
+                                  overflow: "hidden",
+                                  border: "1px solid #eee",
+                                  background: "#000",
+                                }}
+                              >
+                                <img
+                                  src={thumbSrc}
+                                  alt=""
+                                  loading="lazy"
+                                  decoding="async"
+                                  style={{
+                                    width: "100%",
+                                    height: "auto",
+                                    display: "block",
+                                    background: "#f8fafc",
+                                    objectFit: "cover",
+                                  }}
+                                  onError={(e) => {
+                                    const tries = Number(e.currentTarget.dataset.tries || 0);
 
+                                    if (tries === 0 && baseImage && baseImage !== DEFAULT_IMAGE_URL) {
+                                      e.currentTarget.dataset.tries = "1";
+                                      e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now());
+                                      return;
+                                    }
 
-    return (
-  <div
-    style={{
-      width: "100%",
-      maxWidth: 320,
-      position: "relative",
-      borderRadius: 10,
-      overflow: "hidden",
-      border: "1px solid #eee",
-      background: "#000",
-    }}
-  >
-    {/* ✅ Always show the image */}
-    <img
-      src={thumbSrc}
-      alt=""
-      loading="lazy"
-      decoding="async"
-      style={{
-        width: "100%",
-        height: "auto",
-        display: "block",
-        background: "#f8fafc",
-        objectFit: "cover",
-      }}
-      onError={(e) => {
-        const tries = Number(e.currentTarget.dataset.tries || 0);
+                                    if (tries === 1) {
+                                      e.currentTarget.dataset.tries = "2";
+                                      e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 1);
+                                      return;
+                                    }
 
-        if (tries === 0 && baseImage && baseImage !== DEFAULT_IMAGE_URL) {
-          e.currentTarget.dataset.tries = "1";
-          e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now());
-          return;
-        }
+                                    e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 2);
+                                  }}
+                                />
 
-        if (tries === 1) {
-          e.currentTarget.dataset.tries = "2";
-          e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 1);
-          return;
-        }
+                                {hasVideo ? (
+                                  <video
+                                    src={toPlayableVideoSrc(a.videoUrl)}
+                                    autoPlay
+                                    loop
+                                    muted
+                                    playsInline
+                                    preload="metadata"
+                                    style={{
+                                      position: "absolute",
+                                      right: 8,
+                                      bottom: 8,
+                                      width: "55%",
+                                      height: "40%",
+                                      borderRadius: 10,
+                                      border: "1px solid rgba(255,255,255,0.35)",
+                                      background: "#000",
+                                      objectFit: "cover",
+                                      boxShadow: "0 8px 20px rgba(0,0,0,0.35)",
+                                      pointerEvents: "none",
+                                    }}
+                                  />
+                                ) : null}
+                              </div>
 
-        e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 2);
-      }}
-    />
+                              {/* ✅ FIX #2: Publisher source image should NOT hide on error */}
+                              {sourceImageUrl ? (
+                                <div style={{ maxWidth: 320 }}>
+                                  <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 4 }}>
+                                    Source Image (Publisher)
+                                  </div>
+                                  <img
+                                    src={sourceImageUrl}
+                                    alt="Source"
+                                    loading="lazy"
+                                    decoding="async"
+                                    referrerPolicy="no-referrer"
+                                    crossOrigin="anonymous"
+                                    style={{
+                                      width: "100%",
+                                      height: "auto",
+                                      display: "block",
+                                      objectFit: "cover",
+                                      borderRadius: 10,
+                                      border: "1px solid rgba(0,0,0,0.08)",
+                                      background: "#f8fafc",
+                                    }}
+                                    onError={(e) => {
+                                      // ✅ DON'T HIDE IT. Show it as faded so you know it's blocked.
+                                      e.currentTarget.style.opacity = "0.3";
+                                      e.currentTarget.title =
+                                        "Blocked by publisher (hotlink protection). Import to Cloudinary to show.";
+                                    }}
+                                  />
+                                  <div style={{ fontSize: 12, color: "#b91c1c", marginTop: 6 }}>
+                                    If this looks blank/grey → the publisher blocks direct image loading. You must
+                                    import it to Cloudinary.
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })()}
+                      </div>
 
-    {/* ✅ If video exists, overlay it (no iframe, no controls) */}
-    {hasVideo ? (
-      <video
-        src={toPlayableVideoSrc(a.videoUrl)}
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="metadata"
-        style={{
-          position: "absolute",
-          right: 8,
-          bottom: 8,
-          width: "55%",
-          height: "40%",
-          borderRadius: 10,
-          border: "1px solid rgba(255,255,255,0.35)",
-          background: "#000",
-          objectFit: "cover",
-          boxShadow: "0 8px 20px rgba(0,0,0,0.35)",
-          pointerEvents: "none",
-        }}
-      />
-    ) : null}
-  </div>
-);
+                      {/* Quick Image URL editor (with open/default/AI image buttons) */}
+                      <div style={{ marginTop: 10 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            marginBottom: 4,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <span style={{ fontSize: 12, color: "#555", fontWeight: 600 }}>
+                            Image URL (quick)
+                          </span>
+                          <span
+                            title={imgState.saving}
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: 8,
+                              background: dotColor,
+                              display: "inline-block",
+                            }}
+                          />
+                        </div>
 
-  })()}
-</div>
+                        <input
+                          value={imgState.value}
+                          onChange={(e) => onChangeQuickImage(a._id, e.target.value)}
+                          placeholder="https://…"
+                          style={inp}
+                        />
 
-{/* Quick Image URL editor (with open/default/AI image buttons) */}
-<div style={{ marginTop: 10 }}>
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      marginBottom: 4,
-      flexWrap: "wrap",
-    }}
-  >
-    <span style={{ fontSize: 12, color: "#555", fontWeight: 600 }}>
-      Image URL (quick)
-    </span>
-    <span
-      title={imgState.saving}
-      style={{
-        width: 8,
-        height: 8,
-        borderRadius: 8,
-        background: dotColor,
-        display: "inline-block",
-      }}
-    />
-  </div>
+                        <div
+                          className="image-tools-desktop"
+                          style={{
+                            display: "flex",
+                            gap: 8,
+                            alignItems: "center",
+                            marginTop: 6,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <label
+                            style={{
+                              display: "inline-flex",
+                              gap: 6,
+                              alignItems: "center",
+                              fontSize: 12,
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={!!imgState.syncOg}
+                              onChange={(e) => setImgState(a._id, { syncOg: e.target.checked })}
+                            />
+                            Also set <code>OG Image URL</code>
+                          </label>
 
-  <input
-    value={imgState.value}
-    onChange={(e) => onChangeQuickImage(a._id, e.target.value)}
-    placeholder="https://…"
-    style={inp}
-  />
+                          {imgState.value ? (
+                            <>
+                              <a
+                                href={imgState.value}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  textDecoration: "none",
+                                  color: "#1B4965",
+                                  fontSize: 12,
+                                }}
+                              >
+                                open image ↗
+                              </a>
+                              <span style={{ color: "#999", fontSize: 12 }}>|</span>
+                            </>
+                          ) : null}
 
-  <div
-    className="image-tools-desktop"
-    style={{
-      display: "flex",
-      gap: 8,
-      alignItems: "center",
-      marginTop: 6,
-      flexWrap: "wrap",
-    }}
-  >
-    <label
-      style={{
-        display: "inline-flex",
-        gap: 6,
-        alignItems: "center",
-        fontSize: 12,
-      }}
-    >
-      <input
-        type="checkbox"
-        checked={!!imgState.syncOg}
-        onChange={(e) => setImgState(a._id, { syncOg: e.target.checked })}
-      />
-      Also set <code>OG Image URL</code>
-    </label>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              window.open(
+                                `/article/${encodeURIComponent(a.slug)}`,
+                                "_blank",
+                                "noopener,noreferrer"
+                              )
+                            }
+                            style={{ ...btnSmallGhost, padding: "4px 8px", fontSize: 12 }}
+                            title="Open public article page"
+                          >
+                            open article ↗
+                          </button>
 
-    {imgState.value ? (
-      <>
-        <a
-          href={imgState.value}
-          target="_blank"
-          rel="noreferrer"
-          style={{
-            textDecoration: "none",
-            color: "#1B4965",
-            fontSize: 12,
-          }}
-        >
-          open image ↗
-        </a>
-        <span style={{ color: "#999", fontSize: 12 }}>|</span>
-      </>
-    ) : null}
+                          <button
+                            type="button"
+                            onClick={() => handleUseDefaultImage(a._id)}
+                            style={{ ...btnSmallGhost, padding: "4px 8px", fontSize: 12 }}
+                            title="Force this article to use the default image"
+                          >
+                            default image
+                          </button>
 
-    <button
-      type="button"
-      onClick={() =>
-        window.open(
-          `/article/${encodeURIComponent(a.slug)}`,
-          "_blank",
-          "noopener,noreferrer"
-        )
-      }
-      style={{ ...btnSmallGhost, padding: "4px 8px", fontSize: 12 }}
-      title="Open public article page"
-    >
-      open article ↗
-    </button>
-
-    <button
-      type="button"
-      onClick={() => handleUseDefaultImage(a._id)}
-      style={{ ...btnSmallGhost, padding: "4px 8px", fontSize: 12 }}
-      title="Force this article to use the default image"
-    >
-      default image
-    </button>
-
-    <button
-      type="button"
-      onClick={() => handleGenerateAiImage(a._id)}
-      style={{ ...btnSmallPrimary, padding: "4px 8px", fontSize: 12 }}
-      title="Generate an AI hero image for this article"
-    >
-      AI image
-    </button>
-  </div>
-</div>
-
-
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateAiImage(a._id)}
+                            style={{ ...btnSmallPrimary, padding: "4px 8px", fontSize: 12 }}
+                            title="Generate an AI hero image for this article"
+                          >
+                            AI image
+                          </button>
+                        </div>
+                      </div>
 
                       {/* Mobile-only main actions block: default / AI / delete + publish / edit */}
                       <div className="article-actions-mobile">
@@ -1657,11 +1640,7 @@ category: categoryNameFromSlug(categories, form.category),
                           >
                             AI image
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => deleteOne(a._id)}
-                            style={btnSmallDanger}
-                          >
+                          <button type="button" onClick={() => deleteOne(a._id)} style={btnSmallDanger}>
                             Delete
                           </button>
                         </div>
@@ -1669,9 +1648,7 @@ category: categoryNameFromSlug(categories, form.category),
                           {a.status !== "published" && (
                             <button
                               type="button"
-                              onClick={() =>
-                                patchOne(a._id, { status: "published" })
-                              }
+                              onClick={() => patchOne(a._id, { status: "published" })}
                               style={{
                                 ...btnSmallPrimary,
                                 opacity: isAdmin ? 1 : 0.6,
@@ -1684,9 +1661,7 @@ category: categoryNameFromSlug(categories, form.category),
                           {a.status === "published" && (
                             <button
                               type="button"
-                              onClick={() =>
-                                patchOne(a._id, { status: "draft" })
-                              }
+                              onClick={() => patchOne(a._id, { status: "draft" })}
                               style={{
                                 ...btnSmallGhost,
                                 opacity: isAdmin ? 1 : 0.6,
@@ -1696,11 +1671,7 @@ category: categoryNameFromSlug(categories, form.category),
                               Unpublish
                             </button>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => openEdit(a._id)}
-                            style={btnSmallGhost}
-                          >
+                          <button type="button" onClick={() => openEdit(a._id)} style={btnSmallGhost}>
                             Edit
                           </button>
                         </div>
@@ -1708,132 +1679,158 @@ category: categoryNameFromSlug(categories, form.category),
                     </td>
 
                     {/* Status column (desktop only; hidden on mobile via CSS) */}
-                   <td style={td}>
-  <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-    <span style={{ ...badge, ...statusBadge }}>{a.status}</span>
-    {placement ? (
-      <span style={{ ...badge, ...(placementStyle || {}) }}>{placement}</span>
-    ) : null}
-  </div>
-</td>
+                    <td style={td}>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                        <span style={{ ...badge, ...statusBadge }}>{a.status}</span>
+                        {placement ? <span style={{ ...badge, ...(placementStyle || {}) }}>{placement}</span> : null}
+                      </div>
+                    </td>
 
                     <td style={td}>{a.category?.name || a.category || "—"}</td>
                     <td style={td}>{fmt(a.publishedAt) || "—"}</td>
                     <td style={td}>{fmt(a.updatedAt)}</td>
 
-                                       {/* Preview column – desktop only */}
-                   {/* Preview column – desktop only */}
-<td style={{ ...td, width: 230 }}>
-  {(() => {
-    const baseImage = normalizeCloudinaryUrl(
-      imgState?.value || a.imageUrl || a.thumbImage || ""
-    );
-    const thumbSrc = withCacheBust(baseImage || DEFAULT_IMAGE_URL, a.updatedAt || Date.now());
+                    {/* Preview column – desktop only */}
+                    <td style={{ ...td, width: 230 }}>
+                      {(() => {
+                        // ✅ FIX #1: STOP normalizing for display
+                        const baseImage = (imgState?.value || a.imageUrl || a.thumbImage || "").trim();
 
-    const hasVideo = !!a.videoUrl;
+                        const thumbSrc = withCacheBust(
+                          baseImage || DEFAULT_IMAGE_URL,
+                          a.updatedAt || Date.now()
+                        );
 
-    return (
-  <div
-    className="thumb-desktop-only"
-    style={{
-      display: "flex",
-      flexDirection: "column",
-      gap: 8,
-      alignItems: "flex-start",
-    }}
-  >
-    <span style={badge}>{a.category?.name || a.category || "General"}</span>
+                        const hasVideo = !!a.videoUrl;
+                        const sourceImageUrl = a.sourceImageUrl || "";
 
-    <div
-      style={{
-        width: 200,
-        height: 120,
-        position: "relative",
-        borderRadius: 10,
-        overflow: "hidden",
-        border: "1px solid #eee",
-        background: "#000",
-      }}
-    >
-      {/* ✅ Always show the image */}
-      <img
-        id={`thumb-${a._id}`}
-        src={thumbSrc}
-        alt=""
-        loading="lazy"
-        decoding="async"
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          display: "block",
-          background: "#f8fafc",
-        }}
-        onError={(e) => {
-          const tries = Number(e.currentTarget.dataset.tries || 0);
-          if (tries === 0 && baseImage && baseImage !== DEFAULT_IMAGE_URL) {
-            e.currentTarget.dataset.tries = "1";
-            e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now());
-            return;
-          }
-          if (tries === 1) {
-            e.currentTarget.dataset.tries = "2";
-            e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 1);
-            return;
-          }
-          e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 2);
-        }}
-      />
+                        return (
+                          <div
+                            className="thumb-desktop-only"
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 8,
+                              alignItems: "flex-start",
+                            }}
+                          >
+                            <span style={badge}>{a.category?.name || a.category || "General"}</span>
 
-      {/* ✅ If video exists, overlay it (no iframe, no controls) */}
-      {hasVideo ? (
-        <video
-          src={toPlayableVideoSrc(a.videoUrl)}
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="metadata"
-          style={{
-            position: "absolute",
-            right: 6,
-            bottom: 6,
-            width: "52%",
-            height: "52%",
-            borderRadius: 10,
-            border: "1px solid rgba(255,255,255,0.35)",
-            background: "#000",
-            objectFit: "cover",
-            boxShadow: "0 8px 20px rgba(0,0,0,0.35)",
-            pointerEvents: "none",
-          }}
-        />
-      ) : null}
-    </div>
-  </div>
-);
+                            {/* ✅ Hero preview */}
+                            <div
+                              style={{
+                                width: 200,
+                                height: 120,
+                                position: "relative",
+                                borderRadius: 10,
+                                overflow: "hidden",
+                                border: "1px solid #eee",
+                                background: "#000",
+                              }}
+                            >
+                              <img
+                                id={`thumb-${a._id}`}
+                                src={thumbSrc}
+                                alt=""
+                                loading="lazy"
+                                decoding="async"
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                  display: "block",
+                                  background: "#f8fafc",
+                                }}
+                                onError={(e) => {
+                                  const tries = Number(e.currentTarget.dataset.tries || 0);
+                                  if (tries === 0 && baseImage && baseImage !== DEFAULT_IMAGE_URL) {
+                                    e.currentTarget.dataset.tries = "1";
+                                    e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now());
+                                    return;
+                                  }
+                                  if (tries === 1) {
+                                    e.currentTarget.dataset.tries = "2";
+                                    e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 1);
+                                    return;
+                                  }
+                                  e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 2);
+                                }}
+                              />
 
-  })()}
-</td>
+                              {hasVideo ? (
+                                <video
+                                  src={toPlayableVideoSrc(a.videoUrl)}
+                                  autoPlay
+                                  loop
+                                  muted
+                                  playsInline
+                                  preload="metadata"
+                                  style={{
+                                    position: "absolute",
+                                    right: 6,
+                                    bottom: 6,
+                                    width: "52%",
+                                    height: "52%",
+                                    borderRadius: 10,
+                                    border: "1px solid rgba(255,255,255,0.35)",
+                                    background: "#000",
+                                    objectFit: "cover",
+                                    boxShadow: "0 8px 20px rgba(0,0,0,0.35)",
+                                    pointerEvents: "none",
+                                  }}
+                                />
+                              ) : null}
+                            </div>
 
+                            {/* ✅ FIX #2: Publisher source image should NOT hide on error */}
+                            {sourceImageUrl ? (
+                              <div style={{ marginTop: 2, width: 200 }}>
+                                <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 4 }}>
+                                  Source Image (Publisher)
+                                </div>
+                                <img
+                                  src={sourceImageUrl}
+                                  alt="Source"
+                                  loading="lazy"
+                                  decoding="async"
+                                  referrerPolicy="no-referrer"
+                                  crossOrigin="anonymous"
+                                  style={{
+                                    width: "100%",
+                                    height: "auto",
+                                    display: "block",
+                                    objectFit: "cover",
+                                    borderRadius: 10,
+                                    border: "1px solid rgba(0,0,0,0.08)",
+                                    background: "#f8fafc",
+                                  }}
+                                  onError={(e) => {
+                                    // ✅ DON'T HIDE IT. Show it as faded so you know it's blocked.
+                                    e.currentTarget.style.opacity = "0.3";
+                                    e.currentTarget.title =
+                                      "Blocked by publisher (hotlink protection). Import to Cloudinary to show.";
+                                  }}
+                                />
+                                <div style={{ fontSize: 12, color: "#b91c1c", marginTop: 6 }}>
+                                  If this looks blank/grey → the publisher blocks direct image loading. You must import
+                                  it to Cloudinary.
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })()}
+                    </td>
 
                     {/* Actions column – desktop only */}
                     <td style={td}>
-                      <div
-                        className="article-actions-desktop"
-                        style={{ display: "flex", gap: 6, flexWrap: "wrap" }}
-                      >
-                        <button
-                          onClick={() => openEdit(a._id)}
-                          style={btnSmallGhost}
-                        >
+                      <div className="article-actions-desktop" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        <button onClick={() => openEdit(a._id)} style={btnSmallGhost}>
                           Edit
                         </button>
                         {a.status !== "published" && (
                           <button
-                            onClick={() =>
-                              patchOne(a._id, { status: "published" })
-                            }
+                            onClick={() => patchOne(a._id, { status: "published" })}
                             style={{
                               ...btnSmallPrimary,
                               opacity: isAdmin ? 1 : 0.6,
@@ -1845,9 +1842,7 @@ category: categoryNameFromSlug(categories, form.category),
                         )}
                         {a.status === "published" && (
                           <button
-                            onClick={() =>
-                              patchOne(a._id, { status: "draft" })
-                            }
+                            onClick={() => patchOne(a._id, { status: "draft" })}
                             style={{
                               ...btnSmallGhost,
                               opacity: isAdmin ? 1 : 0.6,
@@ -1857,10 +1852,7 @@ category: categoryNameFromSlug(categories, form.category),
                             Unpublish
                           </button>
                         )}
-                        <button
-                          onClick={() => deleteOne(a._id)}
-                          style={btnSmallDanger}
-                        >
+                        <button onClick={() => deleteOne(a._id)} style={btnSmallDanger}>
                           Delete
                         </button>
                       </div>
@@ -1949,7 +1941,7 @@ category: categoryNameFromSlug(categories, form.category),
             </div>
 
             {/* Paste-once importer (auto-fills the form from JSON/YAML) */}
-                       <PasteImporter
+            <PasteImporter
               onApply={(d) => {
                 setForm((f) => ({
                   ...f,
@@ -1957,7 +1949,7 @@ category: categoryNameFromSlug(categories, form.category),
                   slug: d.slug ?? f.slug,
                   summary: d.summary ?? f.summary,
                   author: d.author ?? f.author,
-                 category: normalizeSlug(d.category ?? f.category),
+                  category: normalizeSlug(d.category ?? f.category),
 
                   status: d.status ?? f.status,
                   homepagePlacement: normalizePlacement(d.homepagePlacement ?? f.homepagePlacement),
@@ -1965,17 +1957,15 @@ category: categoryNameFromSlug(categories, form.category),
                   publishAt: d.publishAt ?? f.publishAt,
                   imageUrl: d.imageUrl ?? f.imageUrl,
                   imagePublicId: d.imagePublicId ?? f.imagePublicId,
+                  // ✅ ADD THESE
+                  sourceImageUrl: d.sourceImageUrl ?? f.sourceImageUrl,
+                  sourceImageFrom: d.sourceImageFrom ?? f.sourceImageFrom,
+                  sourceUrl: d.sourceUrl ?? f.sourceUrl,
                   videoUrl: d.videoUrl ?? f.videoUrl, // NEW
                   imageAlt: d.imageAlt ?? f.imageAlt,
 
-                  metaTitle: (d.metaTitle ?? f.metaTitle)?.slice(
-                    0,
-                    META_TITLE_MAX
-                  ),
-                  metaDesc: (d.metaDesc ?? f.metaDesc)?.slice(
-                    0,
-                    META_DESC_MAX
-                  ),
+                  metaTitle: (d.metaTitle ?? f.metaTitle)?.slice(0, META_TITLE_MAX),
+                  metaDesc: (d.metaDesc ?? f.metaDesc)?.slice(0, META_DESC_MAX),
                   ogImage: d.ogImage ?? f.ogImage,
                   geoMode: d.geoMode ?? f.geoMode,
                   geoAreasText: d.geoAreasText ?? f.geoAreasText,
@@ -1992,9 +1982,7 @@ category: categoryNameFromSlug(categories, form.category),
                   <input
                     required
                     value={form.title}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, title: e.target.value }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                     style={inp}
                   />
                 </label>
@@ -2003,9 +1991,7 @@ category: categoryNameFromSlug(categories, form.category),
                   <input
                     required
                     value={form.author}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, author: e.target.value }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, author: e.target.value }))}
                     style={inp}
                   />
                 </label>
@@ -2016,9 +2002,7 @@ category: categoryNameFromSlug(categories, form.category),
                 Slug
                 <input
                   value={form.slug}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, slug: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
                   placeholder="leave blank to auto-generate from title"
                   style={inp}
                 />
@@ -2030,9 +2014,7 @@ category: categoryNameFromSlug(categories, form.category),
                   required
                   rows={2}
                   value={form.summary}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, summary: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
                   style={ta}
                 />
               </label>
@@ -2040,29 +2022,25 @@ category: categoryNameFromSlug(categories, form.category),
               <div style={grid3}>
                 <label style={lbl}>
                   Category
-                 <select
-                  value={normalizeSlug(form.category) || "general"}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, category: normalizeSlug(e.target.value) }))
-                  }
-                  style={inp}
-                >
-                  {categories.map((c) => (
-                    <option key={c.slug} value={normalizeSlug(c.slug)}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-
+                  <select
+                    value={normalizeSlug(form.category) || "general"}
+                    onChange={(e) => setForm((f) => ({ ...f, category: normalizeSlug(e.target.value) }))}
+                    style={inp}
+                  >
+                    {categories.map((c) => (
+                      <option key={c.slug} value={normalizeSlug(c.slug)}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
                 </label>
-                                <label style={lbl}>
+                <label style={lbl}>
                   Homepage Placement
                   <select
                     value={form.homepagePlacement || "none"}
-                   onChange={(e) =>
-  setForm((f) => ({ ...f, homepagePlacement: normalizePlacement(e.target.value) }))
-}
-
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, homepagePlacement: normalizePlacement(e.target.value) }))
+                    }
                     style={inp}
                   >
                     <option value="none">None</option>
@@ -2112,19 +2090,12 @@ category: categoryNameFromSlug(categories, form.category),
                         ...f,
                         status: s,
                         // auto-fill publishAt UI field when switching to published
-                        publishAt:
-                          s === "published"
-                            ? f.publishAt || toLocalInputValue()
-                            : f.publishAt,
+                        publishAt: s === "published" ? f.publishAt || toLocalInputValue() : f.publishAt,
                       }));
                     }}
                     style={{ ...inp, opacity: isAdmin ? 1 : 0.6 }}
                     disabled={!isAdmin}
-                    title={
-                      !isAdmin
-                        ? "Only admins can change publish status"
-                        : undefined
-                    }
+                    title={!isAdmin ? "Only admins can change publish status" : undefined}
                   >
                     <option value="draft">Draft</option>
                     <option value="published">Published</option>
@@ -2136,9 +2107,7 @@ category: categoryNameFromSlug(categories, form.category),
                   <input
                     type="datetime-local"
                     value={form.publishAt}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, publishAt: e.target.value }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, publishAt: e.target.value }))}
                     style={inp}
                   />
                 </label>
@@ -2149,37 +2118,89 @@ category: categoryNameFromSlug(categories, form.category),
                   Image URL
                   <input
                     value={form.imageUrl}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, imageUrl: e.target.value }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
                     style={inp}
                   />
                 </label>
+
                 <label style={lbl}>
                   Image Public ID
                   <input
                     value={form.imagePublicId}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, imagePublicId: e.target.value }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, imagePublicId: e.target.value }))}
                     style={inp}
                   />
                 </label>
               </div>
 
-                            {/* NEW: optional video URL */}
+              {/* ✅ NEW: Source Image (Publisher) — read-only */}
+              {form?.sourceImageUrl ? (
+                <div style={{ marginTop: 24 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
+                    Source Image (Publisher)
+                  </div>
+
+                  <img
+                    src={form.sourceImageUrl}
+                    alt="Source"
+                    loading="lazy"
+                    decoding="async"
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    style={{
+                      width: "100%",
+                      height: "auto",
+                      display: "block",
+                      objectFit: "cover",
+                      borderRadius: 10,
+                      border: "1px solid rgba(0,0,0,0.08)",
+                      background: "#f8fafc",
+                    }}
+                    onError={(e) => {
+                      // ✅ DON'T HIDE IT. Show it as faded so you know it's blocked.
+                      e.currentTarget.style.opacity = "0.3";
+                      e.currentTarget.title =
+                        "Blocked by publisher (hotlink protection). Import to Cloudinary to show.";
+                    }}
+                  />
+                  <div style={{ fontSize: 12, color: "#b91c1c", marginTop: 6 }}>
+                    If this looks blank/grey → the publisher blocks direct image loading. You must import it to
+                    Cloudinary.
+                  </div>
+
+                  <div style={{ marginTop: 6, fontSize: 12, opacity: 0.7 }}>
+                    From: {form.sourceImageFrom || "unknown"}
+                  </div>
+
+                  {form?.sourceUrl && (
+                    <a
+                      href={form.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: "inline-block",
+                        marginTop: 6,
+                        fontSize: 13,
+                        color: "#2563eb",
+                        textDecoration: "none",
+                      }}
+                    >
+                      Open original article ↗
+                    </a>
+                  )}
+                </div>
+              ) : null}
+
+              {/* NEW: optional video URL */}
               <label style={lbl}>
                 Video URL (optional)
                 <input
                   value={form.videoUrl}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, videoUrl: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, videoUrl: e.target.value }))}
                   placeholder="Paste video link (Google Drive / Cloudinary)"
                   style={inp}
                 />
               </label>
-
 
               {/* SEO fields with counters */}
               <div style={{ fontWeight: 600, marginTop: 8 }}>SEO</div>
@@ -2188,9 +2209,7 @@ category: categoryNameFromSlug(categories, form.category),
                   Image Alt
                   <input
                     value={form.imageAlt}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, imageAlt: e.target.value }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, imageAlt: e.target.value }))}
                     placeholder="Describe the image (e.g. ‘Solar panels on a rooftop at sunset’)"
                     style={inp}
                   />
@@ -2208,17 +2227,15 @@ category: categoryNameFromSlug(categories, form.category),
                     style={inp}
                     maxLength={META_TITLE_MAX}
                   />
-                <small style={{ color: "#64748b" }}>
-                  {(form.metaTitle || "").length}/{META_TITLE_MAX}
-                </small>
+                  <small style={{ color: "#64748b" }}>
+                    {(form.metaTitle || "").length}/{META_TITLE_MAX}
+                  </small>
                 </label>
                 <label style={lbl}>
                   OG Image URL
                   <input
                     value={form.ogImage}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, ogImage: e.target.value }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, ogImage: e.target.value }))}
                     style={inp}
                   />
                 </label>
@@ -2231,8 +2248,7 @@ category: categoryNameFromSlug(categories, form.category),
                     marginTop: -4,
                   }}
                 >
-                  Tip: Add a short, meaningful alt description so screen
-                  readers and SEO can understand the image.
+                  Tip: Add a short, meaningful alt description so screen readers and SEO can understand the image.
                 </div>
               )}
               <label style={lbl}>
@@ -2261,9 +2277,7 @@ category: categoryNameFromSlug(categories, form.category),
                   Mode
                   <select
                     value={form.geoMode}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, geoMode: e.target.value }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, geoMode: e.target.value }))}
                     style={inp}
                   >
                     <option value="global">Global</option>
@@ -2275,9 +2289,7 @@ category: categoryNameFromSlug(categories, form.category),
                   Areas (comma separated)
                   <input
                     value={form.geoAreasText}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, geoAreasText: e.target.value }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, geoAreasText: e.target.value }))}
                     placeholder="Examples: country:IN, state:US:CA, city:IN:Bengaluru"
                     style={inp}
                   />
@@ -2306,9 +2318,7 @@ category: categoryNameFromSlug(categories, form.category),
                     Country (2-letter)
                     <input
                       value={testCountry}
-                      onChange={(e) =>
-                        setTestCountry(e.target.value.toUpperCase())
-                      }
+                      onChange={(e) => setTestCountry(e.target.value.toUpperCase())}
                       style={inp}
                       placeholder="e.g. IN"
                     />
@@ -2317,9 +2327,7 @@ category: categoryNameFromSlug(categories, form.category),
                     Region / State
                     <input
                       value={testRegion}
-                      onChange={(e) =>
-                        setTestRegion(e.target.value.toUpperCase())
-                      }
+                      onChange={(e) => setTestRegion(e.target.value.toUpperCase())}
                       style={inp}
                       placeholder="e.g. KA or CA"
                     />
@@ -2336,17 +2344,11 @@ category: categoryNameFromSlug(categories, form.category),
                 </div>
                 <div style={{ marginTop: 8, fontSize: 13 }}>
                   Result:&nbsp;
-                  <span
-                    style={{
-                      ...badge,
-                      ...(geoPreviewAllowed ? badgeGreen : badgeGray),
-                    }}
-                  >
+                  <span style={{ ...badge, ...(geoPreviewAllowed ? badgeGreen : badgeGray) }}>
                     {geoPreviewAllowed ? "Allowed" : "Blocked"}
                   </span>
                   <span style={{ marginLeft: 8, color: "#64748b" }}>
-                    mode = <code>{form.geoMode}</code>, areas ={" "}
-                    <code>{form.geoAreasText || "—"}</code>
+                    mode = <code>{form.geoMode}</code>, areas = <code>{form.geoAreasText || "—"}</code>
                   </span>
                 </div>
               </div>
@@ -2376,9 +2378,7 @@ category: categoryNameFromSlug(categories, form.category),
                 <textarea
                   rows={8}
                   value={form.body}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, body: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
                   style={ta}
                 />
                 <div
@@ -2389,8 +2389,7 @@ category: categoryNameFromSlug(categories, form.category),
                   }}
                 >
                   Supports simple formatting:
-                  <br /># Heading, ## Subheading, - bullet, 1. numbered item,
-                  **highlighted text**
+                  <br /># Heading, ## Subheading, - bullet, 1. numbered item, **highlighted text**
                 </div>
               </label>
 
@@ -2403,11 +2402,7 @@ category: categoryNameFromSlug(categories, form.category),
                   flexWrap: "wrap",
                 }}
               >
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  style={btnGhost}
-                >
+                <button type="button" onClick={closeForm} style={btnGhost}>
                   Cancel
                 </button>
                 <button type="submit" disabled={saving} style={btnPrimary}>
@@ -2600,35 +2595,33 @@ function placementLabel(v) {
 
 function placementBadgeStyle(v) {
   const p = normalizePlacement(v);
- if (p === "top")
-  return {
-    background: "#ff7a00",     // bright orange
-    color: "#000000",          // black text
-    borderColor: "#000000",    // black border
-    fontWeight: 800,           // bold
-    boxShadow: "3px 3px 0 #000" // solid black shadow (hard)
-  };
+  if (p === "top")
+    return {
+      background: "#ff7a00", // bright orange
+      color: "#000000", // black text
+      borderColor: "#000000", // black border
+      fontWeight: 800, // bold
+      boxShadow: "3px 3px 0 #000", // solid black shadow (hard)
+    };
 
   if (p === "latest")
     return {
-    background: "#fbff00ff",     // bright orange
-    color: "#000000",          // black text
-    borderColor: "#000000",    // black border
-    fontWeight: 800,           // bold
-    boxShadow: "3px 3px 0 #000" // solid black shadow (hard)
-  };
+      background: "#fbff00ff", // bright orange
+      color: "#000000", // black text
+      borderColor: "#000000", // black border
+      fontWeight: 800, // bold
+      boxShadow: "3px 3px 0 #000", // solid black shadow (hard)
+    };
   if (p === "trending")
-   return {
-    background: "#88ff00ff",     // bright orange
-    color: "#000000",          // black text
-    borderColor: "#000000",    // black border
-    fontWeight: 800,           // bold
-    boxShadow: "3px 3px 0 #000" // solid black shadow (hard)
-  };
+    return {
+      background: "#88ff00ff", // bright orange
+      color: "#000000", // black text
+      borderColor: "#000000", // black border
+      fontWeight: 800, // bold
+      boxShadow: "3px 3px 0 #000", // solid black shadow (hard)
+    };
   return null;
 }
-
-
 
 /* -------- styles (no Tailwind) -------- */
 const inp = {
