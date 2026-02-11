@@ -1438,6 +1438,31 @@ export default function ArticlesPage() {
                         </div>
                       )}
 
+                      {/* ✅ Why this image? (autoImageDebug) */}
+                        {a?.autoImageDebug ? (
+                          <details style={{ marginTop: 8 }}>
+                            <summary style={{ cursor: "pointer", fontWeight: 700, fontSize: 12, color: "#111827" }}>
+                              Why this image?
+                            </summary>
+                            <pre
+                              style={{
+                                marginTop: 6,
+                                padding: 10,
+                                borderRadius: 10,
+                                background: "#0b1220",
+                                color: "#e5e7eb",
+                                fontSize: 12,
+                                overflow: "auto",
+                                maxHeight: 260,
+                                border: "1px solid rgba(255,255,255,0.08)",
+                              }}
+                            >
+                              {JSON.stringify(a.autoImageDebug, null, 2)}
+                            </pre>
+                          </details>
+                        ) : null}
+
+
                       {/* Mobile-only preview just under slug+tags */}
                       <div className="thumb-mobile-only" style={{ marginTop: 10 }}>
                         {(() => {
