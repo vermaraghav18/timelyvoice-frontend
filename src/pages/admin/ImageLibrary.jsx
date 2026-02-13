@@ -31,13 +31,41 @@ export default function AdminImageLibrary() {
 
   const [listLoading, setListLoading] = useState(false);
 
-  // ✅ NEW: Edit modal state
+  // ✅ Edit modal state
   const [editOpen, setEditOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [editTags, setEditTags] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editPriority, setEditPriority] = useState(10);
   const [editSaving, setEditSaving] = useState(false);
+
+  // ✅ tag preview (plain text)
+  const tagsPreviewText = useMemo(() => {
+    const arr = String(tags || "")
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .slice(0, 30);
+    return arr.join(", ");
+  }, [tags]);
+
+  // ✅ button glow when at least one tag exists (UI only)
+  const hasAtLeastOneTag = useMemo(() => {
+    return String(tags || "")
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean).length > 0;
+  }, [tags]);
+
+  // ✅ inject shimmer keyframes once (UI only)
+  useEffect(() => {
+    const id = "tv-shimmer-style";
+    if (document.getElementById(id)) return;
+    const style = document.createElement("style");
+    style.id = id;
+    style.innerHTML = keyframes;
+    document.head.appendChild(style);
+  }, []);
 
   // Load categories from existing source
   useEffect(() => {
@@ -83,24 +111,17 @@ export default function AdminImageLibrary() {
     try {
       setListLoading(true);
 
-      const params = {
-        page: nextPage,
-        limit,
-      };
+      const params = { page: nextPage, limit };
 
       if (filterCategory) params.category = filterCategory;
 
-      // Backend tag filter is exact tag match (array contains).
-      // We keep it simple: send the exact tag string.
       const tag = String(filterTag || "").trim();
       if (tag) params.tag = tag;
 
       const res = await api.get("/admin/image-library", { params });
       const data = res?.data;
 
-      if (!data?.ok) {
-        throw new Error(data?.error || "Failed to load images");
-      }
+      if (!data?.ok) throw new Error(data?.error || "Failed to load images");
 
       setItems(Array.isArray(data.items) ? data.items : []);
       setTotal(Number(data.total) || 0);
@@ -117,9 +138,7 @@ export default function AdminImageLibrary() {
     }
   }
 
-  // Load list initially + whenever filters change
   useEffect(() => {
-    // Reset to page 1 when filters change
     fetchList(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterCategory, filterTag]);
@@ -146,9 +165,7 @@ export default function AdminImageLibrary() {
       fd.append("priority", String(priority ?? 0));
 
       const res = await api.post("/admin/image-library", fd, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       const data = res?.data;
@@ -160,11 +177,8 @@ export default function AdminImageLibrary() {
         message: "Image uploaded to Cloudinary and saved to Image Library.",
       });
 
-      // Reset only file (admin often uploads many with same tags/category)
       setFile(null);
       if (fileRef.current) fileRef.current.value = "";
-
-      // Refresh list so admin can SEE it immediately
       fetchList(1);
     } catch (err) {
       console.error("[ImageLibrary] upload failed:", err);
@@ -201,7 +215,6 @@ export default function AdminImageLibrary() {
           : "Deleted from MongoDB.",
       });
 
-      // Refresh current page (if page becomes empty, fallback to prev page)
       const remaining = items.length - 1;
       const maxPageAfter = Math.max(1, Math.ceil((total - 1) / limit));
       const nextPage = remaining <= 0 ? Math.min(page, maxPageAfter) : page;
@@ -240,7 +253,6 @@ export default function AdminImageLibrary() {
       return;
     }
 
-    // Fallback
     try {
       const ta = document.createElement("textarea");
       ta.value = t;
@@ -254,7 +266,6 @@ export default function AdminImageLibrary() {
     }
   }
 
-  // ✅ NEW: Edit helpers
   function openEdit(it) {
     setEditItem(it);
     setEditTags(Array.isArray(it?.tags) ? it.tags.join(", ") : "");
@@ -279,7 +290,7 @@ export default function AdminImageLibrary() {
       setEditSaving(true);
 
       const payload = {
-        tags: editTags, // backend accepts string "a,b,c"
+        tags: editTags,
         category: editCategory || "",
         priority: Number(editPriority) || 0,
       };
@@ -296,8 +307,6 @@ export default function AdminImageLibrary() {
       });
 
       closeEdit();
-
-      // Refresh current list
       fetchList(page);
     } catch (err) {
       console.error("[ImageLibrary] update failed:", err);
@@ -315,6 +324,7 @@ export default function AdminImageLibrary() {
 
   return (
     <div style={styles.page}>
+      {/* header intentionally empty (you removed the title/subtitle) */}
       <div
         style={{
           display: "flex",
@@ -322,111 +332,125 @@ export default function AdminImageLibrary() {
           justifyContent: "space-between",
           gap: 12,
         }}
-      >
-        <h1 style={{ margin: 0 }}>Image Library</h1>
-        <div style={{ opacity: 0.75, fontSize: 13 }}>
-          Upload to Cloudinary, metadata in MongoDB (tags live in DB)
-        </div>
-      </div>
+      />
 
       <div style={{ height: 12 }} />
 
-      {/* ✅ Upload form */}
-      <div style={styles.card}>
-        <h3 style={{ marginTop: 0 }}>Upload Image to Library</h3>
+      {/* ✅ Upload form (Stripe + Apple style) */}
+      <div style={uploadWrapStyle}>
+        <h3 style={sectionTitleStyle}>Upload Image to Library</h3>
 
         <form onSubmit={onUpload}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {/* File */}
-            <div>
-              <div style={labelStyle}>Image file</div>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                style={inputStyle}
-              />
-              {file ? (
-                <div style={{ marginTop: 6, fontSize: 13, opacity: 0.85 }}>
-                  Selected: <b>{file.name}</b> ({Math.round((file.size || 0) / 1024)}{" "}
-                  KB)
-                </div>
-              ) : null}
-            </div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            style={{ display: "none" }}
+          />
 
-            {/* Priority */}
-            <div>
-              <div style={labelStyle}>Priority</div>
-              <input
-                type="number"
-                value={priority}
-                onChange={(e) => setPriority(Number(e.target.value))}
-                style={inputStyle}
-                min={0}
-              />
-              <div style={{ marginTop: 6, fontSize: 12, opacity: 0.75 }}>
-                Higher priority images are preferred by auto-picker.
-              </div>
-            </div>
+          <div style={fieldLabelStyle}>Image</div>
+          <div style={dropzoneStyle}>
+            {!file ? <div style={shimmerOverlayStyle} /> : null}
 
-            {/* Tags */}
-            <div>
-              <div style={labelStyle}>Tags (comma separated)</div>
-              <input
-                type="text"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="iran, missile, global"
-                style={inputStyle}
-              />
-              <div style={{ marginTop: 6, fontSize: 12, opacity: 0.75 }}>
-                Example: <code>usa, carrier, navy</code>
-              </div>
-            </div>
-
-            {/* Category */}
-            <div>
-              <div style={labelStyle}>Category</div>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                style={inputStyle}
-                disabled={catsLoading}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+                minWidth: 0,
+                position: "relative",
+                zIndex: 1,
+              }}
+            >
+              <div
+                style={{
+                  fontWeight: 900,
+                  color: "#061026",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
               >
-                {catsLoading ? (
-                  <option value="">Loading categories…</option>
-                ) : (
-                  categoryOptions.map((c) => (
-                    <option key={c.slug} value={c.slug}>
-                      {c.name}
-                    </option>
-                  ))
-                )}
-              </select>
+                {file ? file.name : "Choose an image to upload"}
+              </div>
+              <div style={{ fontSize: 12, opacity: 0.78, color: "#0b2455" }}>
+                {file
+                  ? `${Math.round((file.size || 0) / 1024)} KB`
+                  : "PNG, JPG, WEBP — single file"}
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+                position: "relative",
+                zIndex: 1,
+              }}
+            >
+              <button
+                type="button"
+                style={selectBtnStyle}
+                onClick={() => fileRef.current?.click()}
+              >
+                Select file
+              </button>
+
+              {file ? (
+                <button
+                  type="button"
+                  style={ghostBtnStyle}
+                  onClick={() => {
+                    setFile(null);
+                    if (fileRef.current) fileRef.current.value = "";
+                  }}
+                >
+                  Remove
+                </button>
+              ) : null}
             </div>
           </div>
 
-          <div style={{ height: 12 }} />
+          <div style={{ height: 14 }} />
+
+          <div style={fieldLabelStyle}>Tags</div>
+          <input
+            type="text"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            placeholder="e.g. iran, missile, global"
+            style={luxuryInputStyle}
+          />
+
+          {/* ✅ plain-text preview (no pills) */}
+          {tagsPreviewText ? (
+            <div style={tagsPreviewTextStyle}>{tagsPreviewText}</div>
+          ) : null}
+
+          <div style={{ height: 16 }} />
 
           <button
             type="submit"
             disabled={!file || isUploading}
             style={{
-              ...btnStyle,
-              opacity: !file || isUploading ? 0.65 : 1,
+              ...(hasAtLeastOneTag ? uploadReadyBtnStyle : uploadIdleBtnStyle),
               cursor: !file || isUploading ? "not-allowed" : "pointer",
+              filter: !file || isUploading
+                ? "grayscale(0.25) brightness(0.85)"
+                : "none",
             }}
           >
-            {isUploading ? "Uploading..." : "Upload Image"}
+            {isUploading ? "Uploading..." : "Upload"}
           </button>
         </form>
       </div>
 
-      <div style={{ height: 12 }} />
+      <div style={{ height: 14 }} />
 
-      {/* ✅ Filters + Grid/List */}
-      <div style={styles.card}>
+      {/* ✅ Library (Apple luxury white) */}
+      <div style={libraryWrapStyle}>
         <div
           style={{
             display: "flex",
@@ -435,32 +459,35 @@ export default function AdminImageLibrary() {
             gap: 12,
           }}
         >
-          <h3 style={{ marginTop: 0, marginBottom: 0 }}>Library</h3>
-          <div style={{ opacity: 0.75, fontSize: 13 }}>
+          <h3 style={{ marginTop: 0, marginBottom: 0, fontWeight: 900, color: "#0b1220" }}>
+            Library
+          </h3>
+          <div style={{ opacity: 0.8, fontSize: 13, color: "#0b1220" }}>
             Total: <b>{total}</b>
           </div>
         </div>
 
         <div style={{ height: 12 }} />
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
           <div>
-            <div style={labelStyle}>Filter by tag</div>
+            <div style={fieldLabelStyle}>Filter by tag</div>
             <input
               type="text"
               value={filterTag}
               onChange={(e) => setFilterTag(e.target.value)}
               placeholder="e.g. iran"
-              style={inputStyle}
+              style={libraryInputStyle}
             />
           </div>
 
-          <div>
-            <div style={labelStyle}>Filter by category</div>
+          {/* ✅ HIDDEN: Filter by category (logic unchanged) */}
+          <div style={{ display: "none" }}>
+            <div style={fieldLabelStyle}>Filter by category</div>
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              style={inputStyle}
+              style={librarySelectStyle}
               disabled={catsLoading}
             >
               <option value="">All</option>
@@ -473,113 +500,110 @@ export default function AdminImageLibrary() {
           </div>
         </div>
 
-        <div style={{ height: 12 }} />
+        <div style={{ height: 14 }} />
 
         {listLoading ? (
-          <div style={{ opacity: 0.85 }}>Loading…</div>
+          <div style={{ opacity: 0.85, color: "#0b1220" }}>Loading…</div>
         ) : items.length === 0 ? (
-          <div style={{ opacity: 0.85 }}>No images found.</div>
+          <div style={{ opacity: 0.85, color: "#0b1220" }}>No images found.</div>
         ) : (
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-              gap: 12,
+              gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+              gap: 14,
             }}
           >
-            {items.map((it) => (
-              <div key={it._id} style={cardStyle}>
-                <div
-                  style={{
-                    borderRadius: 12,
-                    overflow: "hidden",
-                    background: "rgba(255,255,255,0.04)",
-                  }}
-                >
+            {items.map((it) => {
+              const tagsText = Array.isArray(it.tags)
+                ? it.tags.map((t) => String(t || "").trim()).filter(Boolean).join(", ")
+                : "";
+
+              return (
+                <div key={it._id} style={itemCardStyle}>
+                  {/* ✅ EDGE-TO-EDGE IMAGE (no inner container, no radius) */}
                   <img
                     src={it.url}
                     alt={it.publicId}
-                    style={{
-                      width: "100%",
-                      height: 160,
-                      objectFit: "cover",
-                      display: "block",
-                    }}
+                    style={itemImageStyle}
                     loading="lazy"
                   />
-                </div>
 
-                <div style={{ height: 10 }} />
+                  <div style={itemBodyStyle}>
+                    {/* ✅ HIDDEN: Category + Priority (logic unchanged) */}
+                    <div style={{ display: "none" }}>
+                      <div style={metaRowStyle}>
+                        <div style={metaLineStyle}>
+                          <span style={metaLabelStyle}>Category</span>
+                          <span style={metaValueStyle}>{it.category || "-"}</span>
+                        </div>
+                        <div style={metaLineStyle}>
+                          <span style={metaLabelStyle}>Priority</span>
+                          <span style={metaValueStyle}>{Number(it.priority) || 0}</span>
+                        </div>
+                      </div>
+                    </div>
 
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.9)" }}>
+                    <div style={{ height: 2 }} />
 
-                  <div>
-                    <b>Category:</b> {it.category || "-"}
+                    {/* ✅ Tags as plain text (comma-separated, less bold) */}
+                    <div style={tagsLineStyle}>
+                      <div style={metaLabelStyle}>Tags</div>
+                      <div style={{ height: 6 }} />
+                      <div style={tagsPlainTextStyle}>
+                        {tagsText ? tagsText : "-"}
+                      </div>
+                    </div>
+
+                    <div style={{ height: 12 }} />
+
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        style={actionPillStyle}
+                        onClick={() => copyText(it.publicId)}
+                        title="Copy publicId"
+                      >
+                        Copy publicId
+                      </button>
+
+                      <a
+                        href={it.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ ...actionPillStyle, textDecoration: "none" }}
+                        title="Open image"
+                      >
+                        Open
+                      </a>
+
+                     <button
+                      type="button"
+                      style={editGlowBtnStyle}
+                      onClick={() => openEdit(it)}
+                      title="Edit tags/category/priority"
+                    >
+                      Edit
+                    </button>
+
+
+                      <button
+                        type="button"
+                        style={dangerPillStyle}
+                        onClick={() => onDelete(it)}
+                        title="Delete"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <b>Priority:</b> {Number(it.priority) || 0}
-                  </div>
                 </div>
-
-                <div style={{ height: 8 }} />
-
-                <div style={{ fontSize: 12, opacity: 0.9 }}>
-                  <b>Tags:</b>{" "}
-                  {Array.isArray(it.tags) && it.tags.length ? it.tags.join(", ") : "-"}
-                </div>
-
-                <div style={{ height: 10 }} />
-
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button
-                    type="button"
-                    style={miniBtnStyle}
-                    onClick={() => copyText(it.publicId)}
-                    title="Copy publicId"
-                  >
-                    Copy publicId
-                  </button>
-
-                  <a
-                    href={it.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{
-                      ...miniBtnStyle,
-                      textDecoration: "none",
-                      display: "inline-flex",
-                      alignItems: "center",
-                    }}
-                    title="Open image"
-                  >
-                    Open
-                  </a>
-
-                  {/* ✅ NEW: Edit button */}
-                  <button
-                    type="button"
-                    style={miniBtnStyle}
-                    onClick={() => openEdit(it)}
-                    title="Edit tags/category/priority"
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    type="button"
-                    style={{ ...miniBtnStyle, borderColor: "rgba(255,80,80,0.35)" }}
-                    onClick={() => onDelete(it)}
-                    title="Delete"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
-        <div style={{ height: 14 }} />
+        <div style={{ height: 16 }} />
 
         {/* Pagination */}
         <div
@@ -590,14 +614,14 @@ export default function AdminImageLibrary() {
             gap: 12,
           }}
         >
-          <div style={{ opacity: 0.75, fontSize: 13 }}>
+          <div style={{ opacity: 0.8, fontSize: 13, color: "#0b1220" }}>
             Page <b>{page}</b> / <b>{totalPages}</b>
           </div>
 
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 10 }}>
             <button
               type="button"
-              style={miniBtnStyle}
+              style={actionPillStyle}
               disabled={page <= 1 || listLoading}
               onClick={() => fetchList(page - 1)}
             >
@@ -605,7 +629,7 @@ export default function AdminImageLibrary() {
             </button>
             <button
               type="button"
-              style={miniBtnStyle}
+              style={actionPillStyle}
               disabled={page >= totalPages || listLoading}
               onClick={() => fetchList(page + 1)}
             >
@@ -615,7 +639,7 @@ export default function AdminImageLibrary() {
         </div>
       </div>
 
-      {/* ✅ NEW: Edit Modal */}
+      {/* ✅ Edit Modal (logic unchanged; styling unchanged) */}
       {editOpen && (
         <div style={modalOverlayStyle} onClick={closeEdit}>
           <div style={modalCardStyle} onClick={(e) => e.stopPropagation()}>
@@ -629,7 +653,6 @@ export default function AdminImageLibrary() {
             <div style={{ height: 10 }} />
 
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.9)" }}>
-
               <b>publicId:</b> {editItem?.publicId || "-"}
             </div>
 
@@ -697,6 +720,9 @@ export default function AdminImageLibrary() {
   );
 }
 
+/* =========================
+   EXISTING DARK INPUTS (modal)
+   ========================= */
 const labelStyle = { fontSize: 13, opacity: 0.8, marginBottom: 6 };
 
 const inputStyle = {
@@ -704,23 +730,10 @@ const inputStyle = {
   padding: "10px 12px",
   borderRadius: 10,
   border: "1px solid rgba(255,255,255,0.18)",
-  background: "#0f223b",       // darker field but solid
-  color: "#ffffff",            // force white text
+  background: "#0f223b",
+  color: "#ffffff",
   outline: "none",
 };
-
-
-const btnStyle = {
-  padding: "10px 14px",
-  borderRadius: 10,
-  border: "1px solid rgba(255,255,255,0.12)",
-  background: "rgba(255,255,255,0.06)",
-  color: "inherit",
-  fontWeight: 700,
-};
-
-const helpTextStyle = { fontSize: 12, opacity: 0.85, marginTop: 6 };
-
 
 const miniBtnStyle = {
   padding: "8px 10px",
@@ -733,14 +746,9 @@ const miniBtnStyle = {
   cursor: "pointer",
 };
 
-const cardStyle = {
-  borderRadius: 14,
-  border: "1px solid rgba(255,255,255,0.10)",
-  background: "rgba(255,255,255,0.03)",
-  padding: 12,
-};
-
-// ✅ NEW styles for modal
+/* =========================
+   MODAL
+   ========================= */
 const modalOverlayStyle = {
   position: "fixed",
   inset: 0,
@@ -756,8 +764,249 @@ const modalCardStyle = {
   width: "min(720px, 96vw)",
   borderRadius: 16,
   border: "1px solid rgba(255,255,255,0.18)",
-  background: "#0b1626", // solid dark (not transparent)
+  background: "#0b1626",
   padding: 18,
   boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
-  color: "#ffffff", // force readable text
+  color: "#ffffff",
 };
+
+/* =========================
+   UPLOAD (Stripe + Apple)
+   ========================= */
+const uploadWrapStyle = {
+  background:
+    "radial-gradient(1200px 250px at 20% 0%, rgba(59,130,246,0.10), rgba(255,255,255,0.72)), rgba(255,255,255,0.72)",
+  border: "1px solid rgba(15, 23, 42, 0.10)",
+  borderRadius: 0, // ✅ zero rounded corners
+  padding: 18,
+  boxShadow: "0 12px 34px rgba(2,6,23,0.06)",
+};
+
+const sectionTitleStyle = { marginTop: 0, marginBottom: 14, fontWeight: 900 };
+
+const fieldLabelStyle = {
+  fontSize: 12,
+  opacity: 0.78,
+  marginBottom: 8,
+  fontWeight: 800,
+  color: "#0b1220",
+};
+
+const luxuryInputStyle = {
+  width: "100%",
+  padding: "12px 12px",
+  borderRadius: 14,
+  border: "1px solid rgba(15, 23, 42, 0.12)",
+  background: "rgba(255,255,255,0.92)",
+  color: "#0b1220",
+  outline: "none",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.65)",
+};
+
+const tagsPreviewTextStyle = {
+  marginTop: 10,
+  fontSize: 13,
+  fontWeight: 500,
+  color: "rgba(11,18,32,0.78)",
+  lineHeight: 1.45,
+};
+
+const dropzoneStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+  padding: 14,
+  borderRadius: 0, // ✅ zero rounded corners
+  border: "1px dashed rgba(59,130,246,0.55)",
+  background:
+    "linear-gradient(120deg, rgba(0,102,255,0.18), rgba(0,153,255,0.10), rgba(255,255,255,0.72))",
+  position: "relative",
+  overflow: "hidden",
+  boxShadow: "0 12px 28px rgba(0,102,255,0.12)",
+};
+
+const shimmerOverlayStyle = {
+  position: "absolute",
+  inset: -40,
+  background:
+    "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(147,197,253,0.55) 45%, rgba(255,255,255,0) 70%)",
+  transform: "skewX(-18deg) translateX(-35%)",
+  animation: "tvShimmer 2.2s infinite",
+  pointerEvents: "none",
+};
+
+const selectBtnStyle = {
+  padding: "10px 12px",
+  borderRadius: 0, // ✅ zero rounded corners
+  border: "1px solid rgba(2,6,23,0.10)",
+  background: "rgba(255,255,255,0.95)",
+  color: "#0b1220",
+  fontWeight: 900,
+  cursor: "pointer",
+  boxShadow: "0 8px 18px rgba(2,6,23,0.08)",
+};
+
+const ghostBtnStyle = {
+  padding: "10px 12px",
+  borderRadius: 0, // ✅ zero rounded corners
+  border: "1px solid rgba(2,6,23,0.10)",
+  background: "rgba(255,255,255,0.70)",
+  color: "#0b1220",
+  fontWeight: 900,
+  cursor: "pointer",
+};
+
+const uploadIdleBtnStyle = {
+  padding: "12px 16px",
+  borderRadius: 0, // ✅ zero rounded corners
+  border: "1px solid rgba(2,6,23,0.10)",
+  background: "rgba(2,6,23,0.10)",
+  color: "rgba(2,6,23,0.55)",
+  fontWeight: 900,
+  letterSpacing: 0.2,
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6)",
+};
+
+const uploadReadyBtnStyle = {
+  padding: "12px 16px",
+  borderRadius: 0, // ✅ zero rounded corners
+  border: "1px solid rgba(0,153,255,0.85)",
+  background:
+    "linear-gradient(135deg, rgba(0, 92, 255, 1) 0%, rgba(0, 153, 255, 1) 55%, rgba(0, 255, 200, 0.85) 120%)",
+  color: "#ffffff",
+  fontWeight: 950,
+  letterSpacing: 0.2,
+  boxShadow:
+    "0 18px 40px rgba(0,92,255,0.55), 0 0 0 5px rgba(0,153,255,0.18), inset 0 1px 0 rgba(255,255,255,0.22)",
+  textShadow: "0 1px 1px rgba(0,0,0,0.22)",
+};
+
+/* =========================
+   LIBRARY (Apple luxury white)
+   ========================= */
+const libraryWrapStyle = {
+  background:
+    "linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,250,252,0.92))",
+  border: "1px solid rgba(15, 23, 42, 0.10)",
+  borderRadius: 0, // ✅ zero rounded corners
+  padding: 18,
+  boxShadow: "0 12px 34px rgba(2,6,23,0.06)",
+};
+
+const libraryInputStyle = {
+  width: "100%",
+  padding: "12px 12px",
+  borderRadius: 0, // ✅ zero rounded corners
+  border: "1px solid rgba(15, 23, 42, 0.12)",
+  background: "rgba(255,255,255,0.94)",
+  color: "#0b1220",
+  outline: "none",
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.75)",
+};
+
+const librarySelectStyle = {
+  ...libraryInputStyle,
+  appearance: "auto",
+};
+
+const itemCardStyle = {
+  borderRadius: 0, // ✅ zero rounded corners
+  overflow: "hidden",
+  border: "1px solid rgba(15, 23, 42, 0.10)",
+  background: "rgba(255,255,255,0.92)",
+  boxShadow: "0 14px 34px rgba(2,6,23,0.07)",
+};
+
+const itemImageStyle = {
+  width: "100%",
+  height: 200,
+  objectFit: "cover",
+  display: "block",
+  borderRadius: 0,
+};
+
+const itemBodyStyle = {
+  padding: 14,
+  color: "#0b1220",
+};
+
+const metaRowStyle = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 10,
+};
+
+const metaLineStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 6,
+};
+
+const metaLabelStyle = {
+  fontSize: 11,
+  fontWeight: 900,
+  letterSpacing: 0.25,
+  textTransform: "uppercase",
+  opacity: 0.55,
+};
+
+const metaValueStyle = {
+  fontSize: 14,
+  fontWeight: 900,
+  color: "#0b1220",
+};
+
+const tagsLineStyle = {
+  borderTop: "1px solid rgba(15,23,42,0.08)",
+  paddingTop: 12,
+};
+
+const tagsPlainTextStyle = {
+  fontSize: 13,
+  fontWeight: 500, // ✅ less bold
+  color: "rgba(11,18,32,0.78)",
+  lineHeight: 1.45,
+  wordBreak: "break-word",
+};
+
+
+const editGlowBtnStyle = {
+  ...actionPillStyle,
+  background: "rgba(255, 245, 180, 0.95)", // light yellow fill
+  color: "#2a2000",
+  border: "1px solid rgba(255, 200, 0, 0.85)", // thin deep yellow border
+  boxShadow:
+    "0 10px 22px rgba(255, 200, 0, 0.22), 0 0 0 3px rgba(255, 200, 0, 0.18), 0 0 18px rgba(255, 190, 0, 0.35)",
+};
+
+
+const actionPillStyle = {
+  padding: "10px 12px",
+  borderRadius: 0, // ✅ zero rounded corners
+  border: "1px solid rgba(15, 23, 42, 0.12)",
+  background: "rgba(255,255,255,0.92)",
+  color: "#0b1220",
+  fontWeight: 900,
+  fontSize: 12,
+  cursor: "pointer",
+  boxShadow: "0 10px 22px rgba(2,6,23,0.06)",
+};
+
+const dangerPillStyle = {
+  ...actionPillStyle,
+  border: "1px solid rgba(239, 68, 68, 0.35)",
+  background: "rgba(239, 68, 68, 0.08)",
+  color: "#991b1b",
+};
+
+/* =========================
+   KEYFRAMES
+   ========================= */
+const keyframes = `
+@keyframes tvShimmer {
+  0%   { transform: skewX(-18deg) translateX(-65%); opacity: 0.55; }
+  50%  { opacity: 0.95; }
+  100% { transform: skewX(-18deg) translateX(65%); opacity: 0.55; }
+}
+`;
