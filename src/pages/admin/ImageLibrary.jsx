@@ -31,6 +31,14 @@ export default function AdminImageLibrary() {
 
   const [listLoading, setListLoading] = useState(false);
 
+  // ✅ NEW: Edit modal state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [editTags, setEditTags] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editPriority, setEditPriority] = useState(10);
+  const [editSaving, setEditSaving] = useState(false);
+
   // Load categories from existing source
   useEffect(() => {
     let alive = true;
@@ -216,10 +224,18 @@ export default function AdminImageLibrary() {
       navigator.clipboard
         .writeText(t)
         .then(() =>
-          toast.push({ type: "success", title: "Copied", message: "publicId copied." })
+          toast.push({
+            type: "success",
+            title: "Copied",
+            message: "publicId copied.",
+          })
         )
         .catch(() =>
-          toast.push({ type: "warning", title: "Copy failed", message: "Could not copy." })
+          toast.push({
+            type: "warning",
+            title: "Copy failed",
+            message: "Could not copy.",
+          })
         );
       return;
     }
@@ -238,11 +254,75 @@ export default function AdminImageLibrary() {
     }
   }
 
+  // ✅ NEW: Edit helpers
+  function openEdit(it) {
+    setEditItem(it);
+    setEditTags(Array.isArray(it?.tags) ? it.tags.join(", ") : "");
+    setEditCategory(String(it?.category || "").trim());
+    setEditPriority(Number(it?.priority) || 0);
+    setEditOpen(true);
+  }
+
+  function closeEdit() {
+    setEditOpen(false);
+    setEditItem(null);
+    setEditTags("");
+    setEditCategory("");
+    setEditPriority(10);
+    setEditSaving(false);
+  }
+
+  async function saveEdit() {
+    if (!editItem?._id) return;
+
+    try {
+      setEditSaving(true);
+
+      const payload = {
+        tags: editTags, // backend accepts string "a,b,c"
+        category: editCategory || "",
+        priority: Number(editPriority) || 0,
+      };
+
+      const res = await api.patch(`/admin/image-library/${editItem._id}`, payload);
+      const data = res?.data;
+
+      if (!data?.ok) throw new Error(data?.error || "Update failed");
+
+      toast.push({
+        type: "success",
+        title: "Updated",
+        message: "Image updated successfully.",
+      });
+
+      closeEdit();
+
+      // Refresh current list
+      fetchList(page);
+    } catch (err) {
+      console.error("[ImageLibrary] update failed:", err);
+      toast.push({
+        type: "error",
+        title: "Update failed",
+        message: err?.response?.data?.error || err?.message || "Failed to update image.",
+      });
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   return (
     <div style={styles.page}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          justifyContent: "space-between",
+          gap: 12,
+        }}
+      >
         <h1 style={{ margin: 0 }}>Image Library</h1>
         <div style={{ opacity: 0.75, fontSize: 13 }}>
           Upload to Cloudinary, metadata in MongoDB (tags live in DB)
@@ -269,7 +349,8 @@ export default function AdminImageLibrary() {
               />
               {file ? (
                 <div style={{ marginTop: 6, fontSize: 13, opacity: 0.85 }}>
-                  Selected: <b>{file.name}</b> ({Math.round((file.size || 0) / 1024)} KB)
+                  Selected: <b>{file.name}</b> ({Math.round((file.size || 0) / 1024)}{" "}
+                  KB)
                 </div>
               ) : null}
             </div>
@@ -346,7 +427,14 @@ export default function AdminImageLibrary() {
 
       {/* ✅ Filters + Grid/List */}
       <div style={styles.card}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
           <h3 style={{ marginTop: 0, marginBottom: 0 }}>Library</h3>
           <div style={{ opacity: 0.75, fontSize: 13 }}>
             Total: <b>{total}</b>
@@ -401,11 +489,22 @@ export default function AdminImageLibrary() {
           >
             {items.map((it) => (
               <div key={it._id} style={cardStyle}>
-                <div style={{ borderRadius: 12, overflow: "hidden", background: "rgba(255,255,255,0.04)" }}>
+                <div
+                  style={{
+                    borderRadius: 12,
+                    overflow: "hidden",
+                    background: "rgba(255,255,255,0.04)",
+                  }}
+                >
                   <img
                     src={it.url}
                     alt={it.publicId}
-                    style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }}
+                    style={{
+                      width: "100%",
+                      height: 160,
+                      objectFit: "cover",
+                      display: "block",
+                    }}
                     loading="lazy"
                   />
                 </div>
@@ -444,11 +543,26 @@ export default function AdminImageLibrary() {
                     href={it.url}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ ...miniBtnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+                    style={{
+                      ...miniBtnStyle,
+                      textDecoration: "none",
+                      display: "inline-flex",
+                      alignItems: "center",
+                    }}
                     title="Open image"
                   >
                     Open
                   </a>
+
+                  {/* ✅ NEW: Edit button */}
+                  <button
+                    type="button"
+                    style={miniBtnStyle}
+                    onClick={() => openEdit(it)}
+                    title="Edit tags/category/priority"
+                  >
+                    Edit
+                  </button>
 
                   <button
                     type="button"
@@ -467,7 +581,14 @@ export default function AdminImageLibrary() {
         <div style={{ height: 14 }} />
 
         {/* Pagination */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
           <div style={{ opacity: 0.75, fontSize: 13 }}>
             Page <b>{page}</b> / <b>{totalPages}</b>
           </div>
@@ -492,6 +613,84 @@ export default function AdminImageLibrary() {
           </div>
         </div>
       </div>
+
+      {/* ✅ NEW: Edit Modal */}
+      {editOpen && (
+        <div style={modalOverlayStyle} onClick={closeEdit}>
+          <div style={modalCardStyle} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ margin: 0 }}>Edit Image</h3>
+              <button type="button" style={miniBtnStyle} onClick={closeEdit}>
+                ✕
+              </button>
+            </div>
+
+            <div style={{ height: 10 }} />
+
+            <div style={{ fontSize: 12, opacity: 0.85 }}>
+              <b>publicId:</b> {editItem?.publicId || "-"}
+            </div>
+
+            <div style={{ height: 14 }} />
+
+            <label style={labelStyle}>Tags (comma separated)</label>
+            <input
+              value={editTags}
+              onChange={(e) => setEditTags(e.target.value)}
+              placeholder="e.g. parliament, debate, budget"
+              style={inputStyle}
+            />
+
+            <div style={{ height: 12 }} />
+
+            <label style={labelStyle}>Category</label>
+            <select
+              value={editCategory}
+              onChange={(e) => setEditCategory(e.target.value)}
+              style={inputStyle}
+              disabled={catsLoading}
+            >
+              <option value="">(empty)</option>
+              {catsLoading ? (
+                <option value="">Loading categories…</option>
+              ) : (
+                categoryOptions.map((c) => (
+                  <option key={c.slug} value={c.slug}>
+                    {c.name}
+                  </option>
+                ))
+              )}
+            </select>
+
+            <div style={{ height: 12 }} />
+
+            <label style={labelStyle}>Priority</label>
+            <input
+              type="number"
+              value={editPriority}
+              onChange={(e) => setEditPriority(e.target.value)}
+              style={inputStyle}
+              min={0}
+            />
+
+            <div style={{ height: 16 }} />
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button type="button" style={miniBtnStyle} onClick={closeEdit} disabled={editSaving}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                style={{ ...miniBtnStyle, borderColor: "rgba(80,200,120,0.45)" }}
+                onClick={saveEdit}
+                disabled={editSaving}
+              >
+                {editSaving ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -533,4 +732,25 @@ const cardStyle = {
   border: "1px solid rgba(255,255,255,0.10)",
   background: "rgba(255,255,255,0.03)",
   padding: 12,
+};
+
+// ✅ NEW styles for modal
+const modalOverlayStyle = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.6)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 9999,
+  padding: 16,
+};
+
+const modalCardStyle = {
+  width: "min(720px, 96vw)",
+  borderRadius: 16,
+  border: "1px solid rgba(255,255,255,0.15)",
+  background: "rgba(10,20,35,0.98)",
+  padding: 16,
+  boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
 };
