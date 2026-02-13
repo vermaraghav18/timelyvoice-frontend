@@ -54,10 +54,12 @@ export default function AdminImageLibrary() {
   }, [tags]);
 
   const hasAtLeastOneTag = useMemo(() => {
-    return String(tags || "")
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean).length > 0;
+    return (
+      String(tags || "")
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean).length > 0
+    );
   }, [tags]);
 
   // ✅ inject shimmer keyframes once (UI only)
@@ -407,7 +409,15 @@ export default function AdminImageLibrary() {
   }
 
   return (
-    <div style={styles.page}>
+    <div
+      style={{
+        ...styles.page,
+        maxWidth: "none", // ✅ remove global max-width constraint
+        margin: 0, // ✅ remove centering margin that creates side gaps
+        paddingLeft: 0, // ✅ let our inner wrapper control padding
+        paddingRight: 0,
+      }}
+    >
       {/* ✅ reduce side gaps + increase inner width */}
       <div style={pageMaxWrapStyle}>
         {/* header intentionally empty */}
@@ -522,9 +532,10 @@ export default function AdminImageLibrary() {
               style={{
                 ...(hasAtLeastOneTag ? uploadReadyBtnStyle : uploadIdleBtnStyle),
                 cursor: !file || isUploading ? "not-allowed" : "pointer",
-                filter: !file || isUploading
-                  ? "grayscale(0.25) brightness(0.85)"
-                  : "none",
+                filter:
+                  !file || isUploading
+                    ? "grayscale(0.25) brightness(0.85)"
+                    : "none",
               }}
             >
               {isUploading ? "Uploading..." : "Upload"}
@@ -851,10 +862,10 @@ const modalCardStyle = {
    ========================= */
 const pageMaxWrapStyle = {
   width: "100%",
-  maxWidth: 1400,
-  margin: "0 auto",
-  paddingLeft: 10,
-  paddingRight: 10,
+  maxWidth: "none", // ✅ full width
+  margin: 0, // ✅ no centered margin
+  paddingLeft: 12, // ✅ small side padding
+  paddingRight: 12,
 };
 
 /* =========================
