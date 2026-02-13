@@ -511,7 +511,8 @@ export default function AdminImageLibrary() {
 
                 <div style={{ height: 10 }} />
 
-                <div style={{ fontSize: 12, opacity: 0.85 }}>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.9)" }}>
+
                   <div>
                     <b>Category:</b> {it.category || "-"}
                   </div>
@@ -627,7 +628,8 @@ export default function AdminImageLibrary() {
 
             <div style={{ height: 10 }} />
 
-            <div style={{ fontSize: 12, opacity: 0.85 }}>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.9)" }}>
+
               <b>publicId:</b> {editItem?.publicId || "-"}
             </div>
 
@@ -701,11 +703,12 @@ const inputStyle = {
   width: "100%",
   padding: "10px 12px",
   borderRadius: 10,
-  border: "1px solid rgba(255,255,255,0.12)",
-  background: "rgba(255,255,255,0.04)",
-  color: "inherit",
+  border: "1px solid rgba(255,255,255,0.18)",
+  background: "#0f223b",       // darker field but solid
+  color: "#ffffff",            // force white text
   outline: "none",
 };
+
 
 const btnStyle = {
   padding: "10px 14px",
@@ -715,6 +718,9 @@ const btnStyle = {
   color: "inherit",
   fontWeight: 700,
 };
+
+const helpTextStyle = { fontSize: 12, opacity: 0.85, marginTop: 6 };
+
 
 const miniBtnStyle = {
   padding: "8px 10px",
@@ -749,8 +755,9 @@ const modalOverlayStyle = {
 const modalCardStyle = {
   width: "min(720px, 96vw)",
   borderRadius: 16,
-  border: "1px solid rgba(255,255,255,0.15)",
-  background: "rgba(10,20,35,0.98)",
-  padding: 16,
-  boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+  border: "1px solid rgba(255,255,255,0.18)",
+  background: "#0b1626", // solid dark (not transparent)
+  padding: 18,
+  boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
+  color: "#ffffff", // force readable text
 };
