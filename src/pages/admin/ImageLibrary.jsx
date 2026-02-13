@@ -412,27 +412,17 @@ export default function AdminImageLibrary() {
     <div
       style={{
         ...styles.page,
-        maxWidth: "none", // ✅ remove global max-width constraint
-        margin: 0, // ✅ remove centering margin that creates side gaps
-        paddingLeft: 0, // ✅ let our inner wrapper control padding
+        maxWidth: "none",
+        margin: 0,
+        paddingLeft: 0,
         paddingRight: 0,
       }}
     >
-      {/* ✅ reduce side gaps + increase inner width */}
       <div style={pageMaxWrapStyle}>
-        {/* header intentionally empty */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            justifyContent: "space-between",
-            gap: 12,
-          }}
-        />
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }} />
 
         <div style={{ height: 12 }} />
 
-        {/* ✅ Upload form */}
         <div style={uploadWrapStyle}>
           <h3 style={sectionTitleStyle}>Upload Image to Library</h3>
 
@@ -449,48 +439,17 @@ export default function AdminImageLibrary() {
             <div style={dropzoneStyle}>
               {!file ? <div style={shimmerOverlayStyle} /> : null}
 
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 4,
-                  minWidth: 0,
-                  position: "relative",
-                  zIndex: 1,
-                }}
-              >
-                <div
-                  style={{
-                    fontWeight: 900,
-                    color: "#061026",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0, position: "relative", zIndex: 1 }}>
+                <div style={{ fontWeight: 900, color: "#061026", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {file ? file.name : "Choose an image to upload"}
                 </div>
                 <div style={{ fontSize: 12, opacity: 0.78, color: "#0b2455" }}>
-                  {file
-                    ? `${Math.round((file.size || 0) / 1024)} KB`
-                    : "PNG, JPG, WEBP — single file"}
+                  {file ? `${Math.round((file.size || 0) / 1024)} KB` : "PNG, JPG, WEBP — single file"}
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: 10,
-                  flexWrap: "wrap",
-                  position: "relative",
-                  zIndex: 1,
-                }}
-              >
-                <button
-                  type="button"
-                  style={selectBtnStyle}
-                  onClick={() => fileRef.current?.click()}
-                >
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", position: "relative", zIndex: 1 }}>
+                <button type="button" style={selectBtnStyle} onClick={() => fileRef.current?.click()}>
                   Select file
                 </button>
 
@@ -520,9 +479,7 @@ export default function AdminImageLibrary() {
               style={luxuryInputStyle}
             />
 
-            {tagsPreviewText ? (
-              <div style={tagsPreviewTextStyle}>{tagsPreviewText}</div>
-            ) : null}
+            {tagsPreviewText ? <div style={tagsPreviewTextStyle}>{tagsPreviewText}</div> : null}
 
             <div style={{ height: 16 }} />
 
@@ -532,10 +489,7 @@ export default function AdminImageLibrary() {
               style={{
                 ...(hasAtLeastOneTag ? uploadReadyBtnStyle : uploadIdleBtnStyle),
                 cursor: !file || isUploading ? "not-allowed" : "pointer",
-                filter:
-                  !file || isUploading
-                    ? "grayscale(0.25) brightness(0.85)"
-                    : "none",
+                filter: !file || isUploading ? "grayscale(0.25) brightness(0.85)" : "none",
               }}
             >
               {isUploading ? "Uploading..." : "Upload"}
@@ -545,26 +499,9 @@ export default function AdminImageLibrary() {
 
         <div style={{ height: 14 }} />
 
-        {/* ✅ Library */}
         <div style={libraryWrapStyle}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              justifyContent: "space-between",
-              gap: 12,
-            }}
-          >
-            <h3
-              style={{
-                marginTop: 0,
-                marginBottom: 0,
-                fontWeight: 900,
-                color: "#0b1220",
-              }}
-            >
-              Library
-            </h3>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+            <h3 style={{ marginTop: 0, marginBottom: 0, fontWeight: 900, color: "#0b1220" }}>Library</h3>
             <div style={{ opacity: 0.8, fontSize: 13, color: "#0b1220" }}>
               Total: <b>{total}</b>
             </div>
@@ -584,7 +521,6 @@ export default function AdminImageLibrary() {
               />
             </div>
 
-            {/* hidden category filter (logic unchanged) */}
             <div style={{ display: "none" }}>
               <div style={fieldLabelStyle}>Filter by category</div>
               <select
@@ -608,17 +544,9 @@ export default function AdminImageLibrary() {
           {items.length === 0 && listLoading ? (
             <div style={{ opacity: 0.85, color: "#0b1220" }}>Loading…</div>
           ) : items.length === 0 ? (
-            <div style={{ opacity: 0.85, color: "#0b1220" }}>
-              No images found.
-            </div>
+            <div style={{ opacity: 0.85, color: "#0b1220" }}>No images found.</div>
           ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-                gap: 14,
-              }}
-            >
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14 }}>
               {items.map((it) => {
                 const tagsText = Array.isArray(it.tags)
                   ? it.tags
@@ -629,39 +557,36 @@ export default function AdminImageLibrary() {
 
                 return (
                   <div key={it._id} style={itemCardStyle}>
-                    <img
-                      src={it.url}
-                      alt={it.publicId}
-                      style={itemImageStyle}
-                      loading="lazy"
-                    />
+                    <img src={it.url} alt={it.publicId} style={itemImageStyle} loading="lazy" />
 
                     <div style={itemBodyStyle}>
-                      <div style={tagsLineStyle}>
+                      {/* ✅ TAGS header row with Copy publicId on the right */}
+                      <div style={tagsHeaderRowStyle}>
                         <div style={metaLabelStyle}>Tags</div>
-                        <div style={{ height: 6 }} />
-                        <div style={tagsPlainTextStyle}>
-                          {tagsText ? tagsText : "-"}
-                        </div>
-                      </div>
 
-                      <div style={{ height: 12 }} />
-
-                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                         <button
                           type="button"
-                          style={actionPillStyle}
+                          style={copyMiniRightStyle}
                           onClick={() => copyText(it.publicId)}
                           title="Copy publicId"
                         >
                           Copy publicId
                         </button>
+                      </div>
 
+                      <div style={{ height: 6 }} />
+
+                      <div style={tagsPlainTextStyle}>{tagsText ? tagsText : "-"}</div>
+
+                      <div style={{ height: 12 }} />
+
+                      {/* ✅ other 3 buttons stay where they are */}
+                      <div style={btnRow3Style}>
                         <a
                           href={it.url}
                           target="_blank"
                           rel="noreferrer"
-                          style={{ ...actionPillStyle, textDecoration: "none" }}
+                          style={{ ...actionPillSmallStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
                           title="Open image"
                         >
                           Open
@@ -669,7 +594,7 @@ export default function AdminImageLibrary() {
 
                         <button
                           type="button"
-                          style={editGlowBtnStyle}
+                          style={editGlowSmallBtnStyle}
                           onClick={() => openEdit(it)}
                           title="Edit tags/category/priority"
                         >
@@ -678,7 +603,7 @@ export default function AdminImageLibrary() {
 
                         <button
                           type="button"
-                          style={dangerPillStyle}
+                          style={dangerSmallPillStyle}
                           onClick={() => onDelete(it)}
                           title="Delete"
                         >
@@ -705,17 +630,10 @@ export default function AdminImageLibrary() {
           <div ref={sentinelRef} style={{ height: 1 }} />
         </div>
 
-        {/* ✅ Edit Modal */}
         {editOpen && (
           <div style={modalOverlayStyle} onClick={closeEdit}>
             <div style={modalCardStyle} onClick={(e) => e.stopPropagation()}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h3 style={{ margin: 0 }}>Edit Image</h3>
                 <button type="button" style={miniBtnStyle} onClick={closeEdit}>
                   ✕
@@ -772,27 +690,13 @@ export default function AdminImageLibrary() {
 
               <div style={{ height: 16 }} />
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: 10,
-                  justifyContent: "flex-end",
-                }}
-              >
-                <button
-                  type="button"
-                  style={miniBtnStyle}
-                  onClick={closeEdit}
-                  disabled={editSaving}
-                >
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button type="button" style={miniBtnStyle} onClick={closeEdit} disabled={editSaving}>
                   Cancel
                 </button>
                 <button
                   type="button"
-                  style={{
-                    ...miniBtnStyle,
-                    borderColor: "rgba(80,200,120,0.45)",
-                  }}
+                  style={{ ...miniBtnStyle, borderColor: "rgba(80,200,120,0.45)" }}
                   onClick={saveEdit}
                   disabled={editSaving}
                 >
@@ -858,18 +762,18 @@ const modalCardStyle = {
 };
 
 /* =========================
-   PAGE WRAP (reduce side gap)
+   PAGE WRAP
    ========================= */
 const pageMaxWrapStyle = {
   width: "100%",
-  maxWidth: "none", // ✅ full width
-  margin: 0, // ✅ no centered margin
-  paddingLeft: 12, // ✅ small side padding
+  maxWidth: "none",
+  margin: 0,
+  paddingLeft: 12,
   paddingRight: 12,
 };
 
 /* =========================
-   UPLOAD (Stripe + Apple)
+   UPLOAD
    ========================= */
 const uploadWrapStyle = {
   background:
@@ -1029,17 +933,22 @@ const itemBodyStyle = {
   color: "#0b1220",
 };
 
+/* ✅ TAGS header row */
+const tagsHeaderRowStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 10,
+  borderTop: "1px solid rgba(15,23,42,0.08)",
+  paddingTop: 12,
+};
+
 const metaLabelStyle = {
   fontSize: 11,
   fontWeight: 900,
   letterSpacing: 0.25,
   textTransform: "uppercase",
   opacity: 0.55,
-};
-
-const tagsLineStyle = {
-  borderTop: "1px solid rgba(15,23,42,0.08)",
-  paddingTop: 12,
 };
 
 const tagsPlainTextStyle = {
@@ -1050,23 +959,49 @@ const tagsPlainTextStyle = {
   wordBreak: "break-word",
 };
 
-/* =========================
-   BUTTONS (order matters)
-   ========================= */
-const actionPillStyle = {
-  padding: "10px 12px",
+/* ✅ Copy button on right of Tags heading */
+const copyMiniRightStyle = {
+  padding: "6px 8px",
+  borderRadius: 0,
+  border: "1px solid rgba(15, 23, 42, 0.14)",
+  background: "rgba(255,255,255,0.92)",
+  color: "#0b1220",
+  fontWeight: 900,
+  fontSize: 11,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  lineHeight: 1,
+  boxShadow: "0 10px 22px rgba(2,6,23,0.05)",
+};
+
+/* ✅ Bottom 3 buttons row */
+const btnRow3Style = {
+  display: "flex",
+  gap: 8,
+  flexWrap: "nowrap",
+  alignItems: "center",
+  justifyContent: "space-between",
+};
+
+const actionPillSmallStyle = {
+  padding: "8px 8px",
   borderRadius: 0,
   border: "1px solid rgba(15, 23, 42, 0.12)",
   background: "rgba(255,255,255,0.92)",
   color: "#0b1220",
   fontWeight: 900,
-  fontSize: 12,
+  fontSize: 11,
   cursor: "pointer",
   boxShadow: "0 10px 22px rgba(2,6,23,0.06)",
+  whiteSpace: "nowrap",
+  lineHeight: 1,
+  flex: "1 1 0",
+  minWidth: 0,
+  textAlign: "center",
 };
 
-const editGlowBtnStyle = {
-  ...actionPillStyle,
+const editGlowSmallBtnStyle = {
+  ...actionPillSmallStyle,
   background: "rgba(255, 245, 180, 0.95)",
   color: "#2a2000",
   border: "1px solid rgba(255, 200, 0, 0.85)",
@@ -1074,8 +1009,8 @@ const editGlowBtnStyle = {
     "0 10px 22px rgba(255, 200, 0, 0.22), 0 0 0 3px rgba(255, 200, 0, 0.18), 0 0 18px rgba(255, 190, 0, 0.35)",
 };
 
-const dangerPillStyle = {
-  ...actionPillStyle,
+const dangerSmallPillStyle = {
+  ...actionPillSmallStyle,
   border: "1px solid rgba(239, 68, 68, 0.35)",
   background: "rgba(239, 68, 68, 0.08)",
   color: "#991b1b",
