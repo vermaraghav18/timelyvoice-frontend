@@ -260,9 +260,17 @@ export default function AdminImageLibrary() {
       ta.select();
       document.execCommand("copy");
       document.body.removeChild(ta);
-      toast.push({ type: "success", title: "Copied", message: "publicId copied." });
+      toast.push({
+        type: "success",
+        title: "Copied",
+        message: "publicId copied.",
+      });
     } catch {
-      toast.push({ type: "warning", title: "Copy failed", message: "Could not copy." });
+      toast.push({
+        type: "warning",
+        title: "Copy failed",
+        message: "Could not copy.",
+      });
     }
   }
 
@@ -550,9 +558,7 @@ export default function AdminImageLibrary() {
                     <div style={tagsLineStyle}>
                       <div style={metaLabelStyle}>Tags</div>
                       <div style={{ height: 6 }} />
-                      <div style={tagsPlainTextStyle}>
-                        {tagsText ? tagsText : "-"}
-                      </div>
+                      <div style={tagsPlainTextStyle}>{tagsText ? tagsText : "-"}</div>
                     </div>
 
                     <div style={{ height: 12 }} />
@@ -577,15 +583,14 @@ export default function AdminImageLibrary() {
                         Open
                       </a>
 
-                     <button
-                      type="button"
-                      style={editGlowBtnStyle}
-                      onClick={() => openEdit(it)}
-                      title="Edit tags/category/priority"
-                    >
-                      Edit
-                    </button>
-
+                      <button
+                        type="button"
+                        style={editGlowBtnStyle}
+                        onClick={() => openEdit(it)}
+                        title="Edit tags/category/priority"
+                      >
+                        Edit
+                      </button>
 
                       <button
                         type="button"
@@ -970,17 +975,7 @@ const tagsPlainTextStyle = {
   wordBreak: "break-word",
 };
 
-
-const editGlowBtnStyle = {
-  ...actionPillStyle,
-  background: "rgba(255, 245, 180, 0.95)", // light yellow fill
-  color: "#2a2000",
-  border: "1px solid rgba(255, 200, 0, 0.85)", // thin deep yellow border
-  boxShadow:
-    "0 10px 22px rgba(255, 200, 0, 0.22), 0 0 0 3px rgba(255, 200, 0, 0.18), 0 0 18px rgba(255, 190, 0, 0.35)",
-};
-
-
+/* ✅ IMPORTANT: actionPillStyle MUST be above editGlowBtnStyle */
 const actionPillStyle = {
   padding: "10px 12px",
   borderRadius: 0, // ✅ zero rounded corners
@@ -991,6 +986,16 @@ const actionPillStyle = {
   fontSize: 12,
   cursor: "pointer",
   boxShadow: "0 10px 22px rgba(2,6,23,0.06)",
+};
+
+/* ✅ Edit button: light yellow + deep glowing border */
+const editGlowBtnStyle = {
+  ...actionPillStyle,
+  background: "rgba(255, 245, 180, 0.95)", // light yellow fill
+  color: "#2a2000",
+  border: "1px solid rgba(255, 200, 0, 0.85)", // thin deep yellow border
+  boxShadow:
+    "0 10px 22px rgba(255, 200, 0, 0.22), 0 0 0 3px rgba(255, 200, 0, 0.18), 0 0 18px rgba(255, 190, 0, 0.35)",
 };
 
 const dangerPillStyle = {
