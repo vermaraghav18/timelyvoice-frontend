@@ -23,13 +23,18 @@ export default function AdminImageLibrary() {
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
 
+  // ✅ Infinite scroll state
   const [page, setPage] = useState(1);
-  const [limit] = useState(12);
+  const [limit] = useState(18);
+  const [hasMore, setHasMore] = useState(true);
+  const [listLoading, setListLoading] = useState(false);
+  const loadingRef = useRef(false);
 
   const [filterTag, setFilterTag] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
 
-  const [listLoading, setListLoading] = useState(false);
+  // ✅ Sentinel for infinite scroll
+  const sentinelRef = useRef(null);
 
   // ✅ Edit modal state
   const [editOpen, setEditOpen] = useState(false);
@@ -107,10 +112,15 @@ export default function AdminImageLibrary() {
       .filter((x) => x.slug);
   }, [categories]);
 
-  async function fetchList(nextPage = page) {
-    try {
-      setListLoading(true);
+  // ✅ Core fetch (append mode)
+  async function fetchPage(nextPage, { replace = false } = {}) {
+    if (loadingRef.current) return;
+    if (!hasMore && !replace) return;
 
+    loadingRef.current = true;
+    setListLoading(true);
+
+    try {
       const params = { page: nextPage, limit };
 
       if (filterCategory) params.category = filterCategory;
@@ -123,9 +133,29 @@ export default function AdminImageLibrary() {
 
       if (!data?.ok) throw new Error(data?.error || "Failed to load images");
 
-      setItems(Array.isArray(data.items) ? data.items : []);
-      setTotal(Number(data.total) || 0);
+      const newItems = Array.isArray(data.items) ? data.items : [];
+      const newTotal = Number(data.total) || 0;
+
+      setTotal(newTotal);
       setPage(Number(data.page) || nextPage || 1);
+
+      setItems((prev) => {
+        if (replace) return newItems;
+
+        // avoid duplicates if backend repeats (safety)
+        const seen = new Set(prev.map((x) => x?._id));
+        const merged = [...prev];
+        for (const it of newItems) {
+          if (!seen.has(it?._id)) merged.push(it);
+        }
+        return merged;
+      });
+
+      const loadedCount = (replace ? newItems.length : items.length + newItems.length);
+      const more =
+        newItems.length > 0 && (newTotal ? loadedCount < newTotal : true);
+
+      setHasMore(more);
     } catch (err) {
       console.error("[ImageLibrary] list fetch failed:", err);
       const msg =
@@ -135,13 +165,42 @@ export default function AdminImageLibrary() {
       toast.push({ type: "error", title: "Load failed", message: msg });
     } finally {
       setListLoading(false);
+      loadingRef.current = false;
     }
   }
 
+  // ✅ When filter changes: reset list + load from page 1
   useEffect(() => {
-    fetchList(1);
+    setItems([]);
+    setTotal(0);
+    setPage(1);
+    setHasMore(true);
+    // load first page
+    fetchPage(1, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterCategory, filterTag]);
+
+  // ✅ Infinite scroll observer
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (!first?.isIntersecting) return;
+        if (listLoading) return;
+        if (!hasMore) return;
+        // load next page
+        fetchPage(page + 1, { replace: false });
+      },
+      { root: null, rootMargin: "800px 0px", threshold: 0.01 }
+    );
+
+    obs.observe(el);
+    return () => obs.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, hasMore, listLoading, filterCategory, filterTag]);
 
   async function onUpload(e) {
     e?.preventDefault?.();
@@ -179,7 +238,13 @@ export default function AdminImageLibrary() {
 
       setFile(null);
       if (fileRef.current) fileRef.current.value = "";
-      fetchList(1);
+
+      // refresh list from page 1
+      setItems([]);
+      setTotal(0);
+      setPage(1);
+      setHasMore(true);
+      fetchPage(1, { replace: true });
     } catch (err) {
       console.error("[ImageLibrary] upload failed:", err);
       const msg =
@@ -215,10 +280,9 @@ export default function AdminImageLibrary() {
           : "Deleted from MongoDB.",
       });
 
-      const remaining = items.length - 1;
-      const maxPageAfter = Math.max(1, Math.ceil((total - 1) / limit));
-      const nextPage = remaining <= 0 ? Math.min(page, maxPageAfter) : page;
-      fetchList(nextPage);
+      // remove locally
+      setItems((prev) => prev.filter((x) => x?._id !== item._id));
+      setTotal((t) => Math.max(0, Number(t || 0) - 1));
     } catch (err) {
       console.error("[ImageLibrary] delete failed:", err);
       const msg =
@@ -315,7 +379,23 @@ export default function AdminImageLibrary() {
       });
 
       closeEdit();
-      fetchList(page);
+
+      // update locally (no refetch needed)
+      setItems((prev) =>
+        prev.map((x) =>
+          x?._id === editItem._id
+            ? {
+                ...x,
+                tags: String(editTags || "")
+                  .split(",")
+                  .map((t) => t.trim())
+                  .filter(Boolean),
+                category: editCategory || x.category,
+                priority: Number(editPriority) || 0,
+              }
+            : x
+        )
+      );
     } catch (err) {
       console.error("[ImageLibrary] update failed:", err);
       toast.push({
@@ -328,23 +408,14 @@ export default function AdminImageLibrary() {
     }
   }
 
-  const totalPages = Math.max(1, Math.ceil(total / limit));
-
   return (
     <div style={styles.page}>
-      {/* header intentionally empty (you removed the title/subtitle) */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          justifyContent: "space-between",
-          gap: 12,
-        }}
-      />
+      {/* header intentionally empty */}
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }} />
 
       <div style={{ height: 12 }} />
 
-      {/* ✅ Upload form (Stripe + Apple style) */}
+      {/* ✅ Upload form */}
       <div style={uploadWrapStyle}>
         <h3 style={sectionTitleStyle}>Upload Image to Library</h3>
 
@@ -361,48 +432,17 @@ export default function AdminImageLibrary() {
           <div style={dropzoneStyle}>
             {!file ? <div style={shimmerOverlayStyle} /> : null}
 
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 4,
-                minWidth: 0,
-                position: "relative",
-                zIndex: 1,
-              }}
-            >
-              <div
-                style={{
-                  fontWeight: 900,
-                  color: "#061026",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0, position: "relative", zIndex: 1 }}>
+              <div style={{ fontWeight: 900, color: "#061026", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {file ? file.name : "Choose an image to upload"}
               </div>
               <div style={{ fontSize: 12, opacity: 0.78, color: "#0b2455" }}>
-                {file
-                  ? `${Math.round((file.size || 0) / 1024)} KB`
-                  : "PNG, JPG, WEBP — single file"}
+                {file ? `${Math.round((file.size || 0) / 1024)} KB` : "PNG, JPG, WEBP — single file"}
               </div>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                gap: 10,
-                flexWrap: "wrap",
-                position: "relative",
-                zIndex: 1,
-              }}
-            >
-              <button
-                type="button"
-                style={selectBtnStyle}
-                onClick={() => fileRef.current?.click()}
-              >
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", position: "relative", zIndex: 1 }}>
+              <button type="button" style={selectBtnStyle} onClick={() => fileRef.current?.click()}>
                 Select file
               </button>
 
@@ -432,10 +472,7 @@ export default function AdminImageLibrary() {
             style={luxuryInputStyle}
           />
 
-          {/* ✅ plain-text preview (no pills) */}
-          {tagsPreviewText ? (
-            <div style={tagsPreviewTextStyle}>{tagsPreviewText}</div>
-          ) : null}
+          {tagsPreviewText ? <div style={tagsPreviewTextStyle}>{tagsPreviewText}</div> : null}
 
           <div style={{ height: 16 }} />
 
@@ -445,9 +482,7 @@ export default function AdminImageLibrary() {
             style={{
               ...(hasAtLeastOneTag ? uploadReadyBtnStyle : uploadIdleBtnStyle),
               cursor: !file || isUploading ? "not-allowed" : "pointer",
-              filter: !file || isUploading
-                ? "grayscale(0.25) brightness(0.85)"
-                : "none",
+              filter: !file || isUploading ? "grayscale(0.25) brightness(0.85)" : "none",
             }}
           >
             {isUploading ? "Uploading..." : "Upload"}
@@ -457,19 +492,10 @@ export default function AdminImageLibrary() {
 
       <div style={{ height: 14 }} />
 
-      {/* ✅ Library (Apple luxury white) */}
+      {/* ✅ Library */}
       <div style={libraryWrapStyle}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            justifyContent: "space-between",
-            gap: 12,
-          }}
-        >
-          <h3 style={{ marginTop: 0, marginBottom: 0, fontWeight: 900, color: "#0b1220" }}>
-            Library
-          </h3>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+          <h3 style={{ marginTop: 0, marginBottom: 0, fontWeight: 900, color: "#0b1220" }}>Library</h3>
           <div style={{ opacity: 0.8, fontSize: 13, color: "#0b1220" }}>
             Total: <b>{total}</b>
           </div>
@@ -489,7 +515,7 @@ export default function AdminImageLibrary() {
             />
           </div>
 
-          {/* ✅ HIDDEN: Filter by category (logic unchanged) */}
+          {/* hidden category filter (logic unchanged) */}
           <div style={{ display: "none" }}>
             <div style={fieldLabelStyle}>Filter by category</div>
             <select
@@ -510,7 +536,7 @@ export default function AdminImageLibrary() {
 
         <div style={{ height: 14 }} />
 
-        {listLoading ? (
+        {items.length === 0 && listLoading ? (
           <div style={{ opacity: 0.85, color: "#0b1220" }}>Loading…</div>
         ) : items.length === 0 ? (
           <div style={{ opacity: 0.85, color: "#0b1220" }}>No images found.</div>
@@ -529,32 +555,9 @@ export default function AdminImageLibrary() {
 
               return (
                 <div key={it._id} style={itemCardStyle}>
-                  {/* ✅ EDGE-TO-EDGE IMAGE (no inner container, no radius) */}
-                  <img
-                    src={it.url}
-                    alt={it.publicId}
-                    style={itemImageStyle}
-                    loading="lazy"
-                  />
+                  <img src={it.url} alt={it.publicId} style={itemImageStyle} loading="lazy" />
 
                   <div style={itemBodyStyle}>
-                    {/* ✅ HIDDEN: Category + Priority (logic unchanged) */}
-                    <div style={{ display: "none" }}>
-                      <div style={metaRowStyle}>
-                        <div style={metaLineStyle}>
-                          <span style={metaLabelStyle}>Category</span>
-                          <span style={metaValueStyle}>{it.category || "-"}</span>
-                        </div>
-                        <div style={metaLineStyle}>
-                          <span style={metaLabelStyle}>Priority</span>
-                          <span style={metaValueStyle}>{Number(it.priority) || 0}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ height: 2 }} />
-
-                    {/* ✅ Tags as plain text (comma-separated, less bold) */}
                     <div style={tagsLineStyle}>
                       <div style={metaLabelStyle}>Tags</div>
                       <div style={{ height: 6 }} />
@@ -592,12 +595,7 @@ export default function AdminImageLibrary() {
                         Edit
                       </button>
 
-                      <button
-                        type="button"
-                        style={dangerPillStyle}
-                        onClick={() => onDelete(it)}
-                        title="Delete"
-                      >
+                      <button type="button" style={dangerPillStyle} onClick={() => onDelete(it)} title="Delete">
                         Delete
                       </button>
                     </div>
@@ -608,43 +606,20 @@ export default function AdminImageLibrary() {
           </div>
         )}
 
-        <div style={{ height: 16 }} />
+        {/* ✅ infinite scroll status */}
+        <div style={{ height: 14 }} />
+        {items.length > 0 && listLoading ? (
+          <div style={{ opacity: 0.75, color: "#0b1220" }}>Loading more…</div>
+        ) : null}
+        {!hasMore && items.length > 0 ? (
+          <div style={{ opacity: 0.65, color: "#0b1220" }}>End of library.</div>
+        ) : null}
 
-        {/* Pagination */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-          }}
-        >
-          <div style={{ opacity: 0.8, fontSize: 13, color: "#0b1220" }}>
-            Page <b>{page}</b> / <b>{totalPages}</b>
-          </div>
-
-          <div style={{ display: "flex", gap: 10 }}>
-            <button
-              type="button"
-              style={actionPillStyle}
-              disabled={page <= 1 || listLoading}
-              onClick={() => fetchList(page - 1)}
-            >
-              Prev
-            </button>
-            <button
-              type="button"
-              style={actionPillStyle}
-              disabled={page >= totalPages || listLoading}
-              onClick={() => fetchList(page + 1)}
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        {/* ✅ sentinel */}
+        <div ref={sentinelRef} style={{ height: 1 }} />
       </div>
 
-      {/* ✅ Edit Modal (logic unchanged; styling unchanged) */}
+      {/* ✅ Edit Modal */}
       {editOpen && (
         <div style={modalOverlayStyle} onClick={closeEdit}>
           <div style={modalCardStyle} onClick={(e) => e.stopPropagation()}>
@@ -782,7 +757,7 @@ const uploadWrapStyle = {
   background:
     "radial-gradient(1200px 250px at 20% 0%, rgba(59,130,246,0.10), rgba(255,255,255,0.72)), rgba(255,255,255,0.72)",
   border: "1px solid rgba(15, 23, 42, 0.10)",
-  borderRadius: 0, // ✅ zero rounded corners
+  borderRadius: 0,
   padding: 18,
   boxShadow: "0 12px 34px rgba(2,6,23,0.06)",
 };
@@ -822,7 +797,7 @@ const dropzoneStyle = {
   justifyContent: "space-between",
   gap: 12,
   padding: 14,
-  borderRadius: 0, // ✅ zero rounded corners
+  borderRadius: 0,
   border: "1px dashed rgba(59,130,246,0.55)",
   background:
     "linear-gradient(120deg, rgba(0,102,255,0.18), rgba(0,153,255,0.10), rgba(255,255,255,0.72))",
@@ -843,7 +818,7 @@ const shimmerOverlayStyle = {
 
 const selectBtnStyle = {
   padding: "10px 12px",
-  borderRadius: 0, // ✅ zero rounded corners
+  borderRadius: 0,
   border: "1px solid rgba(2,6,23,0.10)",
   background: "rgba(255,255,255,0.95)",
   color: "#0b1220",
@@ -854,7 +829,7 @@ const selectBtnStyle = {
 
 const ghostBtnStyle = {
   padding: "10px 12px",
-  borderRadius: 0, // ✅ zero rounded corners
+  borderRadius: 0,
   border: "1px solid rgba(2,6,23,0.10)",
   background: "rgba(255,255,255,0.70)",
   color: "#0b1220",
@@ -864,7 +839,7 @@ const ghostBtnStyle = {
 
 const uploadIdleBtnStyle = {
   padding: "12px 16px",
-  borderRadius: 0, // ✅ zero rounded corners
+  borderRadius: 0,
   border: "1px solid rgba(2,6,23,0.10)",
   background: "rgba(2,6,23,0.10)",
   color: "rgba(2,6,23,0.55)",
@@ -875,7 +850,7 @@ const uploadIdleBtnStyle = {
 
 const uploadReadyBtnStyle = {
   padding: "12px 16px",
-  borderRadius: 0, // ✅ zero rounded corners
+  borderRadius: 0,
   border: "1px solid rgba(0,153,255,0.85)",
   background:
     "linear-gradient(135deg, rgba(0, 92, 255, 1) 0%, rgba(0, 153, 255, 1) 55%, rgba(0, 255, 200, 0.85) 120%)",
@@ -888,13 +863,13 @@ const uploadReadyBtnStyle = {
 };
 
 /* =========================
-   LIBRARY (Apple luxury white)
+   LIBRARY
    ========================= */
 const libraryWrapStyle = {
   background:
     "linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,250,252,0.92))",
   border: "1px solid rgba(15, 23, 42, 0.10)",
-  borderRadius: 0, // ✅ zero rounded corners
+  borderRadius: 0,
   padding: 18,
   boxShadow: "0 12px 34px rgba(2,6,23,0.06)",
 };
@@ -902,7 +877,7 @@ const libraryWrapStyle = {
 const libraryInputStyle = {
   width: "100%",
   padding: "12px 12px",
-  borderRadius: 0, // ✅ zero rounded corners
+  borderRadius: 0,
   border: "1px solid rgba(15, 23, 42, 0.12)",
   background: "rgba(255,255,255,0.94)",
   color: "#0b1220",
@@ -916,7 +891,7 @@ const librarySelectStyle = {
 };
 
 const itemCardStyle = {
-  borderRadius: 0, // ✅ zero rounded corners
+  borderRadius: 0,
   overflow: "hidden",
   border: "1px solid rgba(15, 23, 42, 0.10)",
   background: "rgba(255,255,255,0.92)",
@@ -936,30 +911,12 @@ const itemBodyStyle = {
   color: "#0b1220",
 };
 
-const metaRowStyle = {
-  display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gap: 10,
-};
-
-const metaLineStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 6,
-};
-
 const metaLabelStyle = {
   fontSize: 11,
   fontWeight: 900,
   letterSpacing: 0.25,
   textTransform: "uppercase",
   opacity: 0.55,
-};
-
-const metaValueStyle = {
-  fontSize: 14,
-  fontWeight: 900,
-  color: "#0b1220",
 };
 
 const tagsLineStyle = {
@@ -969,16 +926,18 @@ const tagsLineStyle = {
 
 const tagsPlainTextStyle = {
   fontSize: 13,
-  fontWeight: 500, // ✅ less bold
+  fontWeight: 500,
   color: "rgba(11,18,32,0.78)",
   lineHeight: 1.45,
   wordBreak: "break-word",
 };
 
-/* ✅ IMPORTANT: actionPillStyle MUST be above editGlowBtnStyle */
+/* =========================
+   BUTTONS (order matters)
+   ========================= */
 const actionPillStyle = {
   padding: "10px 12px",
-  borderRadius: 0, // ✅ zero rounded corners
+  borderRadius: 0,
   border: "1px solid rgba(15, 23, 42, 0.12)",
   background: "rgba(255,255,255,0.92)",
   color: "#0b1220",
@@ -988,12 +947,11 @@ const actionPillStyle = {
   boxShadow: "0 10px 22px rgba(2,6,23,0.06)",
 };
 
-/* ✅ Edit button: light yellow + deep glowing border */
 const editGlowBtnStyle = {
   ...actionPillStyle,
-  background: "rgba(255, 245, 180, 0.95)", // light yellow fill
+  background: "rgba(255, 245, 180, 0.95)",
   color: "#2a2000",
-  border: "1px solid rgba(255, 200, 0, 0.85)", // thin deep yellow border
+  border: "1px solid rgba(255, 200, 0, 0.85)",
   boxShadow:
     "0 10px 22px rgba(255, 200, 0, 0.22), 0 0 0 3px rgba(255, 200, 0, 0.18), 0 0 18px rgba(255, 190, 0, 0.35)",
 };
