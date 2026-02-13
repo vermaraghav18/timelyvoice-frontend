@@ -1,3 +1,4 @@
+// src/pages/admin/ImageLibrary.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { styles } from "../../App.jsx";
 import { api } from "../../lib/publicApi.js";
@@ -19,21 +20,19 @@ export default function AdminImageLibrary() {
   const [categories, setCategories] = useState([]);
   const [catsLoading, setCatsLoading] = useState(true);
 
-  // List/Grid state
+  // List/Grid state + infinite scroll
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
 
-  // ✅ Infinite scroll state
   const [page, setPage] = useState(1);
   const [limit] = useState(18);
   const [hasMore, setHasMore] = useState(true);
-  const [listLoading, setListLoading] = useState(false);
-  const loadingRef = useRef(false);
 
   const [filterTag, setFilterTag] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
 
-  // ✅ Sentinel for infinite scroll
+  const [listLoading, setListLoading] = useState(false);
+  const loadingRef = useRef(false);
   const sentinelRef = useRef(null);
 
   // ✅ Edit modal state
@@ -44,7 +43,7 @@ export default function AdminImageLibrary() {
   const [editPriority, setEditPriority] = useState(10);
   const [editSaving, setEditSaving] = useState(false);
 
-  // ✅ tag preview (plain text)
+  // ✅ tags preview as plain text (upload UI)
   const tagsPreviewText = useMemo(() => {
     const arr = String(tags || "")
       .split(",")
@@ -54,7 +53,6 @@ export default function AdminImageLibrary() {
     return arr.join(", ");
   }, [tags]);
 
-  // ✅ button glow when at least one tag exists (UI only)
   const hasAtLeastOneTag = useMemo(() => {
     return String(tags || "")
       .split(",")
@@ -72,7 +70,7 @@ export default function AdminImageLibrary() {
     document.head.appendChild(style);
   }, []);
 
-  // Load categories from existing source
+  // Load categories
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -84,7 +82,6 @@ export default function AdminImageLibrary() {
         const safe = Array.isArray(list) ? list : [];
         setCategories(safe);
 
-        // Keep upload default category stable
         if (!category && safe?.[0]?.slug) setCategory(safe[0].slug);
       } catch (e) {
         console.error("[ImageLibrary] categories load failed:", e);
@@ -112,7 +109,7 @@ export default function AdminImageLibrary() {
       .filter((x) => x.slug);
   }, [categories]);
 
-  // ✅ Core fetch (append mode)
+  // ✅ Fetch one page and append (infinite scroll)
   async function fetchPage(nextPage, { replace = false } = {}) {
     if (loadingRef.current) return;
     if (!hasMore && !replace) return;
@@ -142,7 +139,6 @@ export default function AdminImageLibrary() {
       setItems((prev) => {
         if (replace) return newItems;
 
-        // avoid duplicates if backend repeats (safety)
         const seen = new Set(prev.map((x) => x?._id));
         const merged = [...prev];
         for (const it of newItems) {
@@ -151,7 +147,9 @@ export default function AdminImageLibrary() {
         return merged;
       });
 
-      const loadedCount = (replace ? newItems.length : items.length + newItems.length);
+      // best-effort hasMore
+      const prevCount = replace ? 0 : items.length;
+      const loadedCount = prevCount + newItems.length;
       const more =
         newItems.length > 0 && (newTotal ? loadedCount < newTotal : true);
 
@@ -169,18 +167,17 @@ export default function AdminImageLibrary() {
     }
   }
 
-  // ✅ When filter changes: reset list + load from page 1
+  // Reset list on filters change
   useEffect(() => {
     setItems([]);
     setTotal(0);
     setPage(1);
     setHasMore(true);
-    // load first page
     fetchPage(1, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterCategory, filterTag]);
 
-  // ✅ Infinite scroll observer
+  // Infinite scroll observer
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -191,7 +188,6 @@ export default function AdminImageLibrary() {
         if (!first?.isIntersecting) return;
         if (listLoading) return;
         if (!hasMore) return;
-        // load next page
         fetchPage(page + 1, { replace: false });
       },
       { root: null, rootMargin: "800px 0px", threshold: 0.01 }
@@ -280,7 +276,6 @@ export default function AdminImageLibrary() {
           : "Deleted from MongoDB.",
       });
 
-      // remove locally
       setItems((prev) => prev.filter((x) => x?._id !== item._id));
       setTotal((t) => Math.max(0, Number(t || 0) - 1));
     } catch (err) {
@@ -378,9 +373,7 @@ export default function AdminImageLibrary() {
         message: "Image updated successfully.",
       });
 
-      closeEdit();
-
-      // update locally (no refetch needed)
+      // update locally
       setItems((prev) =>
         prev.map((x) =>
           x?._id === editItem._id
@@ -396,12 +389,17 @@ export default function AdminImageLibrary() {
             : x
         )
       );
+
+      closeEdit();
     } catch (err) {
       console.error("[ImageLibrary] update failed:", err);
       toast.push({
         type: "error",
         title: "Update failed",
-        message: err?.response?.data?.error || err?.message || "Failed to update image.",
+        message:
+          err?.response?.data?.error ||
+          err?.message ||
+          "Failed to update image.",
       });
     } finally {
       setEditSaving(false);
@@ -410,292 +408,390 @@ export default function AdminImageLibrary() {
 
   return (
     <div style={styles.page}>
-      {/* header intentionally empty */}
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }} />
+      {/* ✅ reduce side gaps + increase inner width */}
+      <div style={pageMaxWrapStyle}>
+        {/* header intentionally empty */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        />
 
-      <div style={{ height: 12 }} />
+        <div style={{ height: 12 }} />
 
-      {/* ✅ Upload form */}
-      <div style={uploadWrapStyle}>
-        <h3 style={sectionTitleStyle}>Upload Image to Library</h3>
+        {/* ✅ Upload form */}
+        <div style={uploadWrapStyle}>
+          <h3 style={sectionTitleStyle}>Upload Image to Library</h3>
 
-        <form onSubmit={onUpload}>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-            style={{ display: "none" }}
-          />
+          <form onSubmit={onUpload}>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              style={{ display: "none" }}
+            />
 
-          <div style={fieldLabelStyle}>Image</div>
-          <div style={dropzoneStyle}>
-            {!file ? <div style={shimmerOverlayStyle} /> : null}
+            <div style={fieldLabelStyle}>Image</div>
+            <div style={dropzoneStyle}>
+              {!file ? <div style={shimmerOverlayStyle} /> : null}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0, position: "relative", zIndex: 1 }}>
-              <div style={{ fontWeight: 900, color: "#061026", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {file ? file.name : "Choose an image to upload"}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                  minWidth: 0,
+                  position: "relative",
+                  zIndex: 1,
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 900,
+                    color: "#061026",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {file ? file.name : "Choose an image to upload"}
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.78, color: "#0b2455" }}>
+                  {file
+                    ? `${Math.round((file.size || 0) / 1024)} KB`
+                    : "PNG, JPG, WEBP — single file"}
+                </div>
               </div>
-              <div style={{ fontSize: 12, opacity: 0.78, color: "#0b2455" }}>
-                {file ? `${Math.round((file.size || 0) / 1024)} KB` : "PNG, JPG, WEBP — single file"}
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  position: "relative",
+                  zIndex: 1,
+                }}
+              >
+                <button
+                  type="button"
+                  style={selectBtnStyle}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  Select file
+                </button>
+
+                {file ? (
+                  <button
+                    type="button"
+                    style={ghostBtnStyle}
+                    onClick={() => {
+                      setFile(null);
+                      if (fileRef.current) fileRef.current.value = "";
+                    }}
+                  >
+                    Remove
+                  </button>
+                ) : null}
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", position: "relative", zIndex: 1 }}>
-              <button type="button" style={selectBtnStyle} onClick={() => fileRef.current?.click()}>
-                Select file
-              </button>
+            <div style={{ height: 14 }} />
 
-              {file ? (
-                <button
-                  type="button"
-                  style={ghostBtnStyle}
-                  onClick={() => {
-                    setFile(null);
-                    if (fileRef.current) fileRef.current.value = "";
-                  }}
-                >
-                  Remove
-                </button>
-              ) : null}
+            <div style={fieldLabelStyle}>Tags</div>
+            <input
+              type="text"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="e.g. iran, missile, global"
+              style={luxuryInputStyle}
+            />
+
+            {tagsPreviewText ? (
+              <div style={tagsPreviewTextStyle}>{tagsPreviewText}</div>
+            ) : null}
+
+            <div style={{ height: 16 }} />
+
+            <button
+              type="submit"
+              disabled={!file || isUploading}
+              style={{
+                ...(hasAtLeastOneTag ? uploadReadyBtnStyle : uploadIdleBtnStyle),
+                cursor: !file || isUploading ? "not-allowed" : "pointer",
+                filter: !file || isUploading
+                  ? "grayscale(0.25) brightness(0.85)"
+                  : "none",
+              }}
+            >
+              {isUploading ? "Uploading..." : "Upload"}
+            </button>
+          </form>
+        </div>
+
+        <div style={{ height: 14 }} />
+
+        {/* ✅ Library */}
+        <div style={libraryWrapStyle}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <h3
+              style={{
+                marginTop: 0,
+                marginBottom: 0,
+                fontWeight: 900,
+                color: "#0b1220",
+              }}
+            >
+              Library
+            </h3>
+            <div style={{ opacity: 0.8, fontSize: 13, color: "#0b1220" }}>
+              Total: <b>{total}</b>
+            </div>
+          </div>
+
+          <div style={{ height: 12 }} />
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
+            <div>
+              <div style={fieldLabelStyle}>Filter by tag</div>
+              <input
+                type="text"
+                value={filterTag}
+                onChange={(e) => setFilterTag(e.target.value)}
+                placeholder="e.g. iran"
+                style={libraryInputStyle}
+              />
+            </div>
+
+            {/* hidden category filter (logic unchanged) */}
+            <div style={{ display: "none" }}>
+              <div style={fieldLabelStyle}>Filter by category</div>
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                style={librarySelectStyle}
+                disabled={catsLoading}
+              >
+                <option value="">All</option>
+                {categoryOptions.map((c) => (
+                  <option key={c.slug} value={c.slug}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
           <div style={{ height: 14 }} />
 
-          <div style={fieldLabelStyle}>Tags</div>
-          <input
-            type="text"
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            placeholder="e.g. iran, missile, global"
-            style={luxuryInputStyle}
-          />
-
-          {tagsPreviewText ? <div style={tagsPreviewTextStyle}>{tagsPreviewText}</div> : null}
-
-          <div style={{ height: 16 }} />
-
-          <button
-            type="submit"
-            disabled={!file || isUploading}
-            style={{
-              ...(hasAtLeastOneTag ? uploadReadyBtnStyle : uploadIdleBtnStyle),
-              cursor: !file || isUploading ? "not-allowed" : "pointer",
-              filter: !file || isUploading ? "grayscale(0.25) brightness(0.85)" : "none",
-            }}
-          >
-            {isUploading ? "Uploading..." : "Upload"}
-          </button>
-        </form>
-      </div>
-
-      <div style={{ height: 14 }} />
-
-      {/* ✅ Library */}
-      <div style={libraryWrapStyle}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-          <h3 style={{ marginTop: 0, marginBottom: 0, fontWeight: 900, color: "#0b1220" }}>Library</h3>
-          <div style={{ opacity: 0.8, fontSize: 13, color: "#0b1220" }}>
-            Total: <b>{total}</b>
-          </div>
-        </div>
-
-        <div style={{ height: 12 }} />
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
-          <div>
-            <div style={fieldLabelStyle}>Filter by tag</div>
-            <input
-              type="text"
-              value={filterTag}
-              onChange={(e) => setFilterTag(e.target.value)}
-              placeholder="e.g. iran"
-              style={libraryInputStyle}
-            />
-          </div>
-
-          {/* hidden category filter (logic unchanged) */}
-          <div style={{ display: "none" }}>
-            <div style={fieldLabelStyle}>Filter by category</div>
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              style={librarySelectStyle}
-              disabled={catsLoading}
+          {items.length === 0 && listLoading ? (
+            <div style={{ opacity: 0.85, color: "#0b1220" }}>Loading…</div>
+          ) : items.length === 0 ? (
+            <div style={{ opacity: 0.85, color: "#0b1220" }}>
+              No images found.
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                gap: 14,
+              }}
             >
-              <option value="">All</option>
-              {categoryOptions.map((c) => (
-                <option key={c.slug} value={c.slug}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+              {items.map((it) => {
+                const tagsText = Array.isArray(it.tags)
+                  ? it.tags
+                      .map((t) => String(t || "").trim())
+                      .filter(Boolean)
+                      .join(", ")
+                  : "";
 
-        <div style={{ height: 14 }} />
+                return (
+                  <div key={it._id} style={itemCardStyle}>
+                    <img
+                      src={it.url}
+                      alt={it.publicId}
+                      style={itemImageStyle}
+                      loading="lazy"
+                    />
 
-        {items.length === 0 && listLoading ? (
-          <div style={{ opacity: 0.85, color: "#0b1220" }}>Loading…</div>
-        ) : items.length === 0 ? (
-          <div style={{ opacity: 0.85, color: "#0b1220" }}>No images found.</div>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-              gap: 14,
-            }}
-          >
-            {items.map((it) => {
-              const tagsText = Array.isArray(it.tags)
-                ? it.tags.map((t) => String(t || "").trim()).filter(Boolean).join(", ")
-                : "";
+                    <div style={itemBodyStyle}>
+                      <div style={tagsLineStyle}>
+                        <div style={metaLabelStyle}>Tags</div>
+                        <div style={{ height: 6 }} />
+                        <div style={tagsPlainTextStyle}>
+                          {tagsText ? tagsText : "-"}
+                        </div>
+                      </div>
 
-              return (
-                <div key={it._id} style={itemCardStyle}>
-                  <img src={it.url} alt={it.publicId} style={itemImageStyle} loading="lazy" />
+                      <div style={{ height: 12 }} />
 
-                  <div style={itemBodyStyle}>
-                    <div style={tagsLineStyle}>
-                      <div style={metaLabelStyle}>Tags</div>
-                      <div style={{ height: 6 }} />
-                      <div style={tagsPlainTextStyle}>{tagsText ? tagsText : "-"}</div>
-                    </div>
+                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          style={actionPillStyle}
+                          onClick={() => copyText(it.publicId)}
+                          title="Copy publicId"
+                        >
+                          Copy publicId
+                        </button>
 
-                    <div style={{ height: 12 }} />
+                        <a
+                          href={it.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ ...actionPillStyle, textDecoration: "none" }}
+                          title="Open image"
+                        >
+                          Open
+                        </a>
 
-                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                      <button
-                        type="button"
-                        style={actionPillStyle}
-                        onClick={() => copyText(it.publicId)}
-                        title="Copy publicId"
-                      >
-                        Copy publicId
-                      </button>
+                        <button
+                          type="button"
+                          style={editGlowBtnStyle}
+                          onClick={() => openEdit(it)}
+                          title="Edit tags/category/priority"
+                        >
+                          Edit
+                        </button>
 
-                      <a
-                        href={it.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ ...actionPillStyle, textDecoration: "none" }}
-                        title="Open image"
-                      >
-                        Open
-                      </a>
-
-                      <button
-                        type="button"
-                        style={editGlowBtnStyle}
-                        onClick={() => openEdit(it)}
-                        title="Edit tags/category/priority"
-                      >
-                        Edit
-                      </button>
-
-                      <button type="button" style={dangerPillStyle} onClick={() => onDelete(it)} title="Delete">
-                        Delete
-                      </button>
+                        <button
+                          type="button"
+                          style={dangerPillStyle}
+                          onClick={() => onDelete(it)}
+                          title="Delete"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          )}
+
+          <div style={{ height: 14 }} />
+
+          {items.length > 0 && listLoading ? (
+            <div style={{ opacity: 0.75, color: "#0b1220" }}>Loading more…</div>
+          ) : null}
+
+          {!hasMore && items.length > 0 ? (
+            <div style={{ opacity: 0.65, color: "#0b1220" }}>End of library.</div>
+          ) : null}
+
+          <div ref={sentinelRef} style={{ height: 1 }} />
+        </div>
+
+        {/* ✅ Edit Modal */}
+        {editOpen && (
+          <div style={modalOverlayStyle} onClick={closeEdit}>
+            <div style={modalCardStyle} onClick={(e) => e.stopPropagation()}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <h3 style={{ margin: 0 }}>Edit Image</h3>
+                <button type="button" style={miniBtnStyle} onClick={closeEdit}>
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ height: 10 }} />
+
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.9)" }}>
+                <b>publicId:</b> {editItem?.publicId || "-"}
+              </div>
+
+              <div style={{ height: 14 }} />
+
+              <label style={labelStyle}>Tags (comma separated)</label>
+              <input
+                value={editTags}
+                onChange={(e) => setEditTags(e.target.value)}
+                placeholder="e.g. parliament, debate, budget"
+                style={inputStyle}
+              />
+
+              <div style={{ height: 12 }} />
+
+              <label style={labelStyle}>Category</label>
+              <select
+                value={editCategory}
+                onChange={(e) => setEditCategory(e.target.value)}
+                style={inputStyle}
+                disabled={catsLoading}
+              >
+                <option value="">(empty)</option>
+                {catsLoading ? (
+                  <option value="">Loading categories…</option>
+                ) : (
+                  categoryOptions.map((c) => (
+                    <option key={c.slug} value={c.slug}>
+                      {c.name}
+                    </option>
+                  ))
+                )}
+              </select>
+
+              <div style={{ height: 12 }} />
+
+              <label style={labelStyle}>Priority</label>
+              <input
+                type="number"
+                value={editPriority}
+                onChange={(e) => setEditPriority(e.target.value)}
+                style={inputStyle}
+                min={0}
+              />
+
+              <div style={{ height: 16 }} />
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  justifyContent: "flex-end",
+                }}
+              >
+                <button
+                  type="button"
+                  style={miniBtnStyle}
+                  onClick={closeEdit}
+                  disabled={editSaving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    ...miniBtnStyle,
+                    borderColor: "rgba(80,200,120,0.45)",
+                  }}
+                  onClick={saveEdit}
+                  disabled={editSaving}
+                >
+                  {editSaving ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </div>
           </div>
         )}
-
-        {/* ✅ infinite scroll status */}
-        <div style={{ height: 14 }} />
-        {items.length > 0 && listLoading ? (
-          <div style={{ opacity: 0.75, color: "#0b1220" }}>Loading more…</div>
-        ) : null}
-        {!hasMore && items.length > 0 ? (
-          <div style={{ opacity: 0.65, color: "#0b1220" }}>End of library.</div>
-        ) : null}
-
-        {/* ✅ sentinel */}
-        <div ref={sentinelRef} style={{ height: 1 }} />
       </div>
-
-      {/* ✅ Edit Modal */}
-      {editOpen && (
-        <div style={modalOverlayStyle} onClick={closeEdit}>
-          <div style={modalCardStyle} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 style={{ margin: 0 }}>Edit Image</h3>
-              <button type="button" style={miniBtnStyle} onClick={closeEdit}>
-                ✕
-              </button>
-            </div>
-
-            <div style={{ height: 10 }} />
-
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.9)" }}>
-              <b>publicId:</b> {editItem?.publicId || "-"}
-            </div>
-
-            <div style={{ height: 14 }} />
-
-            <label style={labelStyle}>Tags (comma separated)</label>
-            <input
-              value={editTags}
-              onChange={(e) => setEditTags(e.target.value)}
-              placeholder="e.g. parliament, debate, budget"
-              style={inputStyle}
-            />
-
-            <div style={{ height: 12 }} />
-
-            <label style={labelStyle}>Category</label>
-            <select
-              value={editCategory}
-              onChange={(e) => setEditCategory(e.target.value)}
-              style={inputStyle}
-              disabled={catsLoading}
-            >
-              <option value="">(empty)</option>
-              {catsLoading ? (
-                <option value="">Loading categories…</option>
-              ) : (
-                categoryOptions.map((c) => (
-                  <option key={c.slug} value={c.slug}>
-                    {c.name}
-                  </option>
-                ))
-              )}
-            </select>
-
-            <div style={{ height: 12 }} />
-
-            <label style={labelStyle}>Priority</label>
-            <input
-              type="number"
-              value={editPriority}
-              onChange={(e) => setEditPriority(e.target.value)}
-              style={inputStyle}
-              min={0}
-            />
-
-            <div style={{ height: 16 }} />
-
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button type="button" style={miniBtnStyle} onClick={closeEdit} disabled={editSaving}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                style={{ ...miniBtnStyle, borderColor: "rgba(80,200,120,0.45)" }}
-                onClick={saveEdit}
-                disabled={editSaving}
-              >
-                {editSaving ? "Saving..." : "Save"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -748,6 +844,17 @@ const modalCardStyle = {
   padding: 18,
   boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
   color: "#ffffff",
+};
+
+/* =========================
+   PAGE WRAP (reduce side gap)
+   ========================= */
+const pageMaxWrapStyle = {
+  width: "100%",
+  maxWidth: 1400,
+  margin: "0 auto",
+  paddingLeft: 10,
+  paddingRight: 10,
 };
 
 /* =========================
