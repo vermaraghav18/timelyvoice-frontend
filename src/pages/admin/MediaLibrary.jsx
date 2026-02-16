@@ -21,9 +21,8 @@ export default function AdminMedia() {
   };
 
   useEffect(() => {
-    if (!getToken()) { setReady(true); return; }
-    fetchMedia().finally(() => setReady(true));
-  }, []);
+  fetchMedia().finally(() => setReady(true));
+}, []);
 
   const uploadRemote = async (e) => {
     e.preventDefault();
@@ -49,13 +48,8 @@ export default function AdminMedia() {
     }
   };
 
-  if (!getToken()) {
-    return (
-      <div style={styles.page}>
-        <div style={styles.card}>You must log in from <Link to="/admin" style={styles.link}>Admin</Link> first.</div>
-      </div>
-    );
-  }
+ // ✅ No login required
+
   if (!ready) return <div style={{ padding: 24 }}>Loading…</div>;
 
   return (

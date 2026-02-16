@@ -136,34 +136,7 @@ export default function AdminShell({ children }) {
               View site
             </a>
 
-            <button
-              type="button"
-              onClick={() => {
-                // Clear any stored admin-related auth info
-                localStorage.removeItem("adminEmail");
-                localStorage.removeItem("news_admin_token");
-                localStorage.removeItem("adminToken");
-                localStorage.removeItem("token");
-                sessionStorage.removeItem("news_admin_token");
-                sessionStorage.removeItem("adminToken");
-
-                // Redirect to admin login screen (route is /admin)
-                window.location.href = "/admin";
-              }}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 4,
-                border: `1px solid ${colors.border}`,
-                background: "#ef4444",
-                color: "#ffffff",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              Logout
-            </button>
-
+            
             <ProfileBadge />
           </div>
         </header>

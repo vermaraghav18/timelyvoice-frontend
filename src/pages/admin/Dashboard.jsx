@@ -594,12 +594,9 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (!getToken()) {
-      setReady(true);
-      return;
-    }
-    fetchArticles().finally(() => setReady(true));
-  }, []);
+  fetchArticles().finally(() => setReady(true));
+}, []);
+
 
   const onChangePreview = async (val) => {
     setGeoPreview(val);
@@ -607,16 +604,8 @@ export default function AdminDashboard() {
     await fetchArticles();
   };
 
-  if (!getToken()) {
-    return (
-      <LoginForm
-        onLoggedIn={() => {
-          fetchArticles();
-          setReady(true);
-        }}
-      />
-    );
-  }
+ // ✅ No login required
+
 
   if (!ready) return <div style={{ padding: 24 }}>Loading…</div>;
 
@@ -657,15 +646,7 @@ export default function AdminDashboard() {
           <Link to="/admin/media" style={styles.link}>
             Media
           </Link>
-          <button
-            onClick={() => {
-              clearToken();
-              navigate(0);
-            }}
-            style={styles.button}
-          >
-            Log out
-          </button>
+        
         </div>
       </div>
 
