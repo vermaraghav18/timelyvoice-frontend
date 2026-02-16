@@ -10,7 +10,8 @@ export default function AdminImageLibrary() {
 
   // Upload form state
   const fileRef = useRef(null);
-  const [file, setFile] = useState(null);
+const [files, setFiles] = useState([]); // ✅ multi upload
+
 const [tags, setTags] = useState("abstract");
 
   const [category, setCategory] = useState("world");
@@ -204,23 +205,27 @@ const [tags, setTags] = useState("abstract");
   async function onUpload(e) {
     e?.preventDefault?.();
 
-    if (!file) {
-      toast.push({
-        type: "warning",
-        title: "Select an image",
-        message: "Please choose an image file to upload.",
-      });
-      return;
-    }
+   if (!files || files.length === 0) {
+  toast.push({
+    type: "warning",
+    title: "Select images",
+    message: "Please choose one or more image files to upload.",
+  });
+  return;
+}
+
 
     try {
       setIsUploading(true);
 
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("tags", tags || "");
-      fd.append("category", category || "");
-      fd.append("priority", String(priority ?? 0));
+     const fd = new FormData();
+
+// ✅ send multiple files in one request
+for (const f of files) fd.append("files", f);
+
+fd.append("tags", tags || "");
+fd.append("category", category || "");
+fd.append("priority", String(priority ?? 0));
 
       const res = await api.post("/admin/image-library", fd, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -232,12 +237,15 @@ const [tags, setTags] = useState("abstract");
       toast.push({
         type: "success",
         title: "Uploaded",
-        message: "Image uploaded to Cloudinary and saved to Image Library.",
+        message: `${files.length} image(s) uploaded to Cloudinary and saved to Image Library.`,
+
       });
 
-      setFile(null);
+    setFiles([]);
 if (fileRef.current) fileRef.current.value = "";
 setTags("abstract");
+
+
 
 
       // refresh list from page 1
@@ -430,25 +438,34 @@ setTags("abstract");
           <h3 style={sectionTitleStyle}>Upload Image to Library</h3>
 
           <form onSubmit={onUpload}>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              style={{ display: "none" }}
-            />
+           <input
+  ref={fileRef}
+  type="file"
+  accept="image/*"
+  multiple // ✅ allow multi-select
+  onChange={(e) => {
+    const list = Array.from(e.target.files || []);
+    setFiles(list);
+  }}
+  style={{ display: "none" }}
+/>
+
 
             <div style={fieldLabelStyle}>Image</div>
             <div style={dropzoneStyle}>
-              {!file ? <div style={shimmerOverlayStyle} /> : null}
+             {files.length === 0 ? <div style={shimmerOverlayStyle} /> : null}
+
 
               <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0, position: "relative", zIndex: 1 }}>
                 <div style={{ fontWeight: 900, color: "#061026", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {file ? file.name : "Choose an image to upload"}
-                </div>
-                <div style={{ fontSize: 12, opacity: 0.78, color: "#0b2455" }}>
-                  {file ? `${Math.round((file.size || 0) / 1024)} KB` : "PNG, JPG, WEBP — single file"}
-                </div>
+  {files.length > 0 ? `${files.length} image(s) selected` : "Choose image(s) to upload"}
+</div>
+<div style={{ fontSize: 12, opacity: 0.78, color: "#0b2455" }}>
+  {files.length > 0
+    ? `${Math.round(files.reduce((sum, f) => sum + (f.size || 0), 0) / 1024)} KB total`
+    : "PNG, JPG, WEBP — multiple allowed"}
+</div>
+
               </div>
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", position: "relative", zIndex: 1 }}>
@@ -456,18 +473,19 @@ setTags("abstract");
                   Select file
                 </button>
 
-                {file ? (
-                  <button
-                    type="button"
-                    style={ghostBtnStyle}
-                    onClick={() => {
-                      setFile(null);
-                      if (fileRef.current) fileRef.current.value = "";
-                    }}
-                  >
-                    Remove
-                  </button>
-                ) : null}
+                {files.length > 0 ? (
+  <button
+    type="button"
+    style={ghostBtnStyle}
+    onClick={() => {
+      setFiles([]);
+      if (fileRef.current) fileRef.current.value = "";
+    }}
+  >
+    Remove
+  </button>
+) : null}
+
               </div>
             </div>
 
@@ -488,11 +506,13 @@ setTags("abstract");
 
             <button
               type="submit"
-              disabled={!file || isUploading}
+             disabled={files.length === 0 || isUploading}
+
               style={{
                 ...(hasAtLeastOneTag ? uploadReadyBtnStyle : uploadIdleBtnStyle),
-                cursor: !file || isUploading ? "not-allowed" : "pointer",
-                filter: !file || isUploading ? "grayscale(0.25) brightness(0.85)" : "none",
+               cursor: files.length === 0 || isUploading ? "not-allowed" : "pointer",
+filter: files.length === 0 || isUploading ? "grayscale(0.25) brightness(0.85)" : "none",
+
               }}
             >
               {isUploading ? "Uploading..." : "Upload"}
