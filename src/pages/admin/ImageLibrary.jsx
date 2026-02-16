@@ -301,7 +301,7 @@ export default function AdminImageLibrary() {
           toast.push({
             type: "success",
             title: "Copied",
-            message: "publicId copied.",
+            message: "Image URL copied.",
           })
         )
         .catch(() =>
@@ -324,7 +324,7 @@ export default function AdminImageLibrary() {
       toast.push({
         type: "success",
         title: "Copied",
-        message: "publicId copied.",
+        message: "Image URL copied.",
       });
     } catch {
       toast.push({
@@ -565,13 +565,14 @@ export default function AdminImageLibrary() {
                         <div style={metaLabelStyle}>Tags</div>
 
                         <button
-                          type="button"
-                          style={copyMiniRightStyle}
-                          onClick={() => copyText(it.publicId)}
-                          title="Copy publicId"
-                        >
-                          Copy publicId
-                        </button>
+                        type="button"
+                        style={copyMiniRightStyle}
+                        onClick={() => copyText(it.url)}
+                        title="Copy full image URL"
+                      >
+                        Copy Image URL
+                      </button>
+
                       </div>
 
                       <div style={{ height: 6 }} />
