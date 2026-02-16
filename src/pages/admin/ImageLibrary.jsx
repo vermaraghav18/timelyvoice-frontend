@@ -11,7 +11,8 @@ export default function AdminImageLibrary() {
   // Upload form state
   const fileRef = useRef(null);
   const [file, setFile] = useState(null);
-  const [tags, setTags] = useState("iran,missile,global");
+const [tags, setTags] = useState("abstract");
+
   const [category, setCategory] = useState("world");
   const [priority, setPriority] = useState(10);
   const [isUploading, setIsUploading] = useState(false);
@@ -235,7 +236,9 @@ export default function AdminImageLibrary() {
       });
 
       setFile(null);
-      if (fileRef.current) fileRef.current.value = "";
+if (fileRef.current) fileRef.current.value = "";
+setTags("abstract");
+
 
       // refresh list from page 1
       setItems([]);
@@ -475,7 +478,7 @@ export default function AdminImageLibrary() {
               type="text"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
-              placeholder="e.g. iran, missile, global"
+              placeholder="e.g. abstract, politics, parliament"
               style={luxuryInputStyle}
             />
 
