@@ -81,8 +81,44 @@ function normalizeCloudinaryUrl(raw = "") {
   }
 }
 
+// ✅ If admin pastes ImageLibrary publicId instead of URL,
+// resolve it via backend to the stored Cloudinary URL (versioned).
+async function resolveImageInputToUrl(api, raw = "") {
+  const input = String(raw || "").trim();
+  if (!input) return { url: "", publicId: "" };
+
+  // If it's already a URL, just normalize it.
+  if (/^https?:\/\//i.test(input) || input.startsWith("data:") || input.startsWith("blob:")) {
+    return { url: normalizeCloudinaryUrl(input), publicId: "" };
+  }
+
+  // Treat it as Cloudinary publicId (strip extension if user pasted one)
+  const publicId = input.replace(/\s+/g, "").replace(/\.(jpg|jpeg|png|webp|gif|avif)$/i, "");
+
+  // First try: resolve via ImageLibrary DB (BEST – returns the correct versioned URL)
+  try {
+    const res = await api.get("/admin/image-library/resolve", { params: { publicId } });
+    const data = res?.data;
+    if (data?.ok && data?.url) {
+      return { url: normalizeCloudinaryUrl(data.url), publicId: data.publicId || publicId };
+    }
+  } catch (e) {
+    // ignore - fallback below
+  }
+
+  // Fallback: attempt non-versioned Cloudinary delivery URL (may 404 on your account)
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  if (cloudName) {
+    return { url: `https://res.cloudinary.com/${cloudName}/image/upload/${publicId}`, publicId };
+  }
+
+  // Last resort: return as-is (prevents crashing)
+  return { url: input, publicId };
+}
+
 // ——— Admin-only: add a cache-buster so the preview <img> refreshes instantly ———
 function withCacheBust(url = "", seed = Date.now()) {
+
   if (!url) return "";
   try {
     // Support absolute AND relative URLs
@@ -837,45 +873,51 @@ export default function ArticlesPage() {
   }
 
   function scheduleSaveImage(id, value) {
-    // debounce per row
-    if (imgTimersRef.current[id]) clearTimeout(imgTimersRef.current[id]);
-    setImgState(id, { saving: "saving" });
-    imgTimersRef.current[id] = setTimeout(async () => {
-      try {
-        // Clean Cloudinary links (strip transforms/version/_a)
-        const cleaned = normalizeCloudinaryUrl(value || "");
-        const syncOg = !!(imgEdits[id]?.syncOg ?? true);
+  // debounce per row
+  if (imgTimersRef.current[id]) clearTimeout(imgTimersRef.current[id]);
+  setImgState(id, { saving: "saving" });
 
-        const payload = syncOg ? { imageUrl: cleaned, ogImage: cleaned } : { imageUrl: cleaned };
+  imgTimersRef.current[id] = setTimeout(async () => {
+    try {
+      const syncOg = !!(imgEdits[id]?.syncOg ?? true);
 
-        const res = await api.patch(`/admin/articles/${id}`, payload);
-        const updated = res?.data || {};
+      // ✅ Convert pasted value (URL OR publicId) -> real URL
+      const resolved = await resolveImageInputToUrl(api, value || "");
+      const finalUrl = resolved.url || "";
+      const finalPublicId = resolved.publicId || "";
 
-        // Server value (if it returns one) wins; otherwise our cleaned input
-        const nextImage = updated.imageUrl ?? cleaned ?? "";
-        const nextOg = updated.ogImage ?? (syncOg ? nextImage : updated.ogImage || "");
+      const payload = syncOg
+        ? { imageUrl: finalUrl, ogImage: finalUrl, ...(finalPublicId ? { imagePublicId: finalPublicId } : {}) }
+        : { imageUrl: finalUrl, ...(finalPublicId ? { imagePublicId: finalPublicId } : {}) };
 
-        updateItemsLocal((a) =>
-          a._id === id
-            ? {
-                ...a,
-                imageUrl: nextImage,
-                ogImage: nextOg,
-                // bump updatedAt so our preview cache-bust seed changes
-                updatedAt: new Date().toISOString(),
-              }
-            : a
-        );
+      const res = await api.patch(`/admin/articles/${id}`, payload);
+      const updated = res?.data || {};
 
-        // Keep the input box in sync with what we saved
-        setImgState(id, { value: nextImage, saving: "saved" });
-        setTimeout(() => setImgState(id, { saving: "idle" }), 900);
-      } catch (e) {
-        console.warn("image quick-save failed", e?.response?.data || e);
-        setImgState(id, { saving: "error" });
-      }
-    }, 800);
-  }
+      // Server value wins
+      const nextImage = updated.imageUrl ?? finalUrl ?? "";
+      const nextOg = updated.ogImage ?? (syncOg ? nextImage : updated.ogImage || "");
+
+      updateItemsLocal((a) =>
+        a._id === id
+          ? {
+              ...a,
+              imageUrl: nextImage,
+              ogImage: nextOg,
+              imagePublicId: updated.imagePublicId ?? finalPublicId ?? a.imagePublicId,
+              updatedAt: new Date().toISOString(),
+            }
+          : a
+      );
+
+      setImgState(id, { value: nextImage, saving: "saved" });
+      setTimeout(() => setImgState(id, { saving: "idle" }), 900);
+    } catch (e) {
+      console.warn("image quick-save failed", e?.response?.data || e);
+      setImgState(id, { saving: "error" });
+    }
+  }, 800);
+}
+
 
   function onChangeQuickImage(id, value) {
     setImgState(id, { value });
