@@ -1262,18 +1262,15 @@ function renderImageCycleControls(article) {
           flexWrap: "wrap",
         }}
       >
-        <h1 style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>
-          Articles
-          {previewEnabled && /^[A-Z]{2}$/.test((previewCountry || "").toUpperCase()) && (
-            <span style={{ marginLeft: 10, ...badge, ...badgeYellow }}>
-              Previewing as: {(previewCountry || "").toUpperCase()}
-            </span>
-          )}
-        </h1>
-        {/* Create button */}
-        <button onClick={openCreate} style={btnPrimary}>
-          New Article
-        </button>
+       <h1 style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>
+  Articles
+  {previewEnabled && /^[A-Z]{2}$/.test((previewCountry || "").toUpperCase()) && (
+    <span style={{ marginLeft: 10, ...badge, ...badgeYellow }}>
+      Previewing as: {(previewCountry || "").toUpperCase()}
+    </span>
+  )}
+</h1>
+
       </div>
 
       <div
@@ -1362,29 +1359,37 @@ function renderImageCycleControls(article) {
         />
 
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            justifySelf: "end",
-          }}
-        >
-          <label style={{ fontSize: 12, color: "#666" }}>Rows</label>
-          <select
-            value={limit}
-            onChange={(e) => {
-              setLimit(Number(e.target.value));
-              setPage(1);
-            }}
-            style={{ ...inp, width: 84 }}
-          >
-            {[10, 20, 50, 100].map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
-        </div>
+  style={{
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",   // ✅ center horizontally
+    gap: 10,
+    justifySelf: "center",  // ✅ center inside grid column
+  }}
+>
+  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+    <label style={{ fontSize: 12, color: "#666" }}>Rows</label>
+    <select
+      value={limit}
+      onChange={(e) => {
+        setLimit(Number(e.target.value));
+        setPage(1);
+      }}
+      style={{ ...inp, width: 84 }}
+    >
+      {[10, 20, 50, 100].map((n) => (
+        <option key={n} value={n}>
+          {n}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  <button onClick={openCreate} style={{ ...btnPrimary, padding: "10px 14px" }}>
+    New Article
+  </button>
+</div>
+
       </div>
 
       {/* X-Geo preview header controls */}
