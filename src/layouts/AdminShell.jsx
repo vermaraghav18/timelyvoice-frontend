@@ -1,6 +1,7 @@
 // src/layouts/AdminShell.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
+import { api } from "../App.jsx";
 
 const colors = {
   primary: "#1D9A8E",
@@ -56,23 +57,36 @@ export default function AdminShell({ children }) {
           </button>
         </div>
 
-                <nav style={{ padding: 8, overflowY: "auto", flex: 1 }}>
+        <nav style={{ padding: 8, overflowY: "auto", flex: 1 }}>
           <NavItem to="/admin/articles" label="Articles" icon={DocumentIcon} />
           <NavItem to="/admin/media" label="Media" icon={ImageIcon} />
 
           {/* ✅ NEW: Image Library */}
-          <NavItem to="/admin/image-library" label="Image Library" icon={ImageIcon} />
+          <NavItem
+            to="/admin/image-library"
+            label="Image Library"
+            icon={ImageIcon}
+          />
 
           <NavItem to="/admin/categories" label="Categories" icon={FolderIcon} />
           <NavItem to="/admin/tags" label="Tags" icon={TagIcon} />
           <NavItem to="/admin/settings" label="Settings" icon={SettingsIcon} />
+          <NavItem to="/admin/prompt" label="Prompt" icon={DocumentIcon} />
 
           {/* ⭐ NEW: Automation dashboard entry */}
-          <NavItem to="/admin/automation" label="Automation" icon={SettingsIcon} />
+          <NavItem
+            to="/admin/automation"
+            label="Automation"
+            icon={SettingsIcon}
+          />
 
           <NavItem to="/admin/autmotion/feeds" label="Feeds" icon={DocumentIcon} />
           <NavItem to="/admin/autmotion/queue" label="Queue" icon={DocumentIcon} />
-          <NavItem to="/admin/autmotion/drafts" label="Drafts" icon={DocumentIcon} />
+          <NavItem
+            to="/admin/autmotion/drafts"
+            label="Drafts"
+            icon={DocumentIcon}
+          />
           <NavItem
             to="/admin/autmotion/x-sources"
             label="X Sources"
@@ -84,7 +98,6 @@ export default function AdminShell({ children }) {
             icon={DocumentIcon}
           />
         </nav>
-
       </aside>
 
       <div
@@ -125,7 +138,7 @@ export default function AdminShell({ children }) {
             <div style={{ fontWeight: 600 }}>CMS</div>
           </div>
 
-          {/* RIGHT SIDE: View site + Logout + Profile */}
+          {/* RIGHT SIDE: View site + Profile */}
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <a
               href="/"
@@ -136,7 +149,6 @@ export default function AdminShell({ children }) {
               View site
             </a>
 
-            
             <ProfileBadge />
           </div>
         </header>
@@ -152,10 +164,66 @@ export default function AdminShell({ children }) {
         </main>
       </div>
 
+      {/* ✅ Fixed floating buttons */}
+      <PromptFloatingButtons />
+
       {/* layout + responsive CSS */}
       <style>{`
         .admin-shell-root {
           position: relative;
+        }
+
+        .prompt-fabs {
+          position: fixed;
+          right: 18px;
+          bottom: 18px;
+          z-index: 9999;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .prompt-fab {
+          width: 54px;
+          height: 54px;
+          border-radius: 999px;
+          border: 1px solid rgba(0,0,0,0.10);
+          background: #111827; /* dark */
+          color: #fff;
+          font-weight: 900;
+          cursor: pointer;
+          box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          user-select: none;
+        }
+
+        .prompt-fab:active {
+          transform: scale(0.96);
+        }
+
+        .prompt-fab--gpt {
+          background: #0f766e;
+        }
+
+        .prompt-fab--gemini {
+          background: #4338ca;
+        }
+
+        .prompt-fab-hint {
+          position: fixed;
+          right: 86px;
+          bottom: 24px;
+          z-index: 9999;
+          background: rgba(17,24,39,0.92);
+          color: #fff;
+          padding: 8px 10px;
+          border-radius: 10px;
+          font-size: 12px;
+          font-weight: 800;
+          max-width: 260px;
+          box-shadow: 0 10px 22px rgba(0,0,0,0.18);
         }
 
         .admin-aside {
@@ -262,6 +330,7 @@ function NavItem({ to, label, icon: Icon }) {
     color: colors.text,
     textDecoration: "none",
   };
+
   return (
     <NavLink
       to={to}
@@ -310,20 +379,17 @@ function DocumentIcon({ size = 16, color = "currentColor" }) {
     </svg>
   );
 }
+
 function ImageIcon({ size = 16, color = "currentColor" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden>
       <rect x="3" y="3" width="18" height="18" rx="2" ry="2" opacity=".2" />
       <circle cx="9" cy="9" r="2" />
-      <path
-        d="M21 15l-5-5L5 21"
-        fill="none"
-        stroke={color}
-        strokeWidth="2"
-      />
+      <path d="M21 15l-5-5L5 21" fill="none" stroke={color} strokeWidth="2" />
     </svg>
   );
 }
+
 function FolderIcon({ size = 16, color = "currentColor" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden>
@@ -331,6 +397,7 @@ function FolderIcon({ size = 16, color = "currentColor" }) {
     </svg>
   );
 }
+
 function TagIcon({ size = 16, color = "currentColor" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden>
@@ -339,6 +406,7 @@ function TagIcon({ size = 16, color = "currentColor" }) {
     </svg>
   );
 }
+
 function SettingsIcon({ size = 16, color = "currentColor" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden>
@@ -350,5 +418,116 @@ function SettingsIcon({ size = 16, color = "currentColor" }) {
         strokeWidth="2"
       />
     </svg>
+  );
+}
+
+/* ---------- ✅ Floating Prompt Buttons (NEW) ---------- */
+function PromptFloatingButtons() {
+  const [prompt, setPrompt] = useState("");
+  const [hint, setHint] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      try {
+        // 1) Use cached prompt instantly (fast UI)
+        const cached = localStorage.getItem("dailyPrompt") || "";
+        if (cached && mounted) setPrompt(cached);
+
+        // 2) Fetch latest from backend
+        const res = await api.get("/admin/prompt");
+        const p = res.data?.prompt || "";
+        if (!mounted) return;
+
+        setPrompt(p);
+        localStorage.setItem("dailyPrompt", p);
+      } catch {
+        // keep cached prompt if API fails
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  async function copyToClipboard(text) {
+    const t = String(text || "");
+    if (!t.trim()) {
+      setHint("No prompt saved yet. Go to Admin → Prompt.");
+      setTimeout(() => setHint(""), 2000);
+      return false;
+    }
+
+    try {
+      await navigator.clipboard.writeText(t);
+      setHint("Prompt copied ✅");
+      setTimeout(() => setHint(""), 1600);
+      return true;
+    } catch {
+      // fallback
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = t;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+
+        setHint(ok ? "Prompt copied ✅" : "Copy failed ❌");
+        setTimeout(() => setHint(""), 1600);
+        return ok;
+      } catch {
+        setHint("Copy failed ❌");
+        setTimeout(() => setHint(""), 1600);
+        return false;
+      }
+    }
+  }
+
+  async function onCopyOnly() {
+    await copyToClipboard(prompt);
+  }
+
+  async function onOpenChatGPT() {
+    await copyToClipboard(prompt);
+    window.open("https://chat.openai.com/", "_blank", "noopener,noreferrer");
+  }
+
+  async function onOpenGemini() {
+    await copyToClipboard(prompt);
+    window.open("https://gemini.google.com/", "_blank", "noopener,noreferrer");
+  }
+
+  return (
+    <>
+      <div className="prompt-fabs">
+        <button className="prompt-fab" title="Copy prompt" onClick={onCopyOnly}>
+          P
+        </button>
+
+        <button
+          className="prompt-fab prompt-fab--gpt"
+          title="Copy prompt + open ChatGPT"
+          onClick={onOpenChatGPT}
+        >
+          G
+        </button>
+
+        <button
+          className="prompt-fab prompt-fab--gemini"
+          title="Copy prompt + open Gemini"
+          onClick={onOpenGemini}
+        >
+          ✦
+        </button>
+      </div>
+
+      {hint ? <div className="prompt-fab-hint">{hint}</div> : null}
+    </>
   );
 }

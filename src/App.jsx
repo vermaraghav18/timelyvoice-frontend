@@ -194,6 +194,8 @@ const ArticlesBulkImport = lazy(() => import("./admin/ArticlesBulkImport.jsx"));
 const AdminDrafts = lazy(() => import("./admin/articles/AdminDrafts.jsx"));
 const AdsPage = lazy(() => import("./admin/AdsPage.jsx"));
 const AdminXPage = lazy(() => import("./pages/AdminX.jsx"));
+const PromptPage = lazy(() => import("./pages/admin/PromptPage.jsx"));
+
 
 /* ===================== Static pages ===================== */
 const AboutPage = lazy(() => import("./pages/static/About.jsx"));
@@ -372,13 +374,23 @@ export default function App() {
             }
           />
           <Route
-            path="/admin/settings"
-            element={
-              <AdminShell>
-                <SettingsPage />
-              </AdminShell>
-            }
-          />
+  path="/admin/settings"
+  element={
+    <AdminShell>
+      <SettingsPage />
+    </AdminShell>
+  }
+/>
+
+<Route
+  path="/admin/prompt"
+  element={
+    <AdminShell>
+      <PromptPage />
+    </AdminShell>
+  }
+/>
+
           <Route
             path="/admin/comments"
             element={
