@@ -261,8 +261,13 @@ export default function ArticlesPage() {
 
   // NEW: quick Image URL editor state per row
   // imgEdits: { [id]: { value, saving: 'idle'|'saving'|'saved'|'error', syncOg: boolean } }
-  const [imgEdits, setImgEdits] = useState({});
+    const [imgEdits, setImgEdits] = useState({});
   const imgTimersRef = useRef({}); // debounce timers per row
+
+  // NEW: Image candidates cache (for next/prev arrows on hero preview)
+  // imgCandidates: { [id]: { list: [], idx: 0, loading: boolean, error?: string } }
+  const [imgCandidates, setImgCandidates] = useState({});
+
 
   // Restore preview prefs
   useEffect(() => {
@@ -366,6 +371,8 @@ export default function ArticlesPage() {
         };
       }
       setImgEdits(seeded);
+      setImgCandidates({}); // reset candidate cache on fresh list load
+
     } catch (e) {
       toast.push({
         type: "error",
@@ -918,8 +925,189 @@ export default function ArticlesPage() {
   }, 800);
 }
 
+function setCandidateState(id, patch) {
+  setImgCandidates((prev) => ({
+    ...prev,
+    [id]: {
+      ...(prev[id] || { list: [], idx: 0, loading: false, error: "", prefetched: false }),
+      ...patch,
+    },
+  }));
+}
+
+
+async function ensureCandidatesLoaded(article) {
+  const id = article?._id;
+  if (!id) return null;
+
+  const existing = imgCandidates[id];
+  if (existing?.loading) return existing;
+  if (Array.isArray(existing?.list) && existing.list.length) return existing;
+
+  // Only makes sense if there are tags
+  if (!Array.isArray(article?.tags) || article.tags.length === 0) {
+    setCandidateState(id, { list: [], idx: 0, loading: false, error: "no_tags", prefetched: true });
+
+    // ✅ Prefetch image candidates so it never shows "No matches" on first render
+useEffect(() => {
+  if (loading) return;
+  const items = data?.items || [];
+  if (!items.length) return;
+
+  // Prefetch only for articles with tags
+  for (const a of items) {
+    const id = a?._id;
+    if (!id) continue;
+
+    const hasTags = Array.isArray(a.tags) && a.tags.length > 0;
+    if (!hasTags) continue;
+
+    const st = imgCandidates[id];
+    if (st?.loading) continue;
+    if (st?.prefetched) continue;        // ✅ only once
+    if (Array.isArray(st?.list) && st.list.length) continue;
+
+    // Fire and forget (ensureCandidatesLoaded updates state)
+    ensureCandidatesLoaded(a);
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [loading, data.items]);
+
+
+    return { list: [], idx: 0, loading: false, error: "no_tags" };
+  }
+
+  try {
+    setCandidateState(id, { loading: true, error: "" });
+    const res = await api.get(`/admin/articles/${id}/image-candidates?limit=24`);
+    const list = Array.isArray(res?.data?.candidates) ? res.data.candidates : [];
+    setCandidateState(id, { list, idx: 0, loading: false, error: "", prefetched: true });
+
+    return { list, idx: 0, loading: false, error: "" };
+  } catch (e) {
+    console.warn("image-candidates fetch failed", e?.response?.data || e);
+    setCandidateState(id, { list: [], idx: 0, loading: false, error: "failed", prefetched: true });
+
+    return { list: [], idx: 0, loading: false, error: "failed" };
+  }
+}
+
+async function cycleCandidate(article, dir) {
+  const id = article?._id;
+  if (!id) return;
+
+  const st = await ensureCandidatesLoaded(article);
+  const list = st?.list || [];
+  if (list.length <= 1) return;
+
+  const currentIdx = Number(imgCandidates[id]?.idx ?? 0);
+  const nextIdx = (currentIdx + dir + list.length) % list.length;
+
+  setCandidateState(id, { idx: nextIdx });
+
+  const next = list[nextIdx];
+  if (next?.url) {
+    // Immediate: set value + save (also sets imagePublicId if resolvable)
+    setImgState(id, { value: next.url });
+    scheduleSaveImage(id, next.url);
+  }
+}
+
+function renderImageCycleControls(article) {
+  const id = article?._id;
+  if (!id) return null;
+
+  const st = imgCandidates[id] || { list: [], idx: 0, loading: false };
+  const count = Array.isArray(st.list) ? st.list.length : 0;
+
+  const hasTags = Array.isArray(article?.tags) && article.tags.length > 0;
+  if (!hasTags) return null;
+
+  const btn = {
+    width: 28,
+    height: 28,
+    borderRadius: 28,
+    border: "1px solid rgba(255,255,255,0.6)",
+    background: "rgba(0,0,0,0.55)",
+    color: "#fff",
+    fontWeight: 800,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    lineHeight: 1,
+    userSelect: "none",
+  };
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: 8,
+        left: 8,
+        right: 8,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
+        pointerEvents: "none",
+      }}
+    >
+      <button
+        type="button"
+        title="Previous matching image"
+        style={{ ...btn, pointerEvents: "auto", opacity: st.loading ? 0.6 : 1 }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          cycleCandidate(article, -1);
+        }}
+      >
+        ◀
+      </button>
+
+      <div
+        style={{
+          pointerEvents: "none",
+          fontSize: 11,
+          padding: "4px 8px",
+          borderRadius: 999,
+          background: "rgba(0,0,0,0.55)",
+          border: "1px solid rgba(255,255,255,0.35)",
+          color: "#fff",
+          opacity: count ? 1 : 0.85,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {st.loading
+  ? "Loading…"
+  : count
+  ? `${(st.idx || 0) + 1}/${count}`
+  : st.prefetched
+  ? "No matches"
+  : "…"}
+
+      </div>
+
+      <button
+        type="button"
+        title="Next matching image"
+        style={{ ...btn, pointerEvents: "auto", opacity: st.loading ? 0.6 : 1 }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          cycleCandidate(article, +1);
+        }}
+      >
+        ▶
+      </button>
+    </div>
+  );
+}
+
 
   function onChangeQuickImage(id, value) {
+
     setImgState(id, { value });
     scheduleSaveImage(id, value);
   }
@@ -1121,10 +1309,7 @@ export default function ArticlesPage() {
           Delete
         </button>
 
-        {/* ✅ Quick access */}
-        <button onClick={() => navigate("/admin/image-library")} style={btnGhost}>
-          Image Library
-        </button>
+       
       </div>
 
       {/* Filters */}
@@ -1533,39 +1718,42 @@ export default function ArticlesPage() {
                                   background: "#000",
                                 }}
                               >
-                                <img
-                                  src={thumbSrc}
-                                  alt=""
-                                  loading="lazy"
-                                  decoding="async"
-                                  style={{
-                                    width: "100%",
-                                    height: "auto",
-                                    display: "block",
-                                    background: "#f8fafc",
-                                    objectFit: "cover",
-                                  }}
-                                  onError={(e) => {
-                                    const tries = Number(e.currentTarget.dataset.tries || 0);
+                               <img
+                                    src={thumbSrc}
+                                    alt=""
+                                    loading="lazy"
+                                    decoding="async"
+                                    style={{
+                                      width: "100%",
+                                      height: "auto",
+                                      display: "block",
+                                      background: "#f8fafc",
+                                      objectFit: "cover",
+                                    }}
+                                    onError={(e) => {
+                                      const tries = Number(e.currentTarget.dataset.tries || 0);
 
-                                    if (tries === 0 && baseImage && baseImage !== DEFAULT_IMAGE_URL) {
-                                      e.currentTarget.dataset.tries = "1";
-                                      e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now());
-                                      return;
-                                    }
+                                      if (tries === 0 && baseImage && baseImage !== DEFAULT_IMAGE_URL) {
+                                        e.currentTarget.dataset.tries = "1";
+                                        e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now());
+                                        return;
+                                      }
 
-                                    if (tries === 1) {
-                                      e.currentTarget.dataset.tries = "2";
-                                      e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 1);
-                                      return;
-                                    }
+                                      if (tries === 1) {
+                                        e.currentTarget.dataset.tries = "2";
+                                        e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 1);
+                                        return;
+                                      }
 
-                                    e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 2);
-                                  }}
-                                />
+                                      e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 2);
+                                    }}
+                                  />
 
-                                {hasVideo ? (
-                                  <video
+                                  {renderImageCycleControls(a)}
+
+                                  {hasVideo ? (
+                                    <video
+
                                     src={toPlayableVideoSrc(a.videoUrl)}
                                     autoPlay
                                     loop
@@ -1740,6 +1928,30 @@ export default function ArticlesPage() {
                           </button>
 
                           <button
+  type="button"
+  onClick={() => {
+    // Optional: open with a default tag filter (first tag) and category
+    const tag = Array.isArray(a?.tags) && a.tags.length ? a.tags[0] : "";
+    const cat = String(a?.category?.slug || a?.category || "").trim();
+
+    const qs = new URLSearchParams();
+    if (tag) qs.set("tag", tag);
+    if (cat) qs.set("category", cat);
+
+    window.open(
+      `/admin/image-library${qs.toString() ? `?${qs.toString()}` : ""}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }}
+  style={{ ...btnSmallGhost, padding: "4px 8px", fontSize: 12 }}
+  title="Open Image Library (new tab)"
+>
+  Image Library
+</button>
+
+
+                          <button
                             type="button"
                             onClick={() => handleGenerateAiImage(a._id)}
                             style={{ ...btnSmallPrimary, padding: "4px 8px", fontSize: 12 }}
@@ -1864,36 +2076,39 @@ export default function ArticlesPage() {
                               }}
                             >
                               <img
-                                id={`thumb-${a._id}`}
-                                src={thumbSrc}
-                                alt=""
-                                loading="lazy"
-                                decoding="async"
-                                style={{
-                                  width: "100%",
-                                  height: "100%",
-                                  objectFit: "cover",
-                                  display: "block",
-                                  background: "#f8fafc",
-                                }}
-                                onError={(e) => {
-                                  const tries = Number(e.currentTarget.dataset.tries || 0);
-                                  if (tries === 0 && baseImage && baseImage !== DEFAULT_IMAGE_URL) {
-                                    e.currentTarget.dataset.tries = "1";
-                                    e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now());
-                                    return;
-                                  }
-                                  if (tries === 1) {
-                                    e.currentTarget.dataset.tries = "2";
-                                    e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 1);
-                                    return;
-                                  }
-                                  e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 2);
-                                }}
-                              />
+                                  id={`thumb-${a._id}`}
+                                  src={thumbSrc}
+                                  alt=""
+                                  loading="lazy"
+                                  decoding="async"
+                                  style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "cover",
+                                    display: "block",
+                                    background: "#f8fafc",
+                                  }}
+                                  onError={(e) => {
+                                    const tries = Number(e.currentTarget.dataset.tries || 0);
+                                    if (tries === 0 && baseImage && baseImage !== DEFAULT_IMAGE_URL) {
+                                      e.currentTarget.dataset.tries = "1";
+                                      e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now());
+                                      return;
+                                    }
+                                    if (tries === 1) {
+                                      e.currentTarget.dataset.tries = "2";
+                                      e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 1);
+                                      return;
+                                    }
+                                    e.currentTarget.src = withCacheBust(DEFAULT_IMAGE_URL, Date.now() + 2);
+                                  }}
+                                />
 
-                              {hasVideo ? (
-                                <video
+                                {renderImageCycleControls(a)}
+
+                                {hasVideo ? (
+                                  <video
+
                                   src={toPlayableVideoSrc(a.videoUrl)}
                                   autoPlay
                                   loop
@@ -2668,9 +2883,10 @@ export default function ArticlesPage() {
             gap: 8px;
           }
 
-          .article-actions-mobile .article-actions-row-top {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+         .article-actions-mobile .article-actions-row-top {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           }
+
 
           .article-actions-mobile .article-actions-row-bottom {
             grid-template-columns: repeat(2, minmax(0, 1fr));

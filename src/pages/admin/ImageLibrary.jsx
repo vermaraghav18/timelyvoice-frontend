@@ -10,10 +10,8 @@ export default function AdminImageLibrary() {
 
   // Upload form state
   const fileRef = useRef(null);
-const [files, setFiles] = useState([]); // ✅ multi upload
-
-const [tags, setTags] = useState("abstract");
-
+  const [files, setFiles] = useState([]); // ✅ multi upload
+  const [tags, setTags] = useState("");
   const [category, setCategory] = useState("world");
   const [priority, setPriority] = useState(10);
   const [isUploading, setIsUploading] = useState(false);
@@ -45,6 +43,63 @@ const [tags, setTags] = useState("abstract");
   const [editPriority, setEditPriority] = useState(10);
   const [editSaving, setEditSaving] = useState(false);
 
+  // ✅ Google Drive picker state (selection behaves like local files)
+  const [driveOpen, setDriveOpen] = useState(false);
+  const [driveLoading, setDriveLoading] = useState(false);
+  const [driveFiles, setDriveFiles] = useState([]);
+  const [driveQuery, setDriveQuery] = useState("");
+  const [driveSelected, setDriveSelected] = useState(() => new Set());
+
+  const openDrivePicker = async () => {
+    try {
+      setDriveLoading(true);
+      setDriveOpen(true);
+      setDriveQuery("");
+      setDriveSelected(new Set());
+
+      const res = await api.get("/admin/image-library/drive/files");
+      const data = res?.data;
+      if (!data?.ok) throw new Error(data?.error || "Failed to load Drive files");
+
+      setDriveFiles(Array.isArray(data.files) ? data.files : []);
+    } catch (e) {
+      console.error("[ImageLibrary] drive list failed:", e);
+      toast.push({
+        type: "error",
+        title: "Drive failed",
+        message: e?.response?.data?.error || e?.message || "Could not load Drive images.",
+      });
+      setDriveOpen(false);
+    } finally {
+      setDriveLoading(false);
+    }
+  };
+
+  const closeDrivePicker = () => setDriveOpen(false);
+
+  const toggleDriveSelect = (id) => {
+    setDriveSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // ✅ Apply selection: close modal, keep fileIds ready for Upload button
+  const applyDriveSelection = () => {
+    // If user picked from Drive, clear local input to avoid confusion
+    setFiles([]);
+    if (fileRef.current) fileRef.current.value = "";
+    setDriveOpen(false);
+  };
+
+  const clearAllSelections = () => {
+    setFiles([]);
+    if (fileRef.current) fileRef.current.value = "";
+    setDriveSelected(new Set());
+  };
+
   // ✅ tags preview as plain text (upload UI)
   const tagsPreviewText = useMemo(() => {
     const arr = String(tags || "")
@@ -53,15 +108,6 @@ const [tags, setTags] = useState("abstract");
       .filter(Boolean)
       .slice(0, 30);
     return arr.join(", ");
-  }, [tags]);
-
-  const hasAtLeastOneTag = useMemo(() => {
-    return (
-      String(tags || "")
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean).length > 0
-    );
   }, [tags]);
 
   // ✅ inject shimmer keyframes once (UI only)
@@ -154,8 +200,7 @@ const [tags, setTags] = useState("abstract");
       // best-effort hasMore
       const prevCount = replace ? 0 : items.length;
       const loadedCount = prevCount + newItems.length;
-      const more =
-        newItems.length > 0 && (newTotal ? loadedCount < newTotal : true);
+      const more = newItems.length > 0 && (newTotal ? loadedCount < newTotal : true);
 
       setHasMore(more);
     } catch (err) {
@@ -202,51 +247,76 @@ const [tags, setTags] = useState("abstract");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, hasMore, listLoading, filterCategory, filterTag]);
 
+  // ✅ Upload button: either local upload OR drive import (with same tags input)
   async function onUpload(e) {
     e?.preventDefault?.();
 
-   if (!files || files.length === 0) {
-  toast.push({
-    type: "warning",
-    title: "Select images",
-    message: "Please choose one or more image files to upload.",
-  });
-  return;
-}
+    const localCount = Array.isArray(files) ? files.length : 0;
+    const driveCount = driveSelected?.size || 0;
 
+    if (localCount === 0 && driveCount === 0) {
+      toast.push({
+        type: "warning",
+        title: "Select images",
+        message: "Please choose images from PC or Google Drive.",
+      });
+      return;
+    }
 
     try {
       setIsUploading(true);
 
-     const fd = new FormData();
+      // ✅ CASE 1: Local upload (existing behavior)
+      if (localCount > 0) {
+        const fd = new FormData();
+        for (const f of files) fd.append("files", f);
 
-// ✅ send multiple files in one request
-for (const f of files) fd.append("files", f);
+        fd.append("tags", tags || "");
+        fd.append("category", category || "");
+        fd.append("priority", String(priority ?? 0));
 
-fd.append("tags", tags || "");
-fd.append("category", category || "");
-fd.append("priority", String(priority ?? 0));
+        const res = await api.post("/admin/image-library", fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
 
-      const res = await api.post("/admin/image-library", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+        const data = res?.data;
+        if (!data?.ok) throw new Error(data?.error || "Upload failed");
 
-      const data = res?.data;
-      if (!data?.ok) throw new Error(data?.error || "Upload failed");
+        toast.push({
+          type: "success",
+          title: "Uploaded",
+          message: `${localCount} image(s) uploaded to Cloudinary and saved to Image Library.`,
+        });
 
-      toast.push({
-        type: "success",
-        title: "Uploaded",
-        message: `${files.length} image(s) uploaded to Cloudinary and saved to Image Library.`,
+        setFiles([]);
+        if (fileRef.current) fileRef.current.value = "";
+        setTags("");
+      } else {
+        // ✅ CASE 2: Drive import (NEW behavior)
+        const ids = Array.from(driveSelected || []);
+        const payload = {
+          fileIds: ids,
+          tags: tags || "",
+          category: category || "",
+          priority: Number(priority) || 0,
+        };
 
-      });
+        const res = await api.post("/admin/image-library/drive/import", payload, {
+  timeout: 120000, // ✅ allow enough time for Drive download + Cloudinary upload
+});
 
-    setFiles([]);
-if (fileRef.current) fileRef.current.value = "";
-setTags("abstract");
+        const data = res?.data;
+        if (!data?.ok) throw new Error(data?.error || "Drive import failed");
 
+        toast.push({
+          type: "success",
+          title: "Imported",
+          message: `${ids.length} image(s) imported from Drive and saved to Image Library.`,
+        });
 
-
+        setDriveSelected(new Set());
+        setTags("");
+      }
 
       // refresh list from page 1
       setItems([]);
@@ -255,11 +325,16 @@ setTags("abstract");
       setHasMore(true);
       fetchPage(1, { replace: true });
     } catch (err) {
-      console.error("[ImageLibrary] upload failed:", err);
-      const msg =
-        err?.response?.data?.error ||
-        err?.message ||
-        "Upload failed. Please try again.";
+      console.error("[ImageLibrary] upload/import failed:", err);
+     const apiErr = err?.response?.data;
+const msg =
+  apiErr?.error ||
+  (Array.isArray(apiErr?.failed) && apiErr.failed[0]?.error
+    ? apiErr.failed[0].error
+    : null) ||
+  err?.message ||
+  "Upload failed. Please try again.";
+
       toast.push({ type: "error", title: "Upload failed", message: msg });
     } finally {
       setIsUploading(false);
@@ -284,9 +359,7 @@ setTags("abstract");
       toast.push({
         type: "success",
         title: "Deleted",
-        message: also
-          ? "Deleted from MongoDB and Cloudinary."
-          : "Deleted from MongoDB.",
+        message: also ? "Deleted from MongoDB and Cloudinary." : "Deleted from MongoDB.",
       });
 
       setItems((prev) => prev.filter((x) => x?._id !== item._id));
@@ -346,13 +419,21 @@ setTags("abstract");
     }
   }
 
-  function openEdit(it) {
-    setEditItem(it);
-    setEditTags(Array.isArray(it?.tags) ? it.tags.join(", ") : "");
-    setEditCategory(String(it?.category || "").trim());
-    setEditPriority(Number(it?.priority) || 0);
-    setEditOpen(true);
-  }
+ function openEdit(it) {
+  const rawTags = it?.tags;
+
+  const tagsText = Array.isArray(rawTags)
+    ? rawTags.map((t) => String(t || "").trim()).filter(Boolean).join(", ")
+    : typeof rawTags === "string"
+    ? rawTags
+    : "";
+
+  setEditItem(it);
+  setEditTags(tagsText);
+  setEditCategory(String(it?.category || category || "").trim()); // fallback to current category
+  setEditPriority(Number(it?.priority ?? 10));
+  setEditOpen(true);
+}
 
   function closeEdit() {
     setEditOpen(false);
@@ -369,11 +450,10 @@ setTags("abstract");
     try {
       setEditSaving(true);
 
-      const payload = {
-        tags: editTags,
-        category: editCategory || "",
-        priority: Number(editPriority) || 0,
-      };
+     const payload = {
+  tags: editTags,
+};
+
 
       const res = await api.patch(`/admin/image-library/${editItem._id}`, payload);
       const data = res?.data;
@@ -390,15 +470,14 @@ setTags("abstract");
       setItems((prev) =>
         prev.map((x) =>
           x?._id === editItem._id
-            ? {
-                ...x,
-                tags: String(editTags || "")
-                  .split(",")
-                  .map((t) => t.trim())
-                  .filter(Boolean),
-                category: editCategory || x.category,
-                priority: Number(editPriority) || 0,
-              }
+         ? {
+    ...x,
+    tags: String(editTags || "")
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean),
+  }
+
             : x
         )
       );
@@ -409,10 +488,7 @@ setTags("abstract");
       toast.push({
         type: "error",
         title: "Update failed",
-        message:
-          err?.response?.data?.error ||
-          err?.message ||
-          "Failed to update image.",
+        message: err?.response?.data?.error || err?.message || "Failed to update image.",
       });
     } finally {
       setEditSaving(false);
@@ -430,7 +506,14 @@ setTags("abstract");
       }}
     >
       <div style={pageMaxWrapStyle}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }} />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        />
 
         <div style={{ height: 12 }} />
 
@@ -438,54 +521,97 @@ setTags("abstract");
           <h3 style={sectionTitleStyle}>Upload Image to Library</h3>
 
           <form onSubmit={onUpload}>
-           <input
-  ref={fileRef}
-  type="file"
-  accept="image/*"
-  multiple // ✅ allow multi-select
-  onChange={(e) => {
-    const list = Array.from(e.target.files || []);
-    setFiles(list);
-  }}
-  style={{ display: "none" }}
-/>
-
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              multiple // ✅ allow multi-select
+              onChange={(e) => {
+                const list = Array.from(e.target.files || []);
+                setFiles(list);
+                // ✅ local select should override drive selection
+                setDriveSelected(new Set());
+              }}
+              style={{ display: "none" }}
+            />
 
             <div style={fieldLabelStyle}>Image</div>
             <div style={dropzoneStyle}>
-             {files.length === 0 ? <div style={shimmerOverlayStyle} /> : null}
+              {files.length === 0 && (driveSelected?.size || 0) === 0 ? (
+                <div style={shimmerOverlayStyle} />
+              ) : null}
 
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                  minWidth: 0,
+                  position: "relative",
+                  zIndex: 1,
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 900,
+                    color: "#061026",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {files.length > 0
+                    ? `${files.length} image(s) selected`
+                    : (driveSelected?.size || 0) > 0
+                    ? `${driveSelected.size} image(s) selected (Google Drive)`
+                    : "Choose image(s) to upload"}
+                </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0, position: "relative", zIndex: 1 }}>
-                <div style={{ fontWeight: 900, color: "#061026", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-  {files.length > 0 ? `${files.length} image(s) selected` : "Choose image(s) to upload"}
-</div>
-<div style={{ fontSize: 12, opacity: 0.78, color: "#0b2455" }}>
-  {files.length > 0
-    ? `${Math.round(files.reduce((sum, f) => sum + (f.size || 0), 0) / 1024)} KB total`
-    : "PNG, JPG, WEBP — multiple allowed"}
-</div>
-
+                <div style={{ fontSize: 12, opacity: 0.78, color: "#0b2455" }}>
+                  {files.length > 0
+                    ? `${Math.round(
+                        files.reduce((sum, f) => sum + (f.size || 0), 0) / 1024
+                      )} KB total`
+                    : (driveSelected?.size || 0) > 0
+                    ? "Selected from Google Drive"
+                    : "PNG, JPG, WEBP — multiple allowed"}
+                </div>
               </div>
 
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", position: "relative", zIndex: 1 }}>
-                <button type="button" style={selectBtnStyle} onClick={() => fileRef.current?.click()}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  position: "relative",
+                  zIndex: 1,
+                }}
+              >
+                <button
+                  type="button"
+                  style={selectBtnStyle}
+                  onClick={() => {
+                    setDriveSelected(new Set());
+                    fileRef.current?.click();
+                  }}
+                >
                   Select file
                 </button>
 
-                {files.length > 0 ? (
-  <button
-    type="button"
-    style={ghostBtnStyle}
-    onClick={() => {
-      setFiles([]);
-      if (fileRef.current) fileRef.current.value = "";
-    }}
-  >
-    Remove
-  </button>
-) : null}
+                <button
+                  type="button"
+                  style={ghostBtnStyle}
+                  onClick={openDrivePicker}
+                  title="Pick images from Google Drive folder"
+                >
+                  Choose from Drive
+                </button>
 
+                {files.length > 0 || (driveSelected?.size || 0) > 0 ? (
+                  <button type="button" style={ghostBtnStyle} onClick={clearAllSelections}>
+                    Remove
+                  </button>
+                ) : null}
               </div>
             </div>
 
@@ -496,23 +622,31 @@ setTags("abstract");
               type="text"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
-              placeholder="e.g. abstract, politics, parliament"
+              placeholder="Leave empty to auto-generate (or type comma-separated tags)"
               style={luxuryInputStyle}
             />
 
-            {tagsPreviewText ? <div style={tagsPreviewTextStyle}>{tagsPreviewText}</div> : null}
+            {tagsPreviewText ? (
+              <div style={tagsPreviewTextStyle}>{tagsPreviewText}</div>
+            ) : null}
 
             <div style={{ height: 16 }} />
 
             <button
               type="submit"
-             disabled={files.length === 0 || isUploading}
-
+              disabled={(files.length === 0 && (driveSelected?.size || 0) === 0) || isUploading}
               style={{
-                ...(hasAtLeastOneTag ? uploadReadyBtnStyle : uploadIdleBtnStyle),
-               cursor: files.length === 0 || isUploading ? "not-allowed" : "pointer",
-filter: files.length === 0 || isUploading ? "grayscale(0.25) brightness(0.85)" : "none",
-
+                ...((files.length > 0 || (driveSelected?.size || 0) > 0) && !isUploading
+                  ? uploadReadyBtnStyle
+                  : uploadIdleBtnStyle),
+                cursor:
+                  (files.length === 0 && (driveSelected?.size || 0) === 0) || isUploading
+                    ? "not-allowed"
+                    : "pointer",
+                filter:
+                  (files.length === 0 && (driveSelected?.size || 0) === 0) || isUploading
+                    ? "grayscale(0.25) brightness(0.85)"
+                    : "none",
               }}
             >
               {isUploading ? "Uploading..." : "Upload"}
@@ -523,8 +657,17 @@ filter: files.length === 0 || isUploading ? "grayscale(0.25) brightness(0.85)" :
         <div style={{ height: 14 }} />
 
         <div style={libraryWrapStyle}>
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-            <h3 style={{ marginTop: 0, marginBottom: 0, fontWeight: 900, color: "#0b1220" }}>Library</h3>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <h3 style={{ marginTop: 0, marginBottom: 0, fontWeight: 900, color: "#0b1220" }}>
+              Library
+            </h3>
             <div style={{ opacity: 0.8, fontSize: 13, color: "#0b1220" }}>
               Total: <b>{total}</b>
             </div>
@@ -569,7 +712,13 @@ filter: files.length === 0 || isUploading ? "grayscale(0.25) brightness(0.85)" :
           ) : items.length === 0 ? (
             <div style={{ opacity: 0.85, color: "#0b1220" }}>No images found.</div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                gap: 14,
+              }}
+            >
               {items.map((it) => {
                 const tagsText = Array.isArray(it.tags)
                   ? it.tags
@@ -583,19 +732,18 @@ filter: files.length === 0 || isUploading ? "grayscale(0.25) brightness(0.85)" :
                     <img src={it.url} alt={it.publicId} style={itemImageStyle} loading="lazy" />
 
                     <div style={itemBodyStyle}>
-                      {/* ✅ TAGS header row with Copy publicId on the right */}
+                      {/* ✅ TAGS header row with Copy Image URL on the right */}
                       <div style={tagsHeaderRowStyle}>
                         <div style={metaLabelStyle}>Tags</div>
 
                         <button
-                        type="button"
-                        style={copyMiniRightStyle}
-                        onClick={() => copyText(it.url)}
-                        title="Copy full image URL"
-                      >
-                        Copy Image URL
-                      </button>
-
+                          type="button"
+                          style={copyMiniRightStyle}
+                          onClick={() => copyText(it.url)}
+                          title="Copy full image URL"
+                        >
+                          Copy Image URL
+                        </button>
                       </div>
 
                       <div style={{ height: 6 }} />
@@ -610,7 +758,12 @@ filter: files.length === 0 || isUploading ? "grayscale(0.25) brightness(0.85)" :
                           href={it.url}
                           target="_blank"
                           rel="noreferrer"
-                          style={{ ...actionPillSmallStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+                          style={{
+                            ...actionPillSmallStyle,
+                            textDecoration: "none",
+                            display: "inline-flex",
+                            alignItems: "center",
+                          }}
                           title="Open image"
                         >
                           Open
@@ -654,12 +807,128 @@ filter: files.length === 0 || isUploading ? "grayscale(0.25) brightness(0.85)" :
           <div ref={sentinelRef} style={{ height: 1 }} />
         </div>
 
-        {editOpen && (
-          <div style={modalOverlayStyle} onClick={closeEdit}>
+        {/* ✅ Edit modal (leave your existing modal content as you had) */}
+       {editOpen && (
+  <div style={modalOverlayStyle} onClick={closeEdit}>
+    <div style={modalCardStyle} onClick={(e) => e.stopPropagation()}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+        <h3 style={{ margin: 0, fontWeight: 900 }}>Edit Image</h3>
+
+        <button
+          type="button"
+          style={miniBtnStyle}
+          onClick={closeEdit}
+          disabled={editSaving}
+          title="Close"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div style={{ height: 12 }} />
+
+      {/* Preview */}
+      {editItem?.url ? (
+        <img
+          src={editItem.url}
+          alt={editItem.publicId || "image"}
+          style={{
+            width: "100%",
+            height: 240,
+            objectFit: "cover",
+            borderRadius: 12,
+            border: "1px solid rgba(255,255,255,0.12)",
+          }}
+          referrerPolicy="no-referrer"
+          crossOrigin="anonymous"
+        />
+      ) : null}
+
+      <div style={{ height: 12 }} />
+
+      {/* URL row */}
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ fontSize: 12, opacity: 0.85 }}>
+          {editItem?.publicId ? <b>{editItem.publicId}</b> : null}
+        </div>
+
+        {editItem?.url ? (
+          <button
+            type="button"
+            style={miniBtnStyle}
+            onClick={() => copyText(editItem.url)}
+            title="Copy image URL"
+          >
+            Copy URL
+          </button>
+        ) : null}
+      </div>
+
+      <div style={{ height: 14 }} />
+
+      {/* Fields */}
+      <div style={labelStyle}>Tags (comma separated)</div>
+      <textarea
+  value={editTags}
+  onChange={(e) => setEditTags(e.target.value)}
+  placeholder="e.g. india, politics, parliament"
+  style={{
+    ...inputStyle,
+    resize: "none",
+    overflow: "hidden",          // ✅ no scrollbar
+    whiteSpace: "pre-wrap",
+    overflowWrap: "anywhere",
+    lineHeight: 1.4,
+    minHeight: 120,              // ✅ good for mobile
+  }}
+  onInput={(e) => {
+    e.target.style.height = "auto";
+    e.target.style.height = `${e.target.scrollHeight}px`;  // ✅ grow to fit all text
+  }}
+  ref={(el) => {
+    if (!el) return;
+    // ✅ set correct height on first open too
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }}
+/>
+
+
+
+      <div style={{ height: 12 }} />
+
+      {/* Actions */}
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
+        <button type="button" style={miniBtnStyle} onClick={closeEdit} disabled={editSaving}>
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          style={{
+            ...miniBtnStyle,
+            background: "rgba(59,130,246,0.18)",
+            border: "1px solid rgba(59,130,246,0.35)",
+          }}
+          onClick={saveEdit}
+          disabled={editSaving}
+        >
+          {editSaving ? "Saving..." : "Save"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
+        {/* ✅ Drive picker modal (select only; import happens on Upload) */}
+        {driveOpen && (
+          <div style={modalOverlayStyle} onClick={closeDrivePicker}>
             <div style={modalCardStyle} onClick={(e) => e.stopPropagation()}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h3 style={{ margin: 0 }}>Edit Image</h3>
-                <button type="button" style={miniBtnStyle} onClick={closeEdit}>
+                <h3 style={{ margin: 0 }}>Choose from Google Drive</h3>
+                <button type="button" style={miniBtnStyle} onClick={closeDrivePicker} disabled={isUploading}>
                   ✕
                 </button>
               </div>
@@ -667,64 +936,124 @@ filter: files.length === 0 || isUploading ? "grayscale(0.25) brightness(0.85)" :
               <div style={{ height: 10 }} />
 
               <div style={{ fontSize: 12, color: "rgba(255,255,255,0.9)" }}>
-                <b>publicId:</b> {editItem?.publicId || "-"}
+                Select images here, then click <b>Select</b>. Add tags in the main form, then click <b>Upload</b>.
+              </div>
+
+              <div style={{ height: 12 }} />
+
+              <input
+                value={driveQuery}
+                onChange={(e) => setDriveQuery(e.target.value)}
+                placeholder="Search by file name…"
+                style={inputStyle}
+              />
+
+              <div style={{ height: 12 }} />
+
+              <div
+                style={{
+                  maxHeight: 420,
+                  overflow: "auto",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 12,
+                }}
+              >
+                {driveLoading ? (
+                  <div style={{ padding: 12, color: "rgba(255,255,255,0.85)" }}>Loading Drive images…</div>
+                ) : (
+                  (driveFiles || [])
+                    .filter((f) => {
+                      const q = String(driveQuery || "").trim().toLowerCase();
+                      if (!q) return true;
+                      return String(f?.name || "").toLowerCase().includes(q);
+                    })
+                    .map((f) => {
+                      const id = f?.id;
+                      const checked = driveSelected?.has?.(id);
+                      return (
+                        <div
+                          key={id}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: 10,
+                            borderBottom: "1px solid rgba(255,255,255,0.08)",
+                          }}
+                        >
+                          <input type="checkbox" checked={!!checked} onChange={() => toggleDriveSelect(id)} />
+
+                          {f?.thumbnailLink ? (
+                            <img
+                              src={f.thumbnailLink}
+                              alt={f?.name || "drive-image"}
+                              style={{ width: 54, height: 40, objectFit: "cover", borderRadius: 8 }}
+                              referrerPolicy="no-referrer"
+                              crossOrigin="anonymous"
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: 54,
+                                height: 40,
+                                borderRadius: 8,
+                                background: "rgba(255,255,255,0.08)",
+                              }}
+                            />
+                          )}
+
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div
+                              style={{
+                                fontSize: 13,
+                                fontWeight: 800,
+                                color: "#fff",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {f?.name || "(no name)"}
+                            </div>
+                            <div style={{ fontSize: 11, opacity: 0.85, color: "rgba(255,255,255,0.8)" }}>
+                              {f?.modifiedTime ? new Date(f.modifiedTime).toLocaleString() : ""}
+                            </div>
+                          </div>
+
+                          {f?.webViewLink ? (
+                            <a
+                              href={f.webViewLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ fontSize: 12, color: "rgba(255,255,255,0.9)" }}
+                            >
+                              Open
+                            </a>
+                          ) : null}
+                        </div>
+                      );
+                    })
+                )}
               </div>
 
               <div style={{ height: 14 }} />
 
-              <label style={labelStyle}>Tags (comma separated)</label>
-              <input
-                value={editTags}
-                onChange={(e) => setEditTags(e.target.value)}
-                placeholder="e.g. parliament, debate, budget"
-                style={inputStyle}
-              />
-
-              <div style={{ height: 12 }} />
-
-              <label style={labelStyle}>Category</label>
-              <select
-                value={editCategory}
-                onChange={(e) => setEditCategory(e.target.value)}
-                style={inputStyle}
-                disabled={catsLoading}
-              >
-                <option value="">(empty)</option>
-                {catsLoading ? (
-                  <option value="">Loading categories…</option>
-                ) : (
-                  categoryOptions.map((c) => (
-                    <option key={c.slug} value={c.slug}>
-                      {c.name}
-                    </option>
-                  ))
-                )}
-              </select>
-
-              <div style={{ height: 12 }} />
-
-              <label style={labelStyle}>Priority</label>
-              <input
-                type="number"
-                value={editPriority}
-                onChange={(e) => setEditPriority(e.target.value)}
-                style={inputStyle}
-                min={0}
-              />
-
-              <div style={{ height: 16 }} />
-
-              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-                <button type="button" style={miniBtnStyle} onClick={closeEdit} disabled={editSaving}>
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                <button type="button" style={miniBtnStyle} onClick={closeDrivePicker} disabled={isUploading}>
                   Cancel
                 </button>
+
                 <button
                   type="button"
-                  style={{ ...miniBtnStyle, borderColor: "rgba(80,200,120,0.45)" }}
-                  onClick={saveEdit}
-                  disabled={editSaving}
+                  style={miniBtnStyle}
+                  onClick={() => setDriveSelected(new Set())}
+                  disabled={isUploading}
                 >
-                  {editSaving ? "Saving..." : "Save"}
+                  Clear
+                </button>
+
+                <button type="button" style={selectBtnStyle} onClick={applyDriveSelection} disabled={isUploading}>
+                  Select ({driveSelected?.size || 0})
                 </button>
               </div>
             </div>

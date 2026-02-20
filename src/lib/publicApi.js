@@ -19,8 +19,9 @@ function readToken() {
 
 export const api = axios.create({
   baseURL: API_BASE,
-  timeout: 15000,
+  timeout: 120000, // ✅ 2 minutes (Drive import + Cloudinary can take time)
 });
+
 
 // Attach token for /api/admin/* requests (safe no-op for public calls)
 api.interceptors.request.use((config) => {
