@@ -174,14 +174,15 @@ export default function AdminShell({ children }) {
         }
 
         .prompt-fabs {
-          position: fixed;
-          right: 18px;
-          bottom: 18px;
-          z-index: 9999;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
+  position: fixed;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 
         .prompt-fab {
           width: 54px;
