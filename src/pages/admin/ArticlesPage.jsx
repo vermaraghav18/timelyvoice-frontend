@@ -1690,12 +1690,18 @@ function renderImageCycleControls(article) {
                       )}
 
                       {/* ✅ Why this image? (autoImageDebug) */}
-                        {a?.autoImageDebug ? (
-                          <details style={{ marginTop: 8 }}>
-                            <summary style={{ cursor: "pointer", fontWeight: 700, fontSize: 12, color: "#111827" }}>
-                              Why this image?
-                            </summary>
-                            {a?.autoImageDebug && (
+<details style={{ marginTop: 8 }} open>
+  <summary
+    style={{
+      cursor: "pointer",
+      fontWeight: 700,
+      fontSize: 12,
+      color: "#111827",
+    }}
+  >
+    Why this image?
+  </summary>
+
   <div
     style={{
       background: "#f9fafb",
@@ -1706,61 +1712,90 @@ function renderImageCycleControls(article) {
       lineHeight: 1.6,
     }}
   >
-    <div style={{ fontWeight: 600, marginBottom: 6 }}>
-      🖼 Why this image was selected
-    </div>
-
-    {/* Selection Type */}
-    <div style={{ marginBottom: 6 }}>
-      <strong>Selection Type:</strong>{" "}
-      {a.autoImageDebug.mode === "manual-candidate"
-        ? "Manual selection from candidates"
-        : a.autoImageDebug.mode === "manual"
-        ? "Manually pasted image"
-        : "Auto-selected by system"}
-    </div>
-
-    {/* Matched Tags */}
-    {a.autoImageDebug.strongTagMatches?.length > 0 && (
-      <div style={{ marginBottom: 6 }}>
-        <strong>Matched Article Tags:</strong>
-        <ul style={{ margin: "4px 0 0 18px" }}>
-          {a.autoImageDebug.strongTagMatches.map((tag) => (
-            <li key={tag}>{tag}</li>
-          ))}
-        </ul>
+    {!a?.autoImageDebug ? (
+      <div style={{ color: "#6b7280" }}>
+        No image reasoning stored yet.
+        <br />
+        Click <strong>re-pick</strong> or change the image once to generate reasoning.
       </div>
-    )}
+    ) : (
+      <>
+        <div style={{ fontWeight: 600, marginBottom: 8 }}>
+          Image Selection Explanation
+        </div>
 
-    {/* Matched Keywords */}
-    {a.autoImageDebug.strongKeywordMatches?.length > 0 && (
-      <div style={{ marginBottom: 6 }}>
-        <strong>Matched Title Keywords:</strong>
-        <ul style={{ margin: "4px 0 0 18px" }}>
-          {a.autoImageDebug.strongKeywordMatches.map((tag) => (
-            <li key={tag}>{tag}</li>
-          ))}
-        </ul>
-      </div>
-    )}
+        {/* Selection Type */}
+        <div style={{ marginBottom: 6 }}>
+          <strong>How it was selected:</strong>{" "}
+          {a.autoImageDebug.mode === "manual-candidate"
+            ? "Manually chosen from image suggestions"
+            : a.autoImageDebug.mode === "manual"
+            ? "Manually pasted image"
+            : "Automatically selected by tag matching"}
+        </div>
 
-    {/* Score Info */}
-    {typeof a.autoImageDebug.score === "number" && (
-      <div style={{ marginBottom: 6 }}>
-        <strong>Confidence Score:</strong> {a.autoImageDebug.score}
-      </div>
-    )}
+        {/* Matched Article Tags */}
+        {Array.isArray(a.autoImageDebug.strongTagMatches) &&
+          a.autoImageDebug.strongTagMatches.length > 0 && (
+            <div style={{ marginBottom: 6 }}>
+              <strong>Matched Article Tags:</strong>
+              <div style={{ marginTop: 4 }}>
+                {a.autoImageDebug.strongTagMatches.map((tag) => (
+                  <span
+                    key={tag}
+                    style={{
+                      padding: "2px 8px",
+                      borderRadius: 999,
+                      fontSize: 11,
+                      background: "#e0f2fe",
+                      border: "1px solid #7dd3fc",
+                      marginRight: 6,
+                      display: "inline-block",
+                    }}
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
-    {typeof a.autoImageDebug.strongMatchCount === "number" && (
-      <div>
-        <strong>Strong Match Count:</strong>{" "}
-        {a.autoImageDebug.strongMatchCount}
-      </div>
+        {/* Matched Title Keywords */}
+        {Array.isArray(a.autoImageDebug.strongKeywordMatches) &&
+          a.autoImageDebug.strongKeywordMatches.length > 0 && (
+            <div style={{ marginBottom: 6 }}>
+              <strong>Matched Title Keywords:</strong>
+              <div style={{ marginTop: 4 }}>
+                {a.autoImageDebug.strongKeywordMatches.map((tag) => (
+                  <span
+                    key={tag}
+                    style={{
+                      padding: "2px 8px",
+                      borderRadius: 999,
+                      fontSize: 11,
+                      background: "#ede9fe",
+                      border: "1px solid #c4b5fd",
+                      marginRight: 6,
+                      display: "inline-block",
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+        {/* Score */}
+        {typeof a.autoImageDebug.score === "number" && (
+          <div style={{ marginTop: 8 }}>
+            <strong>Confidence Score:</strong> {a.autoImageDebug.score}
+          </div>
+        )}
+      </>
     )}
   </div>
-)}
-                          </details>
-                        ) : null}
+</details>
 
 
                       {/* Mobile-only preview just under slug+tags */}
