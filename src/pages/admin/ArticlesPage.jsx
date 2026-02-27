@@ -879,7 +879,7 @@ export default function ArticlesPage() {
     }));
   }
 
-  function scheduleSaveImage(id, value) {
+  function scheduleSaveImage(id, value, debug = null) {
   // debounce per row
   if (imgTimersRef.current[id]) clearTimeout(imgTimersRef.current[id]);
   setImgState(id, { saving: "saving" });
@@ -893,9 +893,14 @@ export default function ArticlesPage() {
       const finalUrl = resolved.url || "";
       const finalPublicId = resolved.publicId || "";
 
-      const payload = syncOg
-        ? { imageUrl: finalUrl, ogImage: finalUrl, ...(finalPublicId ? { imagePublicId: finalPublicId } : {}) }
-        : { imageUrl: finalUrl, ...(finalPublicId ? { imagePublicId: finalPublicId } : {}) };
+     const payloadBase = syncOg
+  ? { imageUrl: finalUrl, ogImage: finalUrl, ...(finalPublicId ? { imagePublicId: finalPublicId } : {}) }
+  : { imageUrl: finalUrl, ...(finalPublicId ? { imagePublicId: finalPublicId } : {}) };
+
+// ✅ attach debug so "Why this image?" updates instantly
+const payload = debug && typeof debug === "object"
+  ? { ...payloadBase, autoImageDebug: debug }
+  : payloadBase;
 
       const res = await api.patch(`/admin/articles/${id}`, payload);
       const updated = res?.data || {};
@@ -906,13 +911,14 @@ export default function ArticlesPage() {
 
       updateItemsLocal((a) =>
         a._id === id
-          ? {
-              ...a,
-              imageUrl: nextImage,
-              ogImage: nextOg,
-              imagePublicId: updated.imagePublicId ?? finalPublicId ?? a.imagePublicId,
-              updatedAt: new Date().toISOString(),
-            }
+         ? {
+    ...a,
+    imageUrl: nextImage,
+    ogImage: nextOg,
+    imagePublicId: updated.imagePublicId ?? finalPublicId ?? a.imagePublicId,
+    autoImageDebug: updated.autoImageDebug ?? debug ?? a.autoImageDebug ?? null,
+    updatedAt: new Date().toISOString(),
+  }
           : a
       );
 
@@ -1009,7 +1015,20 @@ async function cycleCandidate(article, dir) {
   if (next?.url) {
     // Immediate: set value + save (also sets imagePublicId if resolvable)
     setImgState(id, { value: next.url });
-    scheduleSaveImage(id, next.url);
+    const debug = {
+  mode: "manual-candidate",
+  pickedAt: new Date().toISOString(),
+  pickedPublicId: next.publicId || null,
+  pickedUrl: next.url || null,
+  score: next.score ?? null,
+  strongMatchCount: next.strongMatchCount ?? null,
+  strongTagMatches: next.strongTagMatches || [],
+  genericTagMatches: next.genericTagMatches || [],
+  strongKeywordMatches: next.strongKeywordMatches || [],
+  penalty: next.penalty ?? 0,
+};
+
+scheduleSaveImage(id, next.url, debug);
   }
 }
 
