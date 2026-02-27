@@ -1735,57 +1735,98 @@ function renderImageCycleControls(article) {
         </div>
 
         {/* Matched Article Tags */}
-        {Array.isArray(a.autoImageDebug.strongTagMatches) &&
-          a.autoImageDebug.strongTagMatches.length > 0 && (
-            <div style={{ marginBottom: 6 }}>
-              <strong>Matched Article Tags:</strong>
-              <div style={{ marginTop: 4 }}>
-                {a.autoImageDebug.strongTagMatches.map((tag) => (
-                  <span
-                    key={tag}
-                    style={{
-                      padding: "2px 8px",
-                      borderRadius: 999,
-                      fontSize: 11,
-                      background: "#e0f2fe",
-                      border: "1px solid #7dd3fc",
-                      marginRight: 6,
-                      display: "inline-block",
-                    }}
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+       {/* Matched Article Tags (fallback to article.tags) */}
+{(() => {
+  const strong = Array.isArray(a?.autoImageDebug?.strongTagMatches)
+    ? a.autoImageDebug.strongTagMatches
+    : [];
 
-        {/* Matched Title Keywords */}
-        {Array.isArray(a.autoImageDebug.strongKeywordMatches) &&
-          a.autoImageDebug.strongKeywordMatches.length > 0 && (
-            <div style={{ marginBottom: 6 }}>
-              <strong>Matched Title Keywords:</strong>
-              <div style={{ marginTop: 4 }}>
-                {a.autoImageDebug.strongKeywordMatches.map((tag) => (
-                  <span
-                    key={tag}
-                    style={{
-                      padding: "2px 8px",
-                      borderRadius: 999,
-                      fontSize: 11,
-                      background: "#ede9fe",
-                      border: "1px solid #c4b5fd",
-                      marginRight: 6,
-                      display: "inline-block",
-                    }}
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+  const fallbackTags = Array.isArray(a?.tags) ? a.tags : [];
 
+  const tagsToShow = strong.length ? strong : fallbackTags;
+
+  if (!tagsToShow.length) return null;
+
+  return (
+    <div style={{ marginBottom: 6 }}>
+      <strong>{strong.length ? "Matched Article Tags:" : "Article Tags (used for matching):"}</strong>
+      <div style={{ marginTop: 4 }}>
+        {tagsToShow.map((tag, i) => (
+          <span
+            key={`${tag}-${i}`}
+            style={{
+              padding: "2px 8px",
+              borderRadius: 999,
+              fontSize: 11,
+              background: strong.length ? "#e0f2fe" : "#f1f5f9",
+              border: strong.length ? "1px solid #7dd3fc" : "1px solid #e2e8f0",
+              marginRight: 6,
+              display: "inline-block",
+            }}
+          >
+            #{tag}
+          </span>
+        ))}
+      </div>
+
+      {!strong.length && (
+        <div style={{ marginTop: 6, fontSize: 12, color: "#b45309" }}>
+          Backend didn’t store debug match tags for this auto-pick — showing article tags instead.
+        </div>
+      )}
+    </div>
+  );
+})()}
+
+      {/* Matched Title Keywords (fallback to derived title tokens) */}
+{(() => {
+  const strong = Array.isArray(a?.autoImageDebug?.strongKeywordMatches)
+    ? a.autoImageDebug.strongKeywordMatches
+    : [];
+
+  const derived =
+    String(a?.title || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter(Boolean)
+      .filter((w) => w.length >= 4)
+      .slice(0, 10);
+
+  const wordsToShow = strong.length ? strong : derived;
+
+  if (!wordsToShow.length) return null;
+
+  return (
+    <div style={{ marginBottom: 6 }}>
+      <strong>{strong.length ? "Matched Title Keywords:" : "Title Keywords (derived):"}</strong>
+      <div style={{ marginTop: 4 }}>
+        {wordsToShow.map((w, i) => (
+          <span
+            key={`${w}-${i}`}
+            style={{
+              padding: "2px 8px",
+              borderRadius: 999,
+              fontSize: 11,
+              background: strong.length ? "#ede9fe" : "#f3f4f6",
+              border: strong.length ? "1px solid #c4b5fd" : "1px solid #e5e7eb",
+              marginRight: 6,
+              display: "inline-block",
+            }}
+          >
+            {w}
+          </span>
+        ))}
+      </div>
+
+      {!strong.length && (
+        <div style={{ marginTop: 6, fontSize: 12, color: "#b45309" }}>
+          Backend didn’t store keyword matches for this auto-pick — showing derived keywords instead.
+        </div>
+      )}
+    </div>
+  );
+})()}
         {/* Score */}
         {typeof a.autoImageDebug.score === "number" && (
           <div style={{ marginTop: 8 }}>
