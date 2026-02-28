@@ -1690,7 +1690,7 @@ function renderImageCycleControls(article) {
                       )}
 
                       {/* ✅ Why this image? (autoImageDebug) */}
-<details style={{ marginTop: 8 }} open>
+<details style={{ marginTop: 8 }}>
   <summary
     style={{
       cursor: "pointer",
@@ -1734,99 +1734,100 @@ function renderImageCycleControls(article) {
             : "Automatically selected by tag matching"}
         </div>
 
-        {/* Matched Article Tags */}
-       {/* Matched Article Tags (fallback to article.tags) */}
-{(() => {
-  const strong = Array.isArray(a?.autoImageDebug?.strongTagMatches)
-    ? a.autoImageDebug.strongTagMatches
-    : [];
+        {/* Matched Article Tags (fallback to article.tags) */}
+        {(() => {
+          const strong = Array.isArray(a?.autoImageDebug?.strongTagMatches)
+            ? a.autoImageDebug.strongTagMatches
+            : [];
 
-  const fallbackTags = Array.isArray(a?.tags) ? a.tags : [];
+          const fallbackTags = Array.isArray(a?.tags) ? a.tags : [];
 
-  const tagsToShow = strong.length ? strong : fallbackTags;
+          const tagsToShow = strong.length ? strong : fallbackTags;
 
-  if (!tagsToShow.length) return null;
+          if (!tagsToShow.length) return null;
 
-  return (
-    <div style={{ marginBottom: 6 }}>
-      <strong>{strong.length ? "Matched Article Tags:" : "Article Tags (used for matching):"}</strong>
-      <div style={{ marginTop: 4 }}>
-        {tagsToShow.map((tag, i) => (
-          <span
-            key={`${tag}-${i}`}
-            style={{
-              padding: "2px 8px",
-              borderRadius: 999,
-              fontSize: 11,
-              background: strong.length ? "#e0f2fe" : "#f1f5f9",
-              border: strong.length ? "1px solid #7dd3fc" : "1px solid #e2e8f0",
-              marginRight: 6,
-              display: "inline-block",
-            }}
-          >
-            #{tag}
-          </span>
-        ))}
-      </div>
+          return (
+            <div style={{ marginBottom: 6 }}>
+              <strong>
+                {strong.length ? "Matched Article Tags:" : "Article Tags (used for matching):"}
+              </strong>
+              <div style={{ marginTop: 4 }}>
+                {tagsToShow.map((tag, i) => (
+                  <span
+                    key={`${tag}-${i}`}
+                    style={{
+                      padding: "2px 8px",
+                      borderRadius: 999,
+                      fontSize: 11,
+                      background: strong.length ? "#e0f2fe" : "#f1f5f9",
+                      border: strong.length ? "1px solid #7dd3fc" : "1px solid #e2e8f0",
+                      marginRight: 6,
+                      display: "inline-block",
+                    }}
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
 
-      {!strong.length && (
-        <div style={{ marginTop: 6, fontSize: 12, color: "#b45309" }}>
-          Backend didn’t store debug match tags for this auto-pick — showing article tags instead.
-        </div>
-      )}
-    </div>
-  );
-})()}
+              {!strong.length && (
+                <div style={{ marginTop: 6, fontSize: 12, color: "#b45309" }}>
+                  Backend didn’t store debug match tags for this auto-pick — showing article tags instead.
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
-      {/* Matched Title Keywords (fallback to derived title tokens) */}
-{(() => {
-  const strong = Array.isArray(a?.autoImageDebug?.strongKeywordMatches)
-    ? a.autoImageDebug.strongKeywordMatches
-    : [];
+        {/* Matched Title Keywords (fallback to derived title tokens) */}
+        {(() => {
+          const strong = Array.isArray(a?.autoImageDebug?.strongKeywordMatches)
+            ? a.autoImageDebug.strongKeywordMatches
+            : [];
 
-  const derived =
-    String(a?.title || "")
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, " ")
-      .split(/\s+/)
-      .filter(Boolean)
-      .filter((w) => w.length >= 4)
-      .slice(0, 10);
+          const derived = String(a?.title || "")
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, " ")
+            .split(/\s+/)
+            .filter(Boolean)
+            .filter((w) => w.length >= 4)
+            .slice(0, 10);
 
-  const wordsToShow = strong.length ? strong : derived;
+          const wordsToShow = strong.length ? strong : derived;
 
-  if (!wordsToShow.length) return null;
+          if (!wordsToShow.length) return null;
 
-  return (
-    <div style={{ marginBottom: 6 }}>
-      <strong>{strong.length ? "Matched Title Keywords:" : "Title Keywords (derived):"}</strong>
-      <div style={{ marginTop: 4 }}>
-        {wordsToShow.map((w, i) => (
-          <span
-            key={`${w}-${i}`}
-            style={{
-              padding: "2px 8px",
-              borderRadius: 999,
-              fontSize: 11,
-              background: strong.length ? "#ede9fe" : "#f3f4f6",
-              border: strong.length ? "1px solid #c4b5fd" : "1px solid #e5e7eb",
-              marginRight: 6,
-              display: "inline-block",
-            }}
-          >
-            {w}
-          </span>
-        ))}
-      </div>
+          return (
+            <div style={{ marginBottom: 6 }}>
+              <strong>{strong.length ? "Matched Title Keywords:" : "Title Keywords (derived):"}</strong>
+              <div style={{ marginTop: 4 }}>
+                {wordsToShow.map((w, i) => (
+                  <span
+                    key={`${w}-${i}`}
+                    style={{
+                      padding: "2px 8px",
+                      borderRadius: 999,
+                      fontSize: 11,
+                      background: strong.length ? "#ede9fe" : "#f3f4f6",
+                      border: strong.length ? "1px solid #c4b5fd" : "1px solid #e5e7eb",
+                      marginRight: 6,
+                      display: "inline-block",
+                    }}
+                  >
+                    {w}
+                  </span>
+                ))}
+              </div>
 
-      {!strong.length && (
-        <div style={{ marginTop: 6, fontSize: 12, color: "#b45309" }}>
-          Backend didn’t store keyword matches for this auto-pick — showing derived keywords instead.
-        </div>
-      )}
-    </div>
-  );
-})()}
+              {!strong.length && (
+                <div style={{ marginTop: 6, fontSize: 12, color: "#b45309" }}>
+                  Backend didn’t store keyword matches for this auto-pick — showing derived keywords instead.
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Score */}
         {typeof a.autoImageDebug.score === "number" && (
           <div style={{ marginTop: 8 }}>
